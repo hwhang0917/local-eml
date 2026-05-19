@@ -46,6 +46,7 @@ go-build:
 
 web-build:
 	cd web && npm run build
+	@touch web/dist/.gitkeep
 
 web-dev:
 	cd web && npm run dev
