@@ -226,7 +226,6 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	return &e, nil
 }
 
-
 func unixOrZero(t time.Time) int64 {
 	if t.IsZero() {
 		return 0
