@@ -65,14 +65,17 @@ func TestBlocksRemoteImagesByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, "tracker.example.com") {
-		t.Errorf("remote image URL leaked into src: %s", out)
+	if strings.Contains(out, `src="https://tracker.example.com/p.gif"`) {
+		t.Errorf("remote URL stayed in src attribute: %s", out)
 	}
-	if !strings.Contains(out, "data-remote-blocked") {
+	if !strings.Contains(out, `src="data:image/gif;base64,`) {
+		t.Errorf("src should be replaced with placeholder data URL: %s", out)
+	}
+	if !strings.Contains(out, `data-remote-blocked="1"`) {
 		t.Errorf("missing remote-blocked marker: %s", out)
 	}
-	if !strings.Contains(out, "data-original-src") {
-		t.Errorf("missing original-src marker: %s", out)
+	if !strings.Contains(out, `data-original-src="https://tracker.example.com/p.gif"`) {
+		t.Errorf("missing original-src (needed for 'Load remote images' toggle): %s", out)
 	}
 }
 
