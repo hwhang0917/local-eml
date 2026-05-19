@@ -79,6 +79,18 @@
   --radius-md: 0.6875rem;
   --radius-lg: 1.125rem;
   --radius-full: 9999px;
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.4;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.1875rem;
+  --text-base--line-height: 1.55;
+  --text-lg: 1.3125rem;
+  --text-lg--line-height: 1.45;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 1.35;
+  --text-2xl: 1.875rem;
+  --text-2xl--line-height: 1.2;
 }
 
 @layer base {
@@ -88,8 +100,8 @@
     background: var(--canvas-parchment);
     color: var(--foreground);
     font-family: 'Roboto', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
-    font-size: 17px;
-    line-height: 1.47;
+    font-size: 19px;
+    line-height: 1.55;
     letter-spacing: -0.022em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -99,9 +111,9 @@
     letter-spacing: -0.022em;
     line-height: 1.15;
   }
-  h1 { font-size: 2.5rem; letter-spacing: -0.028em; }
-  h2 { font-size: 2rem; }
-  h3 { font-size: 1.5rem; }
+  h1 { font-size: 2.75rem; letter-spacing: -0.028em; }
+  h2 { font-size: 2.125rem; }
+  h3 { font-size: 1.625rem; }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   summary { cursor: pointer; }
