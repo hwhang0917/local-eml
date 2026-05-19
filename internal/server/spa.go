@@ -16,7 +16,6 @@ func spaHandler() http.Handler {
 	}
 	fileServer := http.FileServer(http.FS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// API/healthz are routed by chi; guard against accidental fall-through.
 		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/healthz" {
 			http.NotFound(w, r)
 			return

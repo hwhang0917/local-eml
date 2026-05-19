@@ -52,7 +52,6 @@ func TestHubDropsWhenSubscriberIsSlow(t *testing.T) {
 	h := NewHub()
 	_, cancel := h.Subscribe("y")
 	defer cancel()
-	// Buffer is 64; publishing 1000 should not block.
 	done := make(chan struct{})
 	go func() {
 		for range 1000 {

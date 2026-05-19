@@ -41,7 +41,6 @@ func (s *Server) Router() http.Handler {
 		api.Delete("/emails/{sha}/tags/{name}", s.handleRemoveTag)
 	})
 
-	// SPA + static assets — must be registered after specific routes.
 	r.Handle("/*", spaHandler())
 
 	return r

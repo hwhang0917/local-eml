@@ -16,8 +16,6 @@ type Job struct {
 	ID       string
 }
 
-// RunFile imports a single .eml file. srcPath is a local temp path; the caller
-// is responsible for cleaning it up after the job returns.
 func (j *Job) RunFile(ctx context.Context, srcPath, name string) {
 	defer j.Hub.Close(j.ID)
 	_ = j.Store.SetImportTotal(ctx, j.ID, 1)
@@ -27,8 +25,6 @@ func (j *Job) RunFile(ctx context.Context, srcPath, name string) {
 	j.publish(Event{Type: "done", Processed: 1, Total: 1})
 }
 
-// RunDir imports each .eml file in srcPaths (filtered by name suffix).
-// names[i] is the original filename for srcPaths[i].
 func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
 	defer j.Hub.Close(j.ID)
 
@@ -53,8 +49,6 @@ func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
 	j.publish(Event{Type: "done", Processed: total, Total: total})
 }
 
-// RunZip iterates a zip archive at zipPath, importing each .eml entry streamed
-// one at a time so memory stays bounded.
 func (j *Job) RunZip(ctx context.Context, zipPath string) {
 	defer j.Hub.Close(j.ID)
 

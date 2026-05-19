@@ -226,8 +226,6 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	return &e, nil
 }
 
-// scanEmail used to return *Email; we now build an Email value first.
-
 
 func unixOrZero(t time.Time) int64 {
 	if t.IsZero() {
@@ -252,10 +250,6 @@ func isUniqueViolation(err error) bool {
 		strings.Contains(msg, "unique constraint")
 }
 
-// buildFTSQuery converts a raw user-typed query into an FTS5 expression where
-// every term is a quoted prefix match. This lets short CJK queries like "오창"
-// match documents whose token is "오창수" (unicode61 keeps Hangul as one token).
-// Terms are AND-ed implicitly by FTS5.
 func buildFTSQuery(raw string) string {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

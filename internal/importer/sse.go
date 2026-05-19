@@ -3,7 +3,7 @@ package importer
 import "sync"
 
 type Event struct {
-	Type      string `json:"type"` // "start" | "item" | "done" | "error"
+	Type      string `json:"type"`
 	Path      string `json:"path,omitempty"`
 	SHA256    string `json:"sha256,omitempty"`
 	Duplicate bool   `json:"duplicate,omitempty"`
@@ -21,8 +21,6 @@ func NewHub() *Hub {
 	return &Hub{subs: map[string][]chan Event{}}
 }
 
-// Subscribe returns a buffered channel of events for importID and a cancel
-// function the caller must invoke to release the subscription.
 func (h *Hub) Subscribe(importID string) (<-chan Event, func()) {
 	ch := make(chan Event, 64)
 	h.mu.Lock()
@@ -41,7 +39,6 @@ func (h *Hub) Subscribe(importID string) (<-chan Event, func()) {
 			if len(h.subs[importID]) == 0 {
 				delete(h.subs, importID)
 			}
-			// Drain so close is safe, then close.
 			select {
 			case <-ch:
 			default:
@@ -53,9 +50,6 @@ func (h *Hub) Subscribe(importID string) (<-chan Event, func()) {
 	return ch, cancel
 }
 
-// Publish delivers ev to every current subscriber for importID. Slow subscribers
-// have events dropped rather than blocking the importer (the DB is the source
-// of truth for final state).
 func (h *Hub) Publish(importID string, ev Event) {
 	h.mu.Lock()
 	subs := append([]chan Event{}, h.subs[importID]...)
@@ -68,7 +62,6 @@ func (h *Hub) Publish(importID string, ev Event) {
 	}
 }
 
-// Close terminates all subscribers for importID. Safe to call once.
 func (h *Hub) Close(importID string) {
 	h.mu.Lock()
 	subs := h.subs[importID]

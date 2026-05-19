@@ -23,9 +23,6 @@ type Parsed struct {
 	AttachmentCount int
 }
 
-// Open returns the full parsed envelope, exposing parts (HTML, text, inlines,
-// attachments) for the viewer endpoints. The metadata-only Parse should be used
-// for import-time indexing.
 func Open(r io.Reader) (*enmime.Envelope, error) {
 	return enmime.ReadEnvelope(r)
 }

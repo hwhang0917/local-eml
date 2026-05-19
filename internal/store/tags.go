@@ -58,8 +58,6 @@ func (s *Store) GetTagsForEmail(ctx context.Context, sha string) ([]string, erro
 	return out, rows.Err()
 }
 
-// TagsForEmailIDs returns a map of email id → sorted tag names, used to batch-
-// hydrate list responses without N+1 queries.
 func (s *Store) TagsForEmailIDs(ctx context.Context, ids []int64) (map[int64][]string, error) {
 	out := map[int64][]string{}
 	if len(ids) == 0 {
@@ -90,8 +88,6 @@ func (s *Store) TagsForEmailIDs(ctx context.Context, ids []int64) (map[int64][]s
 	return out, rows.Err()
 }
 
-// AddTagToEmail creates the tag if needed and links it to the email.
-// Idempotent: re-adding the same tag returns nil.
 func (s *Store) AddTagToEmail(ctx context.Context, sha, name string) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -124,9 +120,6 @@ func (s *Store) AddTagToEmail(ctx context.Context, sha, name string) error {
 	return tx.Commit()
 }
 
-// RemoveTagFromEmail unlinks a tag from an email. Idempotent if the link was
-// already absent; returns ErrEmailNotFound only when the email itself doesn't
-// exist. The tag row is left in place even if no other emails reference it.
 func (s *Store) RemoveTagFromEmail(ctx context.Context, sha, name string) error {
 	res, err := s.DB.ExecContext(ctx, `
 		DELETE FROM email_tags

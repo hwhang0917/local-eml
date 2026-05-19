@@ -199,7 +199,6 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(p.Content)
 }
 
-// envErr distinguishes "blob missing" from "blob unreadable / unparseable".
 type envErr struct {
 	status int
 	err    error

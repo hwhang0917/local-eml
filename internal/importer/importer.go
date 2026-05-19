@@ -27,8 +27,6 @@ type Result struct {
 	EmailID   int64  `json:"email_id,omitempty"`
 }
 
-// ImportReader materializes r to a temp file and then delegates to ImportFile.
-// Use this for sources that aren't already on disk (e.g. zip entries).
 func (im *Importer) ImportReader(ctx context.Context, r io.Reader, originalName string) (*Result, error) {
 	tmp, err := os.CreateTemp("", "import-*.eml")
 	if err != nil {
@@ -46,8 +44,6 @@ func (im *Importer) ImportReader(ctx context.Context, r io.Reader, originalName 
 	return im.ImportFile(ctx, tmpName, originalName)
 }
 
-// ImportFile imports a single EML file (path on disk) and returns the result.
-// The caller owns the lifecycle of srcPath (e.g., removing temp uploads).
 func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string) (*Result, error) {
 	f, err := os.Open(srcPath)
 	if err != nil {

@@ -10,20 +10,12 @@ import (
 )
 
 type Options struct {
-	// CIDBaseURL is the URL prefix that `cid:*` references get rewritten to,
-	// e.g. "/api/emails/<sha>/cid/".
 	CIDBaseURL string
-	// ShowRemote, when false, replaces external http(s) <img src> with a blank
-	// placeholder and marks the element with data-remote-blocked="1".
 	ShowRemote bool
 }
 
-// placeholderSrc is a transparent 1x1 GIF used in place of blocked remote images.
 const placeholderSrc = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
-// Sanitize first walks the HTML to rewrite <img src> URLs (cid: → CIDBaseURL,
-// external → placeholder unless ShowRemote), then runs the result through a
-// strict bluemonday policy.
 func Sanitize(htmlSrc string, opts Options) (string, error) {
 	rewritten, err := rewriteImages(htmlSrc, opts)
 	if err != nil {
@@ -36,8 +28,6 @@ func policy() *bluemonday.Policy {
 	p := bluemonday.UGCPolicy()
 	p.AllowRelativeURLs(true)
 	p.AllowURLSchemes("http", "https", "mailto", "data")
-	// Email HTML relies heavily on inline styles. Safe inside a sandboxed
-	// iframe with no script execution; CSS alone cannot escalate.
 	p.AllowAttrs("style").Globally()
 	p.AllowAttrs("class").Globally()
 	p.AllowAttrs("data-remote-blocked", "data-original-src").OnElements("img")
@@ -99,6 +89,5 @@ func rewriteSrc(src string, opts Options) (newSrc string, blocked bool, original
 		}
 		return trimmed, false, ""
 	}
-	// data:, relative paths, or unknown schemes pass through; bluemonday filters further.
 	return trimmed, false, ""
 }

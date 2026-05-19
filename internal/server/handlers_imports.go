@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	maxUploadSize     = 1 << 30 // 1 GiB total per request
+	maxUploadSize     = 1 << 30
 	multipartMemBytes = 32 << 20
 )
 
@@ -133,8 +133,6 @@ func (s *Server) handleImportEvents(w http.ResponseWriter, r *http.Request) {
 	ch, cancel := s.Hub.Subscribe(id)
 	defer cancel()
 
-	// Cover the race where the job finished before the client connected: if the
-	// import is already terminal, emit a synthetic snapshot and stop.
 	if imp, err := s.Store.GetImport(r.Context(), id); err == nil &&
 		(imp.Status == "done" || imp.Status == "error") {
 		writeSSE(w, flusher, importer.Event{
