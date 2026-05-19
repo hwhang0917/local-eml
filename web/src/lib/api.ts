@@ -57,7 +57,8 @@ export interface ImportStatus {
 }
 
 export interface ImportEvent {
-  type: 'start' | 'item' | 'done' | 'error'
+  type: 'step' | 'item' | 'done' | 'error'
+  phase?: string
   path?: string
   sha256?: string
   duplicate?: boolean

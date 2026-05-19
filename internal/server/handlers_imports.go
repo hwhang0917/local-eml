@@ -135,9 +135,15 @@ func (s *Server) handleImportEvents(w http.ResponseWriter, r *http.Request) {
 
 	if imp, err := s.Store.GetImport(r.Context(), id); err == nil &&
 		(imp.Status == "done" || imp.Status == "error") {
-		writeSSE(w, flusher, importer.Event{
-			Type: "done", Processed: imp.Processed, Total: imp.Total,
-		})
+		ev := importer.Event{
+			Type: "done", Phase: "Completed",
+			Processed: imp.Processed, Total: imp.Total,
+		}
+		if imp.Status == "error" {
+			ev.Type = "error"
+			ev.Phase = "Failed"
+		}
+		writeSSE(w, flusher, ev)
 		return
 	}
 

@@ -5,15 +5,23 @@ import { cn } from '@/lib/utils'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
+interface LogEntry {
+  path: string
+  kind: 'ok' | 'dup' | 'err'
+  detail: string
+}
+
 interface ImportRun {
   id: string
   kind: string
+  phase: string
+  current: string
   total: number
   processed: number
   duplicates: number
   errors: number
   done: boolean
-  log: Array<{ path: string; kind: 'ok' | 'dup' | 'err'; detail: string }>
+  log: LogEntry[]
 }
 
 const runs = ref<ImportRun[]>([])
@@ -27,6 +35,8 @@ async function startUpload(files: File[]) {
   const run: ImportRun = {
     id: import_id,
     kind,
+    phase: 'Queued',
+    current: '',
     total: kind === 'zip' ? 0 : files.length,
     processed: 0,
     duplicates: 0,
@@ -43,27 +53,33 @@ function followProgress(run: ImportRun) {
   es.onmessage = (msg) => {
     let ev: ImportEvent
     try { ev = JSON.parse(msg.data) } catch { return }
-    if (ev.type === 'start' || ev.type === 'item') {
+    if (ev.type === 'step') {
+      if (ev.phase) run.phase = ev.phase
+      if (ev.total) run.total = ev.total
+    } else if (ev.type === 'item') {
       if (ev.total) run.total = ev.total
       run.processed = ev.processed
-      if (ev.type === 'item') {
-        if (ev.duplicate) run.duplicates++
-        if (ev.message) run.errors++
-        run.log.unshift({
-          path: ev.path || '',
-          kind: ev.message ? 'err' : ev.duplicate ? 'dup' : 'ok',
-          detail: ev.message || ev.sha256 || '',
-        })
-        if (run.log.length > 200) run.log.length = 200
-      }
+      run.current = ev.path?.split('/').pop() || ev.path || ''
+      if (ev.duplicate) run.duplicates++
+      if (ev.message) run.errors++
+      run.log.unshift({
+        path: ev.path || '',
+        kind: ev.message ? 'err' : ev.duplicate ? 'dup' : 'ok',
+        detail: ev.message || ev.sha256 || '',
+      })
+      if (run.log.length > 200) run.log.length = 200
     } else if (ev.type === 'done') {
       if (ev.total) run.total = ev.total
       if (ev.processed) run.processed = ev.processed
+      run.phase = ev.phase || 'Completed'
+      run.current = ''
       run.done = true
       es.close()
       hydrateFromDB(run)
     } else if (ev.type === 'error') {
       run.errors++
+      run.phase = ev.phase || 'Failed'
+      run.current = ''
       run.done = true
       run.log.unshift({ path: '(job)', kind: 'err', detail: ev.message || 'error' })
       es.close()
@@ -143,16 +159,35 @@ const dropzoneClass = computed(() =>
           <span class="font-medium">Import {{ run.id.slice(0, 8) }}</span>
           <span class="text-xs px-1.5 py-0.5 rounded bg-accent">{{ run.kind }}</span>
           <span class="ml-auto text-sm text-muted-foreground">
-            {{ run.processed }} / {{ run.total }}
+            <span v-if="run.total">{{ run.processed }} / {{ run.total }}</span>
             <span v-if="run.duplicates"> · {{ run.duplicates }} dup</span>
             <span v-if="run.errors" class="text-destructive"> · {{ run.errors }} err</span>
-            <span v-if="run.done" class="ml-2">✓ done</span>
           </span>
         </div>
-        <div class="h-1.5 bg-muted rounded">
-          <div class="h-full bg-primary rounded transition-all"
-            :style="{ width: `${run.total ? (run.processed / run.total) * 100 : 0}%` }"></div>
+
+        <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">
+          <span :class="{ 'text-foreground': run.done && run.errors === 0 }">
+            <span v-if="run.done && run.errors === 0">✓</span>
+            <span v-else-if="run.done && run.errors > 0" class="text-destructive">✗</span>
+            {{ run.phase }}
+          </span>
+          <span v-if="run.current" class="truncate ml-2 max-w-[50%]" :title="run.current">
+            {{ run.current }}
+          </span>
         </div>
+
+        <div class="h-1.5 bg-muted rounded overflow-hidden">
+          <div
+            class="h-full bg-primary transition-all"
+            :class="{ 'animate-pulse': !run.done && run.total === 0 }"
+            :style="{
+              width: run.total
+                ? `${Math.min(100, (run.processed / run.total) * 100)}%`
+                : (run.done ? '100%' : '15%'),
+            }"
+          ></div>
+        </div>
+
         <details class="mt-3" v-if="run.log.length">
           <summary class="text-xs text-muted-foreground cursor-pointer">Log ({{ run.log.length }})</summary>
           <ul class="mt-2 text-xs font-mono space-y-0.5 max-h-48 overflow-auto">

@@ -3,6 +3,7 @@ package importer
 import (
 	"archive/zip"
 	"context"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -19,8 +20,9 @@ type Job struct {
 func (j *Job) RunFile(ctx context.Context, srcPath, name string) {
 	defer j.Hub.Close(j.ID)
 	_ = j.Store.SetImportTotal(ctx, j.ID, 1)
-	j.publish(Event{Type: "start", Total: 1})
-	j.processOne(ctx, srcPath, name, 1, 1, false)
+	j.publish(Event{Type: "step", Phase: "Importing", Total: 1})
+	j.processOne(ctx, srcPath, name, 1, 1)
+	j.publish(Event{Type: "step", Phase: "Finalizing"})
 	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
 	j.publish(Event{Type: "done", Processed: 1, Total: 1})
 }
@@ -28,6 +30,7 @@ func (j *Job) RunFile(ctx context.Context, srcPath, name string) {
 func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
 	defer j.Hub.Close(j.ID)
 
+	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Scanning %d files", len(names))})
 	type entry struct{ path, name string }
 	var entries []entry
 	for i, n := range names {
@@ -37,14 +40,15 @@ func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
 	}
 	total := len(entries)
 	_ = j.Store.SetImportTotal(ctx, j.ID, total)
-	j.publish(Event{Type: "start", Total: total})
+	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
 	for i, e := range entries {
 		if ctxDone(ctx) {
 			break
 		}
-		j.processOne(ctx, e.path, e.name, i+1, total, false)
+		j.processOne(ctx, e.path, e.name, i+1, total)
 	}
+	j.publish(Event{Type: "step", Phase: "Finalizing"})
 	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
 	j.publish(Event{Type: "done", Processed: total, Total: total})
 }
@@ -52,6 +56,7 @@ func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
 func (j *Job) RunZip(ctx context.Context, zipPath string) {
 	defer j.Hub.Close(j.ID)
 
+	j.publish(Event{Type: "step", Phase: "Opening archive"})
 	zr, err := zip.OpenReader(zipPath)
 	if err != nil {
 		_ = j.Store.UpdateImportStatus(ctx, j.ID, "error", true)
@@ -60,6 +65,7 @@ func (j *Job) RunZip(ctx context.Context, zipPath string) {
 	}
 	defer zr.Close()
 
+	j.publish(Event{Type: "step", Phase: "Scanning entries"})
 	var entries []*zip.File
 	for _, f := range zr.File {
 		if !f.FileInfo().IsDir() && isEML(f.Name) {
@@ -68,7 +74,7 @@ func (j *Job) RunZip(ctx context.Context, zipPath string) {
 	}
 	total := len(entries)
 	_ = j.Store.SetImportTotal(ctx, j.ID, total)
-	j.publish(Event{Type: "start", Total: total})
+	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
 	for i, ze := range entries {
 		if ctxDone(ctx) {
@@ -76,11 +82,12 @@ func (j *Job) RunZip(ctx context.Context, zipPath string) {
 		}
 		j.processZipEntry(ctx, ze, i+1, total)
 	}
+	j.publish(Event{Type: "step", Phase: "Finalizing"})
 	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
 	j.publish(Event{Type: "done", Processed: total, Total: total})
 }
 
-func (j *Job) processOne(ctx context.Context, srcPath, name string, idx, total int, _ bool) {
+func (j *Job) processOne(ctx context.Context, srcPath, name string, idx, total int) {
 	res, err := j.Importer.ImportFile(ctx, srcPath, name)
 	if err != nil {
 		_ = j.Store.RecordImportError(ctx, j.ID, name, err.Error())

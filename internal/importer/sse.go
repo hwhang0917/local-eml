@@ -4,6 +4,7 @@ import "sync"
 
 type Event struct {
 	Type      string `json:"type"`
+	Phase     string `json:"phase,omitempty"`
 	Path      string `json:"path,omitempty"`
 	SHA256    string `json:"sha256,omitempty"`
 	Duplicate bool   `json:"duplicate,omitempty"`
