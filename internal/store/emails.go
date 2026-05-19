@@ -136,9 +136,9 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 
 	args := []any{}
 	conds := []string{}
-	if opts.Query != "" {
+	if fts := buildFTSQuery(opts.Query); fts != "" {
 		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
-		args = append(args, opts.Query)
+		args = append(args, fts)
 	}
 	if opts.Tag != "" {
 		conds = append(conds, `id IN (SELECT et.email_id FROM email_tags et
@@ -250,4 +250,22 @@ func isUniqueViolation(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "UNIQUE constraint failed") ||
 		strings.Contains(msg, "unique constraint")
+}
+
+// buildFTSQuery converts a raw user-typed query into an FTS5 expression where
+// every term is a quoted prefix match. This lets short CJK queries like "오창"
+// match documents whose token is "오창수" (unicode61 keeps Hangul as one token).
+// Terms are AND-ed implicitly by FTS5.
+func buildFTSQuery(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	terms := strings.Fields(raw)
+	parts := make([]string, 0, len(terms))
+	for _, t := range terms {
+		t = strings.ReplaceAll(t, `"`, `""`)
+		parts = append(parts, `"`+t+`"*`)
+	}
+	return strings.Join(parts, " ")
 }
