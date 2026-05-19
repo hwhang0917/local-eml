@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -76,11 +77,7 @@ func confirm(prompt string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	line, err := reader.ReadString('\n')
 	if err != nil {
-		if errors.Is(err, os.ErrClosed) {
-			return true
-		}
-		// Empty stdin (EOF) → take the default (Yes).
-		if err.Error() == "EOF" {
+		if errors.Is(err, io.EOF) || errors.Is(err, os.ErrClosed) {
 			fmt.Println()
 			return true
 		}
