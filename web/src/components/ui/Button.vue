@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 const props = withDefaults(
   defineProps<{
-    variant?: 'default' | 'outline' | 'ghost' | 'destructive'
+    variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive'
     size?: 'sm' | 'md' | 'lg' | 'icon'
     type?: 'button' | 'submit' | 'reset'
     disabled?: boolean
@@ -12,25 +12,28 @@ const props = withDefaults(
   { variant: 'default', size: 'md', type: 'button', disabled: false },
 )
 
-const cls = computed(() =>
-  cn(
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium transition-colors',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-    'disabled:opacity-50 disabled:pointer-events-none',
-    {
-      default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
-      ghost: 'hover:bg-accent hover:text-accent-foreground',
-      destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-    }[props.variant],
-    {
-      sm: 'h-8 px-3 text-sm',
-      md: 'h-9 px-4 text-sm',
-      lg: 'h-10 px-6',
-      icon: 'h-9 w-9',
-    }[props.size],
-  ),
-)
+const cls = computed(() => {
+  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-normal'
+    + ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+    + ' focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none select-none'
+
+  const variants = {
+    default: 'bg-primary text-primary-foreground rounded-full hover:bg-primary/95',
+    secondary: 'bg-transparent text-primary border border-primary rounded-full hover:bg-primary/5',
+    outline: 'bg-pearl text-foreground border border-hairline hover:bg-accent rounded-sm',
+    ghost: 'bg-transparent text-foreground hover:bg-accent rounded-sm',
+    destructive: 'bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/95',
+  }
+
+  const sizes = {
+    sm: 'h-8 px-4 text-sm',
+    md: 'h-10 px-5 text-sm',
+    lg: 'h-11 px-6 text-base',
+    icon: 'h-10 w-10 rounded-sm',
+  }
+
+  return cn(base, variants[props.variant], sizes[props.size])
+})
 </script>
 
 <template>

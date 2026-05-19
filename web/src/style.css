@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@import "@fontsource/roboto/300.css";
 @import "@fontsource/roboto/400.css";
 @import "@fontsource/roboto/500.css";
 @import "@fontsource/roboto/700.css";
@@ -8,67 +9,107 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.45 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --border: oklch(0.9 0 0);
-  --input: oklch(0.92 0 0);
-  --ring: oklch(0.708 0 0);
-  --primary: oklch(0.21 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.21 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --radius: 0.5rem;
+  --background: #ffffff;
+  --foreground: #1d1d1f;
+  --canvas-parchment: #f5f5f7;
+  --pearl: #fafafc;
+  --muted: #f5f5f7;
+  --muted-foreground: #6e6e73;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --border: #e0e0e0;
+  --hairline: #e0e0e0;
+  --input: #e0e0e0;
+  --ring: #0071e3;
+  --primary: #0066cc;
+  --primary-foreground: #ffffff;
+  --primary-on-dark: #2997ff;
+  --accent: #f5f5f7;
+  --accent-foreground: #1d1d1f;
+  --destructive: #ff3b30;
+  --destructive-foreground: #ffffff;
+  --tile-dark-1: #272729;
+  --product-shadow: 0 5px 30px 3px rgba(0, 0, 0, 0.22);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0 0);
-  --muted-foreground: oklch(0.65 0 0);
-  --card: oklch(0.18 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --border: oklch(0.27 0 0);
-  --input: oklch(0.27 0 0);
-  --ring: oklch(0.439 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.21 0 0);
-  --accent: oklch(0.27 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.65 0.21 27.5);
+  --background: #1d1d1f;
+  --foreground: #ffffff;
+  --canvas-parchment: #272729;
+  --pearl: #2a2a2c;
+  --muted: #272729;
+  --muted-foreground: #a1a1a6;
+  --card: #2a2a2c;
+  --card-foreground: #ffffff;
+  --border: #3a3a3c;
+  --hairline: #3a3a3c;
+  --input: #3a3a3c;
+  --ring: #2997ff;
+  --primary: #2997ff;
+  --primary-foreground: #ffffff;
+  --accent: #272729;
+  --accent-foreground: #ffffff;
+  --destructive: #ff453a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-canvas-parchment: var(--canvas-parchment);
+  --color-pearl: var(--pearl);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
+  --color-hairline: var(--hairline);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-on-dark: var(--primary-on-dark);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-tile-dark-1: var(--tile-dark-1);
+  --radius-xs: 0.3125rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.6875rem;
+  --radius-lg: 1.125rem;
+  --radius-full: 9999px;
 }
 
 @layer base {
   * { @apply border-border; }
-  body { font-family: 'Roboto', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif; }
+  html { background: var(--canvas-parchment); }
+  body {
+    background: var(--canvas-parchment);
+    color: var(--foreground);
+    font-family: 'Roboto', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.022em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.022em;
+    line-height: 1.15;
+  }
+  h1 { font-size: 2.5rem; letter-spacing: -0.028em; }
+  h2 { font-size: 2rem; }
+  h3 { font-size: 1.5rem; }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   summary { cursor: pointer; }
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active {
+    transform: scale(0.96);
+  }
+  button, [role="button"], a {
+    transition: transform 0.12s ease, background-color 0.18s ease,
+                border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+  }
 }

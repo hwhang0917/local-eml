@@ -19,16 +19,18 @@ function changeLocale(e: Event) {
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <header class="border-b bg-card">
-      <div class="max-w-[1800px] mx-auto px-4 h-14 flex items-center gap-6">
-        <RouterLink to="/" class="font-semibold tracking-tight">local-eml</RouterLink>
-        <nav class="flex items-center gap-1 text-sm">
+    <header class="bg-black text-white">
+      <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
+        <RouterLink to="/" class="font-semibold tracking-tight text-white/90 hover:text-white">
+          local-eml
+        </RouterLink>
+        <nav class="flex items-center gap-1">
           <RouterLink
             v-for="r in nav"
             :key="r.to"
             :to="r.to"
-            class="px-3 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground"
-            active-class="bg-accent text-accent-foreground"
+            class="px-3 py-1 rounded-xs text-white/70 hover:text-white"
+            active-class="text-white"
           >
             {{ r.label }}
           </RouterLink>
@@ -36,15 +38,15 @@ function changeLocale(e: Event) {
         <select
           :value="locale"
           @change="changeLocale"
-          class="ml-auto h-8 rounded-md border bg-background px-2 text-sm cursor-pointer"
+          class="ml-auto bg-transparent text-white/80 hover:text-white text-xs border-none focus:outline-none cursor-pointer"
           :title="t('nav.settings')"
         >
-          <option value="en">English</option>
-          <option value="ko">한국어</option>
+          <option class="text-foreground" value="en">English</option>
+          <option class="text-foreground" value="ko">한국어</option>
         </select>
       </div>
     </header>
-    <main class="flex-1 max-w-[1800px] mx-auto w-full px-4 py-6">
+    <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
       <RouterView />
     </main>
   </div>
