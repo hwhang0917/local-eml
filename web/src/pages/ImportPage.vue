@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type ImportEvent } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -35,7 +35,7 @@ const dirInput = ref<HTMLInputElement | null>(null)
 async function startUpload(files: File[]) {
   if (files.length === 0) return
   const { import_id, kind } = await api.upload(files)
-  const run: ImportRun = {
+  const run = reactive<ImportRun>({
     id: import_id,
     kind,
     phase: t('import.queued'),
@@ -46,7 +46,7 @@ async function startUpload(files: File[]) {
     errors: 0,
     done: false,
     log: [],
-  }
+  })
   runs.value.unshift(run)
   followProgress(run)
 }
