@@ -5,7 +5,7 @@ import { RouterLink, RouterView } from 'vue-router'
 <template>
   <div class="min-h-screen flex flex-col">
     <header class="border-b bg-card">
-      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center gap-6">
+      <div class="max-w-[1800px] mx-auto px-4 h-14 flex items-center gap-6">
         <RouterLink to="/" class="font-semibold tracking-tight">local-eml</RouterLink>
         <nav class="flex items-center gap-1 text-sm">
           <RouterLink
@@ -24,7 +24,7 @@ import { RouterLink, RouterView } from 'vue-router'
         </nav>
       </div>
     </header>
-    <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+    <main class="flex-1 max-w-[1800px] mx-auto w-full px-4 py-6">
       <RouterView />
     </main>
   </div>

@@ -3,7 +3,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, type Email, type Tag } from '@/lib/api'
 import { formatBytes, formatDate, shortSHA } from '@/lib/format'
-import { useDebounceFn } from '@vueuse/core'
+import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -20,6 +20,7 @@ const tag = ref('')
 const sort = ref<'sent_at' | 'from_addr' | 'subject' | 'size_bytes'>('sent_at')
 const order = ref<'asc' | 'desc'>('desc')
 const tags = ref<Tag[]>([])
+const sidebarOpen = useStorage('library-sidebar-open', true)
 
 async function load() {
   loading.value = true
@@ -66,9 +67,16 @@ function open(sha: string) {
 
 <template>
   <div class="flex gap-6">
-    <aside class="w-56 shrink-0 space-y-4">
+    <aside v-if="sidebarOpen" class="w-56 shrink-0 space-y-4">
       <Card class="p-4">
-        <h3 class="text-xs font-semibold uppercase text-muted-foreground mb-3">Tags</h3>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-xs font-semibold uppercase text-muted-foreground">Tags</h3>
+          <button
+            class="text-muted-foreground hover:text-foreground text-sm leading-none p-1 -m-1"
+            @click="sidebarOpen = false"
+            title="Collapse sidebar"
+          >‹</button>
+        </div>
         <div class="space-y-1">
           <button
             class="w-full text-left px-2 py-1 rounded text-sm hover:bg-accent"
@@ -88,6 +96,13 @@ function open(sha: string) {
         </div>
       </Card>
     </aside>
+
+    <button
+      v-else
+      class="self-start text-muted-foreground hover:text-foreground border rounded-md px-2 py-1.5 text-sm leading-none"
+      @click="sidebarOpen = true"
+      title="Expand sidebar"
+    >›</button>
 
     <section class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-4">
@@ -125,8 +140,8 @@ function open(sha: string) {
                 <span v-if="e.has_attachments" title="Has attachments">📎</span>
               </td>
               <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
-              <td class="px-3 py-2 truncate max-w-[14rem]" :title="e.from">{{ e.from }}</td>
-              <td class="px-3 py-2 truncate max-w-[28rem]">
+              <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
+              <td class="px-3 py-2 truncate">
                 {{ e.subject || '(no subject)' }}
                 <span v-for="t in e.tags" :key="t" class="ml-1 inline-block text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">{{ t }}</span>
                 <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
