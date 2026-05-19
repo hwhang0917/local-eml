@@ -65,7 +65,12 @@
     "confirm_summary_one": "1 file · {total}",
     "confirm_summary_many": "{count} files · {total}",
     "confirm": "Start import",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "completed_fallback": "Completed",
+    "failed_fallback": "Failed",
+    "toast_done_title": "Import complete",
+    "toast_error_title": "Import finished with errors",
+    "toast_summary": "{processed} processed · {dup} duplicates · {err} errors"
   },
   "settings": {
     "about": "About",

@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { Toaster } from 'vue-sonner'
+import 'vue-sonner/style.css'
 
 const { t } = useI18n()
 
@@ -35,5 +37,6 @@ const nav = computed(() => [
     <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
       <RouterView />
     </main>
+    <Toaster position="bottom-right" rich-colors close-button />
   </div>
 </template>

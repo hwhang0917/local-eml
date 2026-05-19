@@ -65,7 +65,12 @@
     "confirm_summary_one": "파일 1개 · {total}",
     "confirm_summary_many": "파일 {count}개 · {total}",
     "confirm": "가져오기 시작",
-    "cancel": "취소"
+    "cancel": "취소",
+    "completed_fallback": "완료",
+    "failed_fallback": "실패",
+    "toast_done_title": "가져오기 완료",
+    "toast_error_title": "가져오기 중 오류 발생",
+    "toast_summary": "{processed}개 처리 · 중복 {dup} · 오류 {err}"
   },
   "settings": {
     "about": "정보",
