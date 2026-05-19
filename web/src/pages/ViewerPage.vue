@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { formatBytes, formatDate } from '@/lib/format'
-import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
-import Input from '@/components/ui/Input.vue'
+import {
+  TagsInput,
+  TagsInputInput,
+  TagsInputItem,
+  TagsInputItemText,
+  TagsInputItemDelete,
+} from '@/components/ui/tags-input'
 
 const props = defineProps<{ sha: string }>()
 const { t } = useI18n()
@@ -16,7 +22,6 @@ const tab = ref<'html' | 'text' | 'raw' | 'attachments'>('html')
 const textBody = ref('')
 const rawBody = ref('')
 const showRemote = ref(false)
-const newTag = ref('')
 const error = ref('')
 
 const htmlSrc = computed(() => email.value ? api.htmlURL(email.value.sha256, showRemote.value) : '')
@@ -45,23 +50,32 @@ async function load() {
 
 watch(() => props.sha, load, { immediate: true })
 
-watch([tab, () => email.value?.sha256], async ([t, sha]) => {
+watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (!sha) return
-  if (t === 'text' && !textBody.value) textBody.value = await api.getText(sha)
-  if (t === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
+  if (tb === 'text' && !textBody.value) textBody.value = await api.getText(sha)
+  if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
 })
 
-async function addTag() {
-  if (!email.value || !newTag.value.trim()) return
-  await api.addTag(email.value.sha256, newTag.value.trim())
-  email.value.tags = [...email.value.tags, newTag.value.trim()].sort()
-  newTag.value = ''
+async function onTagAdd(tag: string) {
+  if (!email.value) return
+  const trimmed = tag.trim()
+  if (!trimmed) return
+  try {
+    await api.addTag(email.value.sha256, trimmed)
+    email.value.tags = [...email.value.tags, trimmed].sort()
+  } catch (e) {
+    toast.error(t('viewer.tag_invalid'), { description: String(e) })
+  }
 }
 
-async function removeTag(name: string) {
+async function onTagRemove(tag: string) {
   if (!email.value) return
-  await api.removeTag(email.value.sha256, name)
-  email.value.tags = email.value.tags.filter((t) => t !== name)
+  try {
+    await api.removeTag(email.value.sha256, tag)
+    email.value.tags = email.value.tags.filter((x) => x !== tag)
+  } catch (e) {
+    toast.error(t('viewer.tag_remove_failed'), { description: String(e) })
+  }
 }
 </script>
 
@@ -81,17 +95,21 @@ async function removeTag(name: string) {
         <dt class="text-muted-foreground">{{ t('viewer.size') }}</dt><dd>{{ formatBytes(email.size_bytes) }}</dd>
       </dl>
 
-      <div class="mt-4 flex flex-wrap items-center gap-2">
-        <span class="text-xs uppercase tracking-wide text-muted-foreground mr-1">{{ t('viewer.tags') }}</span>
-        <span v-for="tg in email.tags" :key="tg"
-          class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-accent text-accent-foreground">
-          {{ tg }}
-          <button class="hover:text-destructive" @click="removeTag(tg)" :title="t('viewer.remove')">×</button>
-        </span>
-        <form @submit.prevent="addTag" class="flex items-center gap-1">
-          <Input v-model="newTag" :placeholder="t('viewer.add_tag')" class="h-7 w-32 text-xs" />
-          <Button type="submit" size="sm" variant="outline" class="h-7">{{ t('viewer.add') }}</Button>
-        </form>
+      <div class="mt-4">
+        <div class="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{{ t('viewer.tags') }}</div>
+        <TagsInput
+          :model-value="email.tags"
+          :add-on-paste="true"
+          :delimiter="/[,]/"
+          @add="(p) => onTagAdd(p.value)"
+          @remove="(p) => onTagRemove(p.value)"
+        >
+          <TagsInputItem v-for="tg in email.tags" :key="tg" :value="tg">
+            <TagsInputItemText>{{ tg }}</TagsInputItemText>
+            <TagsInputItemDelete />
+          </TagsInputItem>
+          <TagsInputInput :placeholder="t('viewer.add_tag')" />
+        </TagsInput>
       </div>
     </Card>
 

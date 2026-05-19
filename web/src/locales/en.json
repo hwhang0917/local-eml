@@ -49,7 +49,9 @@
     "no_text": "No plain-text part.",
     "no_attachments": "No attachments.",
     "download": "Download",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "tag_invalid": "Invalid tag",
+    "tag_remove_failed": "Couldn't remove tag"
   },
   "import": {
     "drop": "Drop .eml files, a directory, or a .zip here",

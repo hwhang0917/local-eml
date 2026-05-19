@@ -49,7 +49,9 @@
     "no_text": "텍스트 본문이 없습니다.",
     "no_attachments": "첨부파일이 없습니다.",
     "download": "다운로드",
-    "loading": "불러오는 중…"
+    "loading": "불러오는 중…",
+    "tag_invalid": "잘못된 태그",
+    "tag_remove_failed": "태그를 삭제하지 못했습니다"
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip을 여기에 드롭하세요",
