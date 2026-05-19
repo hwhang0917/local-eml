@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
+import type { AcceptableInputValue } from 'reka-ui'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { formatBytes, formatDate } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
@@ -56,7 +57,7 @@ watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
 })
 
-async function onTagAdd(tag: string | number) {
+async function onTagAdd(tag: AcceptableInputValue) {
   if (!email.value) return
   const trimmed = String(tag).trim()
   if (!trimmed) return
@@ -68,7 +69,7 @@ async function onTagAdd(tag: string | number) {
   }
 }
 
-async function onTagRemove(tag: string | number) {
+async function onTagRemove(tag: AcceptableInputValue) {
   if (!email.value) return
   const name = String(tag)
   try {
