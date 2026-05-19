@@ -62,7 +62,7 @@ run:
 	go run $(PKG) serve --port $(PORT)
 
 test:
-	go test ./... -race -count=1
+	CGO_ENABLED=1 go test ./... -race -count=1
 
 tidy:
 	go mod tidy
