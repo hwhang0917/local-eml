@@ -101,8 +101,8 @@ async function onTagRemove(tag: string) {
           :model-value="email.tags"
           :add-on-paste="true"
           :delimiter="/[,]/"
-          @add="(p) => onTagAdd(p.value)"
-          @remove="(p) => onTagRemove(p.value)"
+          @add-tag="onTagAdd"
+          @remove-tag="onTagRemove"
         >
           <TagsInputItem v-for="tg in email.tags" :key="tg" :value="tg">
             <TagsInputItemText>{{ tg }}</TagsInputItemText>
