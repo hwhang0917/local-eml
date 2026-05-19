@@ -74,6 +74,8 @@
     "data_location": "Data lives in {path}.",
     "tags": "Tags",
     "loading": "Loading…",
-    "no_tags": "No tags yet."
+    "no_tags": "No tags yet.",
+    "language": "Language",
+    "language_help": "Switch the interface language."
   }
 }
