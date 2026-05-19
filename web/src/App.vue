@@ -1,17 +1,30 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { computed, watchEffect } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
 
+const APP_NAME = 'Local Eml'
 const { t } = useI18n()
+const route = useRoute()
 
 const nav = computed(() => [
   { to: '/', label: t('nav.library') },
   { to: '/import', label: t('nav.import') },
   { to: '/settings', label: t('nav.settings') },
 ])
+
+const pageTitle = computed(() => {
+  const key = route.meta.titleKey as string | undefined
+  return key ? t(key) : ''
+})
+
+watchEffect(() => {
+  document.title = pageTitle.value
+    ? `${APP_NAME} | ${pageTitle.value}`
+    : APP_NAME
+})
 </script>
 
 <template>
@@ -20,7 +33,7 @@ const nav = computed(() => [
       <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
         <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
           <img src="/icon-64.png" srcset="/favicon.png 1x, /icon-64.png 2x" alt="" class="h-6 w-6 rounded-sm" />
-          <span>local-eml</span>
+          <span>{{ APP_NAME }}</span>
         </RouterLink>
         <nav class="flex items-center gap-1">
           <RouterLink

@@ -3,7 +3,8 @@
   "nav": {
     "library": "라이브러리",
     "import": "가져오기",
-    "settings": "설정"
+    "settings": "설정",
+    "viewer": "이메일"
   },
   "library": {
     "tags": "태그",

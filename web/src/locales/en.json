@@ -3,7 +3,8 @@
   "nav": {
     "library": "Library",
     "import": "Import",
-    "settings": "Settings"
+    "settings": "Settings",
+    "viewer": "Viewer"
   },
   "library": {
     "tags": "Tags",
