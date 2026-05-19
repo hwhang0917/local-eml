@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@import "@fontsource/roboto/400.css";
+@import "@fontsource/roboto/500.css";
+@import "@fontsource/roboto/700.css";
+@import "pretendard/dist/web/variable/pretendard.css";
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
@@ -62,7 +67,7 @@
 
 @layer base {
   * { @apply border-border; }
-  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif; }
+  body { font-family: 'Roboto', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif; }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   summary { cursor: pointer; }
