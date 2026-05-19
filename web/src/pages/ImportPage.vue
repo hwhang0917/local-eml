@@ -3,6 +3,7 @@ import { ref, computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type ImportEvent } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { formatBytes } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -28,12 +29,32 @@ interface ImportRun {
 }
 
 const runs = ref<ImportRun[]>([])
+const stagedFiles = ref<File[]>([])
 const dragOver = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const dirInput = ref<HTMLInputElement | null>(null)
 
-async function startUpload(files: File[]) {
+const stagedTotal = computed(() =>
+  stagedFiles.value.reduce((s, f) => s + f.size, 0),
+)
+
+const stagedSummary = computed(() => {
+  const total = formatBytes(stagedTotal.value)
+  return stagedFiles.value.length === 1
+    ? t('import.confirm_summary_one', { total })
+    : t('import.confirm_summary_many', { count: stagedFiles.value.length, total })
+})
+
+function stageFiles(files: File[]) {
   if (files.length === 0) return
+  stagedFiles.value = files
+}
+
+function clearStaged() {
+  stagedFiles.value = []
+}
+
+async function startUpload(files: File[]) {
   const { import_id, kind } = await api.upload(files)
   const run = reactive<ImportRun>({
     id: import_id,
@@ -49,6 +70,13 @@ async function startUpload(files: File[]) {
   })
   runs.value.unshift(run)
   followProgress(run)
+}
+
+async function confirmUpload() {
+  if (stagedFiles.value.length === 0) return
+  const files = stagedFiles.value
+  stagedFiles.value = []
+  await startUpload(files)
 }
 
 function followProgress(run: ImportRun) {
@@ -112,13 +140,13 @@ function onDrop(e: DragEvent) {
   dragOver.value = false
   const files = e.dataTransfer?.files
   if (!files) return
-  startUpload(Array.from(files))
+  stageFiles(Array.from(files))
 }
 
 function onFilePicked(e: Event) {
   const input = e.target as HTMLInputElement
   if (!input.files) return
-  startUpload(Array.from(input.files))
+  stageFiles(Array.from(input.files))
   input.value = ''
 }
 
@@ -133,6 +161,7 @@ const dropzoneClass = computed(() =>
 <template>
   <div class="space-y-6">
     <Card
+      v-if="stagedFiles.length === 0"
       :class="dropzoneClass"
       @dragover.prevent="dragOver = true"
       @dragenter.prevent="dragOver = true"
@@ -154,6 +183,25 @@ const dropzoneClass = computed(() =>
           v-bind="{ webkitdirectory: true, directory: true } as any"
         />
       </div>
+    </Card>
+
+    <Card v-else class="p-6">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ stagedSummary }}</p>
+        </div>
+        <div class="flex gap-2 shrink-0">
+          <Button variant="outline" @click="clearStaged">{{ t('import.cancel') }}</Button>
+          <Button @click="confirmUpload">{{ t('import.confirm') }}</Button>
+        </div>
+      </div>
+      <ul class="text-xs font-mono space-y-1 max-h-56 overflow-auto border border-hairline rounded-sm p-3 bg-muted/30">
+        <li v-for="(f, i) in stagedFiles" :key="i" class="flex justify-between gap-3">
+          <span class="truncate" :title="f.name">{{ f.name }}</span>
+          <span class="text-muted-foreground shrink-0">{{ formatBytes(f.size) }}</span>
+        </li>
+      </ul>
     </Card>
 
     <div v-for="run in runs" :key="run.id" class="space-y-2">
