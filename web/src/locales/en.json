@@ -1,0 +1,74 @@
+{
+  "lang": "English",
+  "nav": {
+    "library": "Library",
+    "import": "Import",
+    "settings": "Settings"
+  },
+  "library": {
+    "tags": "Tags",
+    "all": "All",
+    "search_placeholder": "Search subject, from, body…",
+    "loading": "Loading…",
+    "no_emails": "No emails.",
+    "import_some": "Import some?",
+    "no_subject": "(no subject)",
+    "has_attachments": "Has attachments",
+    "col": {
+      "date": "Date",
+      "from": "From",
+      "subject": "Subject",
+      "size": "Size"
+    },
+    "prev": "Prev",
+    "next": "Next",
+    "page_count_zero": "0",
+    "page_count": "{start}–{end} of {total}",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "viewer": {
+    "back": "← back to library",
+    "from": "From",
+    "to": "To",
+    "cc": "Cc",
+    "date": "Date",
+    "size": "Size",
+    "tags": "Tags",
+    "add_tag": "add tag…",
+    "add": "Add",
+    "remove": "remove",
+    "tabs": {
+      "html": "HTML",
+      "text": "Plain text",
+      "attachments": "Attachments",
+      "raw": "Raw"
+    },
+    "load_remote": "Load remote images",
+    "no_html": "No HTML part in this message.",
+    "no_text": "No plain-text part.",
+    "no_attachments": "No attachments.",
+    "download": "Download",
+    "loading": "Loading…"
+  },
+  "import": {
+    "drop": "Drop .eml files, a directory, or a .zip here",
+    "dedup_note": "Duplicates are detected by SHA-256 and skipped.",
+    "choose_files": "Choose files…",
+    "choose_folder": "Choose folder…",
+    "queued": "Queued",
+    "import_label": "Import {id}",
+    "dup": "dup",
+    "err": "err",
+    "log": "Log"
+  },
+  "settings": {
+    "about": "About",
+    "server": "Server",
+    "build": "Build",
+    "data_location": "Data lives in {path}.",
+    "tags": "Tags",
+    "loading": "Loading…",
+    "no_tags": "No tags yet."
+  }
+}

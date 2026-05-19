@@ -1,0 +1,74 @@
+{
+  "lang": "한국어",
+  "nav": {
+    "library": "라이브러리",
+    "import": "가져오기",
+    "settings": "설정"
+  },
+  "library": {
+    "tags": "태그",
+    "all": "전체",
+    "search_placeholder": "제목·발신자·본문 검색…",
+    "loading": "불러오는 중…",
+    "no_emails": "이메일이 없습니다.",
+    "import_some": "지금 가져올까요?",
+    "no_subject": "(제목 없음)",
+    "has_attachments": "첨부 있음",
+    "col": {
+      "date": "날짜",
+      "from": "보낸 사람",
+      "subject": "제목",
+      "size": "크기"
+    },
+    "prev": "이전",
+    "next": "다음",
+    "page_count_zero": "0",
+    "page_count": "{start}–{end} / 총 {total}",
+    "collapse": "사이드바 접기",
+    "expand": "사이드바 펼치기"
+  },
+  "viewer": {
+    "back": "← 라이브러리로",
+    "from": "보낸 사람",
+    "to": "받는 사람",
+    "cc": "참조",
+    "date": "날짜",
+    "size": "크기",
+    "tags": "태그",
+    "add_tag": "태그 추가…",
+    "add": "추가",
+    "remove": "삭제",
+    "tabs": {
+      "html": "HTML",
+      "text": "본문",
+      "attachments": "첨부파일",
+      "raw": "원본"
+    },
+    "load_remote": "외부 이미지 불러오기",
+    "no_html": "HTML 본문이 없습니다.",
+    "no_text": "텍스트 본문이 없습니다.",
+    "no_attachments": "첨부파일이 없습니다.",
+    "download": "다운로드",
+    "loading": "불러오는 중…"
+  },
+  "import": {
+    "drop": ".eml 파일·폴더·.zip을 여기에 드롭하세요",
+    "dedup_note": "SHA-256 해시로 중복을 감지해 건너뜁니다.",
+    "choose_files": "파일 선택…",
+    "choose_folder": "폴더 선택…",
+    "queued": "대기 중",
+    "import_label": "가져오기 {id}",
+    "dup": "중복",
+    "err": "오류",
+    "log": "로그"
+  },
+  "settings": {
+    "about": "정보",
+    "server": "서버",
+    "build": "빌드",
+    "data_location": "데이터 저장 위치: {path}",
+    "tags": "태그",
+    "loading": "불러오는 중…",
+    "no_tags": "태그가 없습니다."
+  }
+}
