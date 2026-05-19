@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -56,8 +57,8 @@ func runServe(args []string) int {
 	port := fs.Int("port", 7878, "TCP port to listen on (loopback only)")
 	_ = fs.Parse(args)
 
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	slog.SetDefault(logger)
+	// Bootstrap stderr-only logger for very early errors before paths exist.
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
 
 	p, err := paths.Resolve()
 	if err != nil {
@@ -68,7 +69,11 @@ func runServe(args []string) int {
 		slog.Error("ensure dirs", "err", err)
 		return 1
 	}
-	slog.Info("paths ready", "base", p.Base, "version", version)
+
+	logger, closeLog := setupLogger(p)
+	defer closeLog()
+	slog.SetDefault(logger)
+	slog.Info("paths ready", "base", p.Base, "log", filepath.Join(p.Logs, "local-eml.log"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
