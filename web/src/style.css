@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css/dist/tw-animate.css";
+@import "tw-animate-css";
 
 @import "@fontsource/roboto/300.css";
 @import "@fontsource/roboto/400.css";
