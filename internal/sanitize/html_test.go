@@ -65,10 +65,12 @@ func TestBlocksRemoteImagesByDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out, `src="https://tracker.example.com/p.gif"`) {
+	// Anchor with a leading space so we don't match the substring inside
+	// `data-original-src="..."`.
+	if strings.Contains(out, ` src="https://tracker.example.com/p.gif"`) {
 		t.Errorf("remote URL stayed in src attribute: %s", out)
 	}
-	if !strings.Contains(out, `src="data:image/gif;base64,`) {
+	if !strings.Contains(out, ` src="data:image/gif;base64,`) {
 		t.Errorf("src should be replaced with placeholder data URL: %s", out)
 	}
 	if !strings.Contains(out, `data-remote-blocked="1"`) {
