@@ -63,4 +63,7 @@
 @layer base {
   * { @apply border-border; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif; }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary { cursor: pointer; }
 }

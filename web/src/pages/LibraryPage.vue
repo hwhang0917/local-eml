@@ -71,11 +71,13 @@ function open(sha: string) {
       <Card class="p-4">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-semibold uppercase text-muted-foreground">Tags</h3>
-          <button
-            class="text-muted-foreground hover:text-foreground text-sm leading-none p-1 -m-1"
+          <Button
+            variant="ghost"
+            size="icon"
+            class="-mr-2 text-lg leading-none"
             @click="sidebarOpen = false"
             title="Collapse sidebar"
-          >‹</button>
+          >‹</Button>
         </div>
         <div class="space-y-1">
           <button
@@ -97,12 +99,14 @@ function open(sha: string) {
       </Card>
     </aside>
 
-    <button
+    <Button
       v-else
-      class="self-start text-muted-foreground hover:text-foreground border rounded-md px-2 py-1.5 text-sm leading-none"
+      variant="outline"
+      size="icon"
+      class="self-start text-lg leading-none"
       @click="sidebarOpen = true"
       title="Expand sidebar"
-    >›</button>
+    >›</Button>
 
     <section class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-4">
