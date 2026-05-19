@@ -2,12 +2,22 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
 import { api, type Email, type Tag } from '@/lib/api'
 import { formatBytes, formatDate, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import {
+  Sidebar,
+  SidebarHeader,
+  SidebarTitle,
+  SidebarContent,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from '@/components/ui/sidebar'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -70,46 +80,43 @@ function open(sha: string) {
 
 <template>
   <div class="flex gap-6">
-    <aside v-if="sidebarOpen" class="w-56 shrink-0 space-y-4">
-      <Card class="p-4">
-        <div class="flex items-center justify-between mb-3">
-          <h3 class="text-xs font-semibold uppercase text-muted-foreground">{{ t('library.tags') }}</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            class="-mr-2 text-lg leading-none"
-            @click="sidebarOpen = false"
-            :title="t('library.collapse')"
-          >‹</Button>
-        </div>
-        <div class="space-y-1">
-          <button
-            class="w-full text-left px-2 py-1 rounded text-sm hover:bg-accent"
-            :class="{ 'bg-accent': tag === '' }"
-            @click="tag = ''"
-          >{{ t('library.all') }} <span class="text-muted-foreground float-right">{{ total }}</span></button>
-          <button
-            v-for="t2 in tags"
-            :key="t2.name"
-            class="w-full text-left px-2 py-1 rounded text-sm hover:bg-accent"
-            :class="{ 'bg-accent': tag === t2.name }"
-            @click="tag = t2.name"
-          >
-            {{ t2.name }}
-            <span class="text-muted-foreground float-right">{{ t2.count }}</span>
-          </button>
-        </div>
-      </Card>
-    </aside>
+    <Sidebar v-if="sidebarOpen">
+      <SidebarHeader>
+        <SidebarTitle>{{ t('library.tags') }}</SidebarTitle>
+        <button
+          @click="sidebarOpen = false"
+          :title="t('library.collapse')"
+          class="h-7 w-7 rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center"
+        >
+          <ChevronsLeft class="h-4 w-4" />
+        </button>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton :active="tag === ''" @click="tag = ''">
+              {{ t('library.all') }}
+              <span class="ml-auto text-xs text-muted-foreground">{{ total }}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem v-for="t2 in tags" :key="t2.name">
+            <SidebarMenuButton :active="tag === t2.name" @click="tag = t2.name">
+              {{ t2.name }}
+              <span class="ml-auto text-xs text-muted-foreground">{{ t2.count }}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarContent>
+    </Sidebar>
 
-    <Button
+    <button
       v-else
-      variant="outline"
-      size="icon"
-      class="self-start text-lg leading-none"
       @click="sidebarOpen = true"
       :title="t('library.expand')"
-    >›</Button>
+      class="self-start h-10 w-10 rounded-sm border border-hairline bg-card text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center"
+    >
+      <ChevronsRight class="h-4 w-4" />
+    </button>
 
     <section class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-4">

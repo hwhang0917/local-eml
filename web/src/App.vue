@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { setLocale, type Locale } from '@/i18n'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const { t, locale } = useI18n()
 
@@ -12,9 +13,13 @@ const nav = computed(() => [
   { to: '/settings', label: t('nav.settings') },
 ])
 
-function changeLocale(e: Event) {
-  setLocale((e.target as HTMLSelectElement).value as Locale)
-}
+const langs = [
+  { value: 'en' as Locale, label: 'English' },
+  { value: 'ko' as Locale, label: '한국어' },
+]
+const currentLangLabel = computed(
+  () => langs.find((l) => l.value === locale.value)?.label ?? locale.value,
+)
 </script>
 
 <template>
@@ -35,15 +40,22 @@ function changeLocale(e: Event) {
             {{ r.label }}
           </RouterLink>
         </nav>
-        <select
-          :value="locale"
-          @change="changeLocale"
-          class="ml-auto bg-transparent text-white/80 hover:text-white text-xs border-none focus:outline-none cursor-pointer"
-          :title="t('nav.settings')"
+        <Select
+          :model-value="locale"
+          @update:model-value="(v) => v && setLocale(v as Locale)"
+          class="ml-auto"
         >
-          <option class="text-foreground" value="en">English</option>
-          <option class="text-foreground" value="ko">한국어</option>
-        </select>
+          <SelectTrigger
+            class="h-7 border-white/15 bg-white/5 text-white/90 hover:bg-white/10 text-xs"
+          >
+            <SelectValue>{{ currentLangLabel }}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="l in langs" :key="l.value" :value="l.value">
+              {{ l.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </header>
     <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
