@@ -56,9 +56,9 @@ watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
 })
 
-async function onTagAdd(tag: string) {
+async function onTagAdd(tag: string | number) {
   if (!email.value) return
-  const trimmed = tag.trim()
+  const trimmed = String(tag).trim()
   if (!trimmed) return
   try {
     await api.addTag(email.value.sha256, trimmed)
@@ -68,11 +68,12 @@ async function onTagAdd(tag: string) {
   }
 }
 
-async function onTagRemove(tag: string) {
+async function onTagRemove(tag: string | number) {
   if (!email.value) return
+  const name = String(tag)
   try {
-    await api.removeTag(email.value.sha256, tag)
-    email.value.tags = email.value.tags.filter((x) => x !== tag)
+    await api.removeTag(email.value.sha256, name)
+    email.value.tags = email.value.tags.filter((x) => x !== name)
   } catch (e) {
     toast.error(t('viewer.tag_remove_failed'), { description: String(e) })
   }
