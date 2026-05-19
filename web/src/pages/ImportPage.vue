@@ -27,7 +27,9 @@ async function startUpload(files: File[]) {
   const run: ImportRun = {
     id: import_id,
     kind,
-    total: files.length,
+    // For zip uploads the real total isn't known until the server has walked
+    // the archive — start at 0 so the bar doesn't jump from "0/1" to "42/42".
+    total: kind === 'zip' ? 0 : files.length,
     processed: 0,
     duplicates: 0,
     errors: 0,
@@ -57,15 +59,36 @@ function followProgress(run: ImportRun) {
         if (run.log.length > 200) run.log.length = 200
       }
     } else if (ev.type === 'done') {
+      if (ev.total) run.total = ev.total
+      if (ev.processed) run.processed = ev.processed
       run.done = true
       es.close()
+      // Fast jobs may finish before the SSE connects, so the only event we
+      // get is a synthetic 'done' that lacks per-item history. Pull the final
+      // counters from the DB to surface dup/error totals.
+      hydrateFromDB(run)
     } else if (ev.type === 'error') {
+      run.errors++
       run.done = true
       run.log.unshift({ path: '(job)', kind: 'err', detail: ev.message || 'error' })
       es.close()
     }
   }
-  es.onerror = () => { run.done = true; es.close() }
+  es.onerror = () => {
+    if (!run.done) hydrateFromDB(run)
+    run.done = true
+    es.close()
+  }
+}
+
+async function hydrateFromDB(run: ImportRun) {
+  try {
+    const s = await api.importStatus(run.id)
+    if (s.total) run.total = s.total
+    run.processed = Math.max(run.processed, s.processed)
+    run.duplicates = Math.max(run.duplicates, s.duplicates)
+    run.errors = Math.max(run.errors, s.errors)
+  } catch { /* ignore */ }
 }
 
 function onDrop(e: DragEvent) {
