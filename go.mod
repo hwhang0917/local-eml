@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/jhillyerd/enmime v1.3.0
+	github.com/kardianos/service v1.2.4
 	github.com/microcosm-cc/bluemonday v1.0.27
 	golang.org/x/net v0.26.0
 	modernc.org/sqlite v1.50.1

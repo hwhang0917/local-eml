@@ -28,6 +28,10 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		os.Exit(runServe(os.Args[2:]))
+	case "install":
+		os.Exit(runInstall(os.Args[2:]))
+	case "uninstall":
+		os.Exit(runUninstall(os.Args[2:]))
 	case "version", "-V", "--version":
 		fmt.Printf("local-eml v%s\n", version)
 	case "-h", "--help":
@@ -40,8 +44,10 @@ func main() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "local-eml v%s\n", version)
-	fmt.Fprintln(os.Stderr, "usage: local-eml <serve|version> [flags]")
-	fmt.Fprintln(os.Stderr, "  serve [--port 7878]   run the local web server (loopback only)")
+	fmt.Fprintln(os.Stderr, "usage: local-eml <command> [flags]")
+	fmt.Fprintln(os.Stderr, "  serve [--port 7878]        run the local web server (loopback only)")
+	fmt.Fprintln(os.Stderr, "  install [-y|--yes]         register as a background service (systemd/launchd/svc)")
+	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
 	fmt.Fprintln(os.Stderr, "  version | -V | --version")
 }
 
