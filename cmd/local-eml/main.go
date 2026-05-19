@@ -18,6 +18,8 @@ import (
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
+var version = "dev"
+
 func main() {
 	if len(os.Args) < 2 {
 		usage()
@@ -26,8 +28,8 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		os.Exit(runServe(os.Args[2:]))
-	case "version":
-		fmt.Println("local-eml dev")
+	case "version", "-V", "--version":
+		fmt.Printf("local-eml v%s\n", version)
 	case "-h", "--help":
 		usage()
 	default:
@@ -37,9 +39,10 @@ func main() {
 }
 
 func usage() {
+	fmt.Fprintf(os.Stderr, "local-eml v%s\n", version)
 	fmt.Fprintln(os.Stderr, "usage: local-eml <serve|version> [flags]")
 	fmt.Fprintln(os.Stderr, "  serve [--port 7878]   run the local web server (loopback only)")
-	fmt.Fprintln(os.Stderr, "  version               print version")
+	fmt.Fprintln(os.Stderr, "  version | -V | --version")
 }
 
 func runServe(args []string) int {
@@ -59,7 +62,7 @@ func runServe(args []string) int {
 		slog.Error("ensure dirs", "err", err)
 		return 1
 	}
-	slog.Info("paths ready", "base", p.Base)
+	slog.Info("paths ready", "base", p.Base, "version", version)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

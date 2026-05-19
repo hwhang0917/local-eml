@@ -76,14 +76,20 @@
     "toast_summary": "{processed} processed · {dup} duplicates · {err} errors"
   },
   "settings": {
-    "about": "About",
+    "section": {
+      "about": "About",
+      "language": "Language",
+      "tags": "Tags",
+      "attributions": "Attributions"
+    },
+    "version": "Version",
     "server": "Server",
-    "build": "Build",
     "data_location": "Data lives in {path}.",
-    "tags": "Tags",
+    "github": "GitHub",
+    "language_help": "Switch the interface language.",
     "loading": "Loading…",
     "no_tags": "No tags yet.",
-    "language": "Language",
-    "language_help": "Switch the interface language."
+    "attributions_intro": "Local Eml is built with these open-source projects.",
+    "license_label": "license"
   }
 }
