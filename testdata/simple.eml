@@ -1,0 +1,15 @@
+From: alice@example.com
+To: bob@example.com
+Cc: carol@example.com
+Subject: Welcome to local-eml
+Date: Mon, 19 May 2026 10:30:00 -0700
+Message-ID: <welcome@local-eml.example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hi Bob,
+
+This is a sample EML used to verify the import pipeline.
+
+Cheers,
+Alice
