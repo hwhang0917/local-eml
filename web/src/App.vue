@@ -18,8 +18,9 @@ const nav = computed(() => [
   <div class="min-h-screen flex flex-col">
     <header class="bg-black text-white">
       <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
-        <RouterLink to="/" class="font-semibold tracking-tight text-white/90 hover:text-white">
-          local-eml
+        <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
+          <img src="/icon-64.png" srcset="/favicon.png 1x, /icon-64.png 2x" alt="" class="h-6 w-6 rounded-sm" />
+          <span>local-eml</span>
         </RouterLink>
         <nav class="flex items-center gap-1">
           <RouterLink
