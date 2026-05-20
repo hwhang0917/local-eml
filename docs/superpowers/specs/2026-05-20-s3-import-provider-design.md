@@ -101,7 +101,7 @@ New endpoint, JSON (not multipart):
 ```
 POST /api/imports/s3
   body: {accessKeyId?, secretAccessKey?, sessionToken?, region?, bucket, prefix?}
-  201:  {import_id, kind:"s3"}
+  202:  {import_id, kind:"s3"}   (Accepted — import runs async; matches POST /api/imports)
   400:  bucket missing
 ```
 
