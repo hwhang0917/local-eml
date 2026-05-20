@@ -118,6 +118,32 @@ function providerBtnClass(p: Provider) {
 
 const inputClass =
   'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary'
+
+// Suggestions only — the input still accepts any value, so newly launched
+// regions keep working without a code change.
+const awsRegions: { code: string; name: string }[] = [
+  { code: 'us-east-1', name: 'US East (N. Virginia)' },
+  { code: 'us-east-2', name: 'US East (Ohio)' },
+  { code: 'us-west-1', name: 'US West (N. California)' },
+  { code: 'us-west-2', name: 'US West (Oregon)' },
+  { code: 'ca-central-1', name: 'Canada (Central)' },
+  { code: 'sa-east-1', name: 'South America (São Paulo)' },
+  { code: 'eu-west-1', name: 'Europe (Ireland)' },
+  { code: 'eu-west-2', name: 'Europe (London)' },
+  { code: 'eu-west-3', name: 'Europe (Paris)' },
+  { code: 'eu-central-1', name: 'Europe (Frankfurt)' },
+  { code: 'eu-north-1', name: 'Europe (Stockholm)' },
+  { code: 'eu-south-1', name: 'Europe (Milan)' },
+  { code: 'ap-northeast-1', name: 'Asia Pacific (Tokyo)' },
+  { code: 'ap-northeast-2', name: 'Asia Pacific (Seoul)' },
+  { code: 'ap-northeast-3', name: 'Asia Pacific (Osaka)' },
+  { code: 'ap-southeast-1', name: 'Asia Pacific (Singapore)' },
+  { code: 'ap-southeast-2', name: 'Asia Pacific (Sydney)' },
+  { code: 'ap-south-1', name: 'Asia Pacific (Mumbai)' },
+  { code: 'ap-east-1', name: 'Asia Pacific (Hong Kong)' },
+  { code: 'me-south-1', name: 'Middle East (Bahrain)' },
+  { code: 'af-south-1', name: 'Africa (Cape Town)' },
+]
 </script>
 
 <template>
@@ -201,7 +227,16 @@ const inputClass =
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.s3_region') }}</span>
-            <input v-model="s3.region" :class="inputClass" placeholder="us-east-1" autocomplete="off" />
+            <input
+              v-model="s3.region"
+              :class="inputClass"
+              list="aws-regions"
+              placeholder="us-east-1"
+              autocomplete="off"
+            />
+            <datalist id="aws-regions">
+              <option v-for="r in awsRegions" :key="r.code" :value="r.code">{{ r.name }}</option>
+            </datalist>
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.s3_bucket') }} *</span>
