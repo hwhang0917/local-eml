@@ -244,7 +244,9 @@ func (s *Server) handleImportS3(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if strings.TrimSpace(body.Bucket) == "" {
+	body.Bucket = strings.TrimSpace(body.Bucket)
+	body.Prefix = strings.TrimSpace(body.Prefix)
+	if body.Bucket == "" {
 		http.Error(w, "bucket is required", http.StatusBadRequest)
 		return
 	}
