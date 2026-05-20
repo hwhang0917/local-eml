@@ -1,6 +1,6 @@
 import { reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
-import { api, type ImportEvent } from '@/lib/api'
+import { api, type ImportEvent, type S3ImportConfig } from '@/lib/api'
 import { i18n } from '@/i18n'
 
 const t = (key: string, params?: Record<string, unknown>) =>
@@ -121,5 +121,24 @@ export function useImports() {
     runs.value.unshift(run)
     followProgress(run)
   }
-  return { runs, startImport }
+
+  async function startS3Import(cfg: S3ImportConfig) {
+    const { import_id, kind } = await api.uploadS3(cfg)
+    const run = reactive<ImportRun>({
+      id: import_id,
+      kind,
+      phase: t('import.queued'),
+      current: '',
+      total: 0,
+      processed: 0,
+      duplicates: 0,
+      errors: 0,
+      done: false,
+      log: [],
+    })
+    runs.value.unshift(run)
+    followProgress(run)
+  }
+
+  return { runs, startImport, startS3Import }
 }
