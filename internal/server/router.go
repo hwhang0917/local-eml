@@ -25,6 +25,7 @@ func (s *Server) Router() http.Handler {
 
 	r.Route("/api", func(api chi.Router) {
 		api.Post("/imports", s.handleImportUpload)
+		api.Post("/imports/s3", s.handleImportS3)
 		api.Get("/imports/{id}", s.handleImportStatus)
 		api.Get("/imports/{id}/events", s.handleImportEvents)
 		api.Get("/emails", s.handleListEmails)

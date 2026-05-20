@@ -67,7 +67,17 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go s.runJob(importID, kind, paths, names)
+	var src importer.Source
+	switch kind {
+	case "zip":
+		src = importer.NewZipSource(paths[0])
+	case "file":
+		src = importer.NewLocalSource(sourceName, paths, names, false)
+	default: // "dir"
+		src = importer.NewLocalSource(sourceName, paths, names, true)
+	}
+
+	go s.runJob(importID, src, func() { removeAll(paths) })
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"import_id": importID,
@@ -75,8 +85,8 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) runJob(importID, kind string, paths, names []string) {
-	defer removeAll(paths)
+func (s *Server) runJob(importID string, src importer.Source, cleanup func()) {
+	defer cleanup()
 	ctx := context.Background()
 	_ = s.Store.UpdateImportStatus(ctx, importID, "running", false)
 
@@ -96,14 +106,7 @@ func (s *Server) runJob(importID, kind string, paths, names []string) {
 		}
 	}()
 
-	switch kind {
-	case "zip":
-		job.RunZip(ctx, paths[0])
-	case "file":
-		job.RunFile(ctx, paths[0], names[0])
-	case "dir":
-		job.RunDir(ctx, paths, names)
-	}
+	job.RunSource(ctx, src)
 }
 
 func (s *Server) handleImportStatus(w http.ResponseWriter, r *http.Request) {
@@ -226,4 +229,51 @@ func removeAll(paths []string) {
 	for _, p := range paths {
 		_ = os.Remove(p)
 	}
+}
+
+func (s *Server) handleImportS3(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		AccessKeyID     string `json:"accessKeyId"`
+		SecretAccessKey string `json:"secretAccessKey"`
+		SessionToken    string `json:"sessionToken"`
+		Region          string `json:"region"`
+		Bucket          string `json:"bucket"`
+		Prefix          string `json:"prefix"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(body.Bucket) == "" {
+		http.Error(w, "bucket is required", http.StatusBadRequest)
+		return
+	}
+
+	importID := newImportID()
+	sourceName := fmt.Sprintf("s3://%s/%s", body.Bucket, body.Prefix)
+	if err := s.Store.CreateImport(r.Context(), store.Import{
+		ID:         importID,
+		SourceKind: "s3",
+		SourceName: sourceName,
+		Status:     "queued",
+	}); err != nil {
+		http.Error(w, "create import: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	src := importer.NewS3Source(importer.S3Config{
+		AccessKeyID:     body.AccessKeyID,
+		SecretAccessKey: body.SecretAccessKey,
+		SessionToken:    body.SessionToken,
+		Region:          body.Region,
+		Bucket:          body.Bucket,
+		Prefix:          body.Prefix,
+	})
+
+	go s.runJob(importID, src, func() {})
+
+	writeJSON(w, http.StatusAccepted, map[string]any{
+		"import_id": importID,
+		"kind":      "s3",
+	})
 }
