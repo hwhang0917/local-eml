@@ -85,11 +85,20 @@
     "s3_region_default": "from profile/environment",
     "s3_bucket": "Bucket",
     "s3_prefix": "Prefix",
-    "s3_review": "Review",
+    "review": "Review",
     "s3_confirm_hint": "Recursively imports every .eml object under the prefix.",
     "s3_creds": "Credentials",
     "s3_creds_form": "from form",
-    "s3_creds_system": "from system (~/.aws/credentials)"
+    "s3_creds_system": "from system (~/.aws/credentials)",
+    "provider_imap": "IMAP",
+    "imap_title": "Import from IMAP",
+    "imap_hint": "Connects read-only; messages are never marked read on the server.",
+    "imap_host": "Server",
+    "imap_port": "Port",
+    "imap_username": "Username",
+    "imap_password": "Password",
+    "imap_folder": "Folder",
+    "imap_confirm_hint": "Imports every message in the selected folder."
   },
   "settings": {
     "section": {

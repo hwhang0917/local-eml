@@ -289,7 +289,7 @@ async function confirmImap() {
         </div>
 
         <div class="flex justify-end">
-          <Button :disabled="!s3Valid" @click="reviewS3">{{ t('import.s3_review') }}</Button>
+          <Button :disabled="!s3Valid" @click="reviewS3">{{ t('import.review') }}</Button>
         </div>
       </Card>
 
@@ -357,7 +357,7 @@ async function confirmImap() {
         </div>
 
         <div class="flex justify-end">
-          <Button :disabled="!imapValid" @click="reviewImap">{{ t('import.s3_review') }}</Button>
+          <Button :disabled="!imapValid" @click="reviewImap">{{ t('import.review') }}</Button>
         </div>
       </Card>
 

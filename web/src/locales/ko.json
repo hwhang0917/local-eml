@@ -85,11 +85,20 @@
     "s3_region_default": "프로필/환경에서 결정",
     "s3_bucket": "버킷",
     "s3_prefix": "접두사",
-    "s3_review": "검토",
+    "review": "검토",
     "s3_confirm_hint": "접두사 아래의 모든 .eml 객체를 재귀적으로 가져옵니다.",
     "s3_creds": "자격 증명",
     "s3_creds_form": "입력값 사용",
-    "s3_creds_system": "시스템 사용 (~/.aws/credentials)"
+    "s3_creds_system": "시스템 사용 (~/.aws/credentials)",
+    "provider_imap": "IMAP",
+    "imap_title": "IMAP에서 가져오기",
+    "imap_hint": "읽기 전용으로 연결하며, 서버에서 메일을 읽음으로 표시하지 않습니다.",
+    "imap_host": "서버",
+    "imap_port": "포트",
+    "imap_username": "사용자 이름",
+    "imap_password": "비밀번호",
+    "imap_folder": "폴더",
+    "imap_confirm_hint": "선택한 폴더의 모든 메시지를 가져옵니다."
   },
   "settings": {
     "section": {
