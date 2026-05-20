@@ -279,3 +279,55 @@ func (s *Server) handleImportS3(w http.ResponseWriter, r *http.Request) {
 		"kind":      "s3",
 	})
 }
+
+func (s *Server) handleImportImap(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Host     string `json:"host"`
+		Port     int    `json:"port"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Folder   string `json:"folder"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	body.Host = strings.TrimSpace(body.Host)
+	body.Username = strings.TrimSpace(body.Username)
+	body.Folder = strings.TrimSpace(body.Folder)
+	if body.Host == "" || body.Username == "" || body.Password == "" {
+		http.Error(w, "host, username and password are required", http.StatusBadRequest)
+		return
+	}
+
+	folder := body.Folder
+	if folder == "" {
+		folder = "INBOX"
+	}
+	importID := newImportID()
+	sourceName := fmt.Sprintf("imap://%s@%s/%s", body.Username, body.Host, folder)
+	if err := s.Store.CreateImport(r.Context(), store.Import{
+		ID:         importID,
+		SourceKind: "imap",
+		SourceName: sourceName,
+		Status:     "queued",
+	}); err != nil {
+		http.Error(w, "create import: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	src := importer.NewIMAPSource(importer.IMAPConfig{
+		Host:     body.Host,
+		Port:     body.Port,
+		Username: body.Username,
+		Password: body.Password,
+		Folder:   body.Folder,
+	})
+
+	go s.runJob(importID, src, func() {})
+
+	writeJSON(w, http.StatusAccepted, map[string]any{
+		"import_id": importID,
+		"kind":      "imap",
+	})
+}
