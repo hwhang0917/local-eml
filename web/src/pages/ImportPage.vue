@@ -4,14 +4,14 @@ import { useI18n } from 'vue-i18n'
 import { cn } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
-import type { S3ImportConfig } from '@/lib/api'
+import type { S3ImportConfig, IMAPImportConfig } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
 const { t } = useI18n()
-const { runs, startImport, startS3Import } = useImports()
+const { runs, startImport, startS3Import, startImapImport } = useImports()
 
-type Provider = 'local' | 's3'
+type Provider = 'local' | 's3' | 'imap'
 const provider = ref<Provider>('local')
 
 // --- local upload (unchanged behavior) ---
@@ -144,6 +144,43 @@ const awsRegions: { code: string; name: string }[] = [
   { code: 'me-south-1', name: 'Middle East (Bahrain)' },
   { code: 'af-south-1', name: 'Africa (Cape Town)' },
 ]
+
+// --- IMAP provider ---
+const imapForm = ref<IMAPImportConfig>({
+  host: '',
+  port: 993,
+  username: '',
+  password: '',
+  folder: 'INBOX',
+})
+const imapConfirming = ref(false)
+
+const imapValid = computed(
+  () =>
+    imapForm.value.host.trim().length > 0 &&
+    imapForm.value.username.trim().length > 0 &&
+    imapForm.value.password.length > 0,
+)
+
+function reviewImap() {
+  if (imapValid.value) imapConfirming.value = true
+}
+
+function cancelImap() {
+  imapConfirming.value = false
+}
+
+async function confirmImap() {
+  const cfg: IMAPImportConfig = {
+    host: imapForm.value.host.trim(),
+    username: imapForm.value.username.trim(),
+    password: imapForm.value.password,
+    port: imapForm.value.port || undefined,
+    folder: imapForm.value.folder?.trim() || undefined,
+  }
+  imapConfirming.value = false
+  await startImapImport(cfg)
+}
 </script>
 
 <template>
@@ -154,6 +191,9 @@ const awsRegions: { code: string; name: string }[] = [
       </button>
       <button :class="providerBtnClass('s3')" @click="provider = 's3'">
         {{ t('import.provider_s3') }}
+      </button>
+      <button :class="providerBtnClass('imap')" @click="provider = 'imap'">
+        {{ t('import.provider_imap') }}
       </button>
     </div>
 
@@ -205,7 +245,7 @@ const awsRegions: { code: string; name: string }[] = [
     </template>
 
     <!-- S3 provider -->
-    <template v-else>
+    <template v-else-if="provider === 's3'">
       <Card v-if="!s3Confirming" class="p-6 space-y-4">
         <div>
           <h3 class="text-lg font-semibold mb-1">{{ t('import.s3_title') }}</h3>
@@ -280,6 +320,74 @@ const awsRegions: { code: string; name: string }[] = [
           <div class="flex gap-3">
             <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_creds') }}</dt>
             <dd>{{ s3CredsLabel }}</dd>
+          </div>
+        </dl>
+      </Card>
+    </template>
+
+    <!-- IMAP provider -->
+    <template v-else>
+      <Card v-if="!imapConfirming" class="p-6 space-y-4">
+        <div>
+          <h3 class="text-lg font-semibold mb-1">{{ t('import.imap_title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ t('import.imap_hint') }}</p>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.imap_host') }} *</span>
+            <input v-model="imapForm.host" :class="inputClass" placeholder="imap.example.com" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.imap_port') }}</span>
+            <input v-model.number="imapForm.port" type="number" :class="inputClass" placeholder="993" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.imap_username') }} *</span>
+            <input v-model="imapForm.username" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.imap_password') }} *</span>
+            <input v-model="imapForm.password" type="password" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.imap_folder') }}</span>
+            <input v-model="imapForm.folder" :class="inputClass" placeholder="INBOX" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="flex justify-end">
+          <Button :disabled="!imapValid" @click="reviewImap">{{ t('import.s3_review') }}</Button>
+        </div>
+      </Card>
+
+      <Card v-else class="p-6">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
+            <p class="text-sm text-muted-foreground">{{ t('import.imap_confirm_hint') }}</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <Button variant="outline" @click="cancelImap">{{ t('import.cancel') }}</Button>
+            <Button @click="confirmImap">{{ t('import.confirm') }}</Button>
+          </div>
+        </div>
+        <dl class="text-sm space-y-2">
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_host') }}</dt>
+            <dd class="font-mono">{{ imapForm.host }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_username') }}</dt>
+            <dd class="font-mono">{{ imapForm.username }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_folder') }}</dt>
+            <dd class="font-mono">{{ imapForm.folder || 'INBOX' }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_port') }}</dt>
+            <dd class="font-mono">{{ imapForm.port || 993 }}</dd>
           </div>
         </dl>
       </Card>
