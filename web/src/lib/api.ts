@@ -76,6 +76,14 @@ export interface S3ImportConfig {
   prefix?: string
 }
 
+export interface IMAPImportConfig {
+  host: string
+  port?: number
+  username: string
+  password: string
+  folder?: string
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -149,6 +157,15 @@ export const api = {
 
   async uploadS3(cfg: S3ImportConfig): Promise<{ import_id: string; kind: string }> {
     const res = await fetch(`${BASE}/api/imports/s3`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    })
+    return jsonOrThrow(res)
+  },
+
+  async uploadImap(cfg: IMAPImportConfig): Promise<{ import_id: string; kind: string }> {
+    const res = await fetch(`${BASE}/api/imports/imap`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(cfg),
