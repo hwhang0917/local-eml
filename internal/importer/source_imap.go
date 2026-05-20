@@ -53,12 +53,14 @@ func (s *imapSource) Scan(_ context.Context) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.session = sess
 
 	uids, err := sess.UIDs()
 	if err != nil {
+		_ = sess.Close()
 		return nil, err
 	}
+	s.session = sess
+
 	items := make([]Item, 0, len(uids))
 	for _, uid := range uids {
 		u := uid

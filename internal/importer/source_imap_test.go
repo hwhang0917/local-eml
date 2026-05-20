@@ -13,10 +13,16 @@ type fakeIMAP struct {
 	uids     []imap.UID
 	bodies   map[imap.UID]string
 	fetchErr map[imap.UID]error
+	uidsErr  error
 	closed   bool
 }
 
-func (f *fakeIMAP) UIDs() ([]imap.UID, error) { return f.uids, nil }
+func (f *fakeIMAP) UIDs() ([]imap.UID, error) {
+	if f.uidsErr != nil {
+		return nil, f.uidsErr
+	}
+	return f.uids, nil
+}
 
 func (f *fakeIMAP) Fetch(uid imap.UID) ([]byte, error) {
 	if f.fetchErr != nil {
@@ -94,6 +100,17 @@ func TestIMAPSourceCloseClosesSession(t *testing.T) {
 	}
 	if !f.closed {
 		t.Error("Close did not close the session")
+	}
+}
+
+func TestIMAPSourceScanClosesSessionOnUIDsError(t *testing.T) {
+	f := &fakeIMAP{uidsErr: errors.New("search failed")}
+	src := sourceWithFake(f, IMAPConfig{Host: "h", Username: "u"})
+	if _, err := src.Scan(context.Background()); err == nil {
+		t.Fatal("expected Scan error, got nil")
+	}
+	if !f.closed {
+		t.Error("session not closed after UIDs error (leak)")
 	}
 }
 
