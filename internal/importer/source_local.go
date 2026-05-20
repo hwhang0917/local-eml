@@ -47,7 +47,7 @@ type zipSource struct {
 	zr   *zip.ReadCloser
 }
 
-func NewZipSource(path string) *zipSource { return &zipSource{path: path} }
+func NewZipSource(path string) SourceCloser { return &zipSource{path: path} }
 
 func (s *zipSource) Label() string { return "zip archive" }
 

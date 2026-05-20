@@ -18,3 +18,10 @@ type Source interface {
 	// Scan returns candidate items already filtered to .eml.
 	Scan(ctx context.Context) ([]Item, error)
 }
+
+// SourceCloser is a Source that holds a resource (e.g. an open archive) which
+// must be released after Scan. The driver closes it when the import finishes.
+type SourceCloser interface {
+	Source
+	io.Closer
+}

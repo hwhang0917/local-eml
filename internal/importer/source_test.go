@@ -64,6 +64,9 @@ func TestLocalFilesSourceKeepsNonEMLWhenFilterOff(t *testing.T) {
 	if len(items) != 1 {
 		t.Fatalf("want 1, got %d", len(items))
 	}
+	if got := readItem(t, items[0]); got != "x" {
+		t.Errorf("body = %q, want x", got)
+	}
 }
 
 func TestZipSourceScansEMLEntries(t *testing.T) {
@@ -101,12 +104,17 @@ func TestZipSourceScansEMLEntries(t *testing.T) {
 	if len(items) != 2 {
 		t.Fatalf("want 2 eml items, got %d", len(items))
 	}
+	got := map[string]string{}
 	for _, it := range items {
 		if filepath.Ext(it.Name) != ".eml" {
 			t.Errorf("unexpected entry %q", it.Name)
 		}
-		if readItem(t, it) == "" {
-			t.Errorf("empty body for %q", it.Name)
-		}
+		got[it.Name] = readItem(t, it)
+	}
+	if got["one.eml"] != "ONE" {
+		t.Errorf("one.eml body = %q, want ONE", got["one.eml"])
+	}
+	if got["two.eml"] != "TWO" {
+		t.Errorf("two.eml body = %q, want TWO", got["two.eml"])
 	}
 }
