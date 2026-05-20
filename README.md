@@ -7,7 +7,10 @@ A local-first viewer for `.eml` files. Drop a folder or a zip on it, search acro
 
 ## Features
 
-- **Import**: single files, directories (browser-`webkitdirectory`), or `.zip` archives — with a two-step confirmation, live SSE progress, and SHA-256 deduplication.
+- **Import** from several providers — each with a two-step confirmation, live SSE progress, and SHA-256 deduplication:
+  - **Local** — single files, directories (browser-`webkitdirectory`), or `.zip` archives.
+  - **AWS S3** — recursively pulls every `.eml` under a bucket/prefix; uses entered credentials or falls back to `~/.aws/credentials` / the environment.
+  - **IMAP** — read-only pull of a mailbox folder (default `INBOX`); fetched with `BODY.PEEK[]` so messages are never marked read on the server.
 - **Library**: virtualizable list with sort + FTS5 fuzzy search across subject, from, to, and body. CJK queries supported via per-term prefix matching.
 - **Viewer**: sandboxed iframe + strict CSP for HTML bodies; inline `cid:` images rewritten; remote images blocked by default with a one-click toggle. Plain-text and raw `.eml` tabs alongside.
 - **Tags**: shadcn-style `TagsInput` with paste-to-split; tag-based library filtering.
@@ -122,25 +125,26 @@ make cross        Cross-compile all 6 platforms into dist/
 ┌────────────────────────────────────────────────────────────────┐
 │ local-eml (single Go binary, loopback-only)                    │
 │                                                                │
-│  Vue 3 SPA  ←  go:embed web/dist                               │
-│      │                                                         │
-│      │ /api/...   /api/imports/:id/events (SSE)                │
-│      ▼                                                         │
-│  HTTP server (chi router)                                      │
-│      │                                                         │
-│      ├─► Importer (worker pool, SHA-256 dedup,                 │
-│      │   zip/dir/file walkers, async via Hub pub-sub)          │
-│      │                                                         │
-│      ├─► Sanitizer (bluemonday + cid rewrite +                 │
-│      │   remote-image gating)                                  │
-│      │                                                         │
-│      └─► Store (SQLite + FTS5)                                 │
+│   Vue 3 SPA  ←  go:embed web/dist                              │
+│       │                                                        │
+│       │ /api/...   /api/imports/:id/events (SSE)               │
+│       ▼                                                        │
+│   HTTP server (chi router)                                     │
+│       │                                                        │
+│       ├─► Importer — pluggable Sources behind one              │
+│       │     driver: local file/dir/zip, AWS S3, IMAP;          │
+│       │     SHA-256 dedup, async via Hub pub-sub (SSE)         │
+│       │                                                        │
+│       ├─► Sanitizer (bluemonday + cid rewrite +                │
+│       │     remote-image gating)                               │
+│       │                                                        │
+│       └─► Store (SQLite + FTS5)                                │
 └────────────────────────────────────────────────────────────────┘
 ```
 
 | Layer | Stack |
 |---|---|
-| Backend | Go, chi, `modernc.org/sqlite` (pure-Go), enmime, bluemonday, kardianos/service |
+| Backend | Go, chi, `modernc.org/sqlite` (pure-Go), enmime, bluemonday, kardianos/service, aws-sdk-go-v2 (S3), go-imap/v2 (IMAP) |
 | Frontend | Vue 3, Vite, TypeScript, Tailwind v4, reka-ui (shadcn-vue primitives), vue-i18n, vue-sonner |
 | Service | systemd user-unit (Linux), LaunchAgent (macOS), Windows Service |
 
@@ -148,14 +152,11 @@ Open-source attributions are listed in-app under **Settings → Attributions**.
 
 ## Releasing
 
-`VERSION` at the repo root is the single source of truth.
+`VERSION` at the repo root is the single source of truth. `scripts/release.sh` bumps it, propagates the new version into `web/package.json` and `web/package-lock.json` (via `npm version`), then creates a single `Release version vX.X.X` commit and a matching annotated tag — after a `[y/N]` confirmation. It does not push.
 
 ```bash
-# Edit VERSION (e.g. 0.0.2)
-make sync-version              # writes the same value into web/package.json
-git commit -am "release: v0.0.2"
-git tag v0.0.2
-git push origin main --tags
+scripts/release.sh patch       # 0.0.1 -> 0.0.2   (also: minor, major)
+git push --follow-tags         # push the commit + tag when ready
 ```
 
 GitHub Actions (`.github/workflows/release.yml`) cuts the release: cross-compiles six binaries (`linux|darwin|windows`-`amd64|arm64`), generates `SHA256SUMS`, and attaches everything to a Release whose body is auto-generated from PR titles since the previous tag.
