@@ -3,10 +3,15 @@ package importer
 import (
 	"archive/zip"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/hwhang0917/local-eml/internal/paths"
+	"github.com/hwhang0917/local-eml/internal/store"
 )
 
 func readItem(t *testing.T, it Item) string {
@@ -116,5 +121,89 @@ func TestZipSourceScansEMLEntries(t *testing.T) {
 	}
 	if got["two.eml"] != "TWO" {
 		t.Errorf("two.eml body = %q, want TWO", got["two.eml"])
+	}
+}
+
+// minimalEML is a parseable RFC822 message.
+const minimalEML = "From: a@example.com\r\nTo: b@example.com\r\nSubject: hi\r\n\r\nbody\r\n"
+
+type stubSource struct {
+	label string
+	items []Item
+}
+
+func (s stubSource) Label() string                        { return s.label }
+func (s stubSource) Scan(context.Context) ([]Item, error) { return s.items, nil }
+
+func newTestPaths(t *testing.T) paths.Paths {
+	t.Helper()
+	base := t.TempDir()
+	p := paths.Paths{
+		Base: base,
+		EML:  filepath.Join(base, "eml"),
+		DB:   filepath.Join(base, "db"),
+		Logs: filepath.Join(base, "logs"),
+	}
+	if err := p.EnsureDirs(); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func newTestStore(t *testing.T) *store.Store {
+	t.Helper()
+	p := newTestPaths(t)
+	st, err := store.Open(context.Background(), p.DBFile())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { st.Close() })
+	return st
+}
+
+func importStub(id string) store.Import {
+	return store.Import{ID: id, SourceKind: "stub", SourceName: "stub", Status: "queued"}
+}
+
+func TestRunSourceImportsAndContinuesPastErrors(t *testing.T) {
+	st := newTestStore(t)
+	im := &Importer{Store: st, Paths: newTestPaths(t)}
+	hub := NewHub()
+
+	importID := "imp1"
+	if err := st.CreateImport(context.Background(), importStub(importID)); err != nil {
+		t.Fatal(err)
+	}
+
+	src := stubSource{
+		label: "stub",
+		items: []Item{
+			{Name: "good.eml", Open: func(context.Context) (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(minimalEML)), nil
+			}},
+			{Name: "broken.eml", Open: func(context.Context) (io.ReadCloser, error) {
+				return nil, errors.New("boom")
+			}},
+		},
+	}
+
+	job := &Job{Importer: im, Hub: hub, Store: st, ID: importID}
+	job.RunSource(context.Background(), src)
+
+	imp, err := st.GetImport(context.Background(), importID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if imp.Status != "done" {
+		t.Errorf("status = %q, want done", imp.Status)
+	}
+	if imp.Total != 2 {
+		t.Errorf("total = %d, want 2", imp.Total)
+	}
+	if imp.Processed != 2 {
+		t.Errorf("processed = %d, want 2", imp.Processed)
+	}
+	if imp.Errors != 1 {
+		t.Errorf("errors = %d, want 1", imp.Errors)
 	}
 }

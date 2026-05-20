@@ -1,10 +1,9 @@
 package importer
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
-	"path/filepath"
+	"io"
 	"strings"
 
 	"github.com/hwhang0917/local-eml/internal/store"
@@ -17,111 +16,47 @@ type Job struct {
 	ID       string
 }
 
-func (j *Job) RunFile(ctx context.Context, srcPath, name string) {
+func (j *Job) RunSource(ctx context.Context, src Source) {
 	defer j.Hub.Close(j.ID)
-	_ = j.Store.SetImportTotal(ctx, j.ID, 1)
-	j.publish(Event{Type: "step", Phase: "Importing", Total: 1})
-	j.processOne(ctx, srcPath, name, 1, 1)
-	j.publish(Event{Type: "step", Phase: "Finalizing"})
-	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
-	j.publish(Event{Type: "done", Processed: 1, Total: 1})
-}
-
-func (j *Job) RunDir(ctx context.Context, srcPaths, names []string) {
-	defer j.Hub.Close(j.ID)
-
-	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Scanning %d files", len(names))})
-	type entry struct{ path, name string }
-	var entries []entry
-	for i, n := range names {
-		if isEML(n) {
-			entries = append(entries, entry{srcPaths[i], n})
-		}
+	if c, ok := src.(io.Closer); ok {
+		defer c.Close()
 	}
-	total := len(entries)
-	_ = j.Store.SetImportTotal(ctx, j.ID, total)
-	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
-	for i, e := range entries {
-		if ctxDone(ctx) {
-			break
-		}
-		j.processOne(ctx, e.path, e.name, i+1, total)
-	}
-	j.publish(Event{Type: "step", Phase: "Finalizing"})
-	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
-	j.publish(Event{Type: "done", Processed: total, Total: total})
-}
-
-func (j *Job) RunZip(ctx context.Context, zipPath string) {
-	defer j.Hub.Close(j.ID)
-
-	j.publish(Event{Type: "step", Phase: "Opening archive"})
-	zr, err := zip.OpenReader(zipPath)
+	j.publish(Event{Type: "step", Phase: "Scanning " + src.Label()})
+	items, err := src.Scan(ctx)
 	if err != nil {
 		_ = j.Store.UpdateImportStatus(ctx, j.ID, "error", true)
-		j.publish(Event{Type: "error", Message: "open zip: " + err.Error()})
+		j.publish(Event{Type: "error", Message: err.Error()})
 		return
 	}
-	defer zr.Close()
 
-	j.publish(Event{Type: "step", Phase: "Scanning entries"})
-	var entries []*zip.File
-	for _, f := range zr.File {
-		if !f.FileInfo().IsDir() && isEML(f.Name) {
-			entries = append(entries, f)
-		}
-	}
-	total := len(entries)
+	total := len(items)
 	_ = j.Store.SetImportTotal(ctx, j.ID, total)
 	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
-	for i, ze := range entries {
+	for i, it := range items {
 		if ctxDone(ctx) {
 			break
 		}
-		j.processZipEntry(ctx, ze, i+1, total)
+		j.processItem(ctx, it, i+1, total)
 	}
+
 	j.publish(Event{Type: "step", Phase: "Finalizing"})
 	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
 	j.publish(Event{Type: "done", Processed: total, Total: total})
 }
 
-func (j *Job) processOne(ctx context.Context, srcPath, name string, idx, total int) {
-	res, err := j.Importer.ImportFile(ctx, srcPath, name)
+func (j *Job) processItem(ctx context.Context, it Item, idx, total int) {
+	rc, err := it.Open(ctx)
 	if err != nil {
-		_ = j.Store.RecordImportError(ctx, j.ID, name, err.Error())
-		_ = j.Store.IncImportCounters(ctx, j.ID, 1, 0, 1)
-		j.publish(Event{Type: "item", Path: name, Message: err.Error(),
-			Processed: idx, Total: total})
-		return
-	}
-	dup := 0
-	if res.Duplicate {
-		dup = 1
-	}
-	_ = j.Store.IncImportCounters(ctx, j.ID, 1, dup, 0)
-	j.publish(Event{Type: "item", Path: name, SHA256: res.SHA256,
-		Duplicate: res.Duplicate, Processed: idx, Total: total})
-}
-
-func (j *Job) processZipEntry(ctx context.Context, ze *zip.File, idx, total int) {
-	name := filepath.Base(ze.Name)
-	rc, err := ze.Open()
-	if err != nil {
-		_ = j.Store.RecordImportError(ctx, j.ID, ze.Name, err.Error())
-		_ = j.Store.IncImportCounters(ctx, j.ID, 1, 0, 1)
-		j.publish(Event{Type: "item", Path: ze.Name, Message: err.Error(),
-			Processed: idx, Total: total})
+		j.recordItemError(ctx, it.Name, err, idx, total)
 		return
 	}
 	defer rc.Close()
-	res, err := j.Importer.ImportReader(ctx, rc, name)
+
+	res, err := j.Importer.ImportReader(ctx, rc, it.Name)
 	if err != nil {
-		_ = j.Store.RecordImportError(ctx, j.ID, ze.Name, err.Error())
-		_ = j.Store.IncImportCounters(ctx, j.ID, 1, 0, 1)
-		j.publish(Event{Type: "item", Path: ze.Name, Message: err.Error(),
-			Processed: idx, Total: total})
+		j.recordItemError(ctx, it.Name, err, idx, total)
 		return
 	}
 	dup := 0
@@ -129,8 +64,15 @@ func (j *Job) processZipEntry(ctx context.Context, ze *zip.File, idx, total int)
 		dup = 1
 	}
 	_ = j.Store.IncImportCounters(ctx, j.ID, 1, dup, 0)
-	j.publish(Event{Type: "item", Path: ze.Name, SHA256: res.SHA256,
+	j.publish(Event{Type: "item", Path: it.Name, SHA256: res.SHA256,
 		Duplicate: res.Duplicate, Processed: idx, Total: total})
+}
+
+func (j *Job) recordItemError(ctx context.Context, name string, cause error, idx, total int) {
+	_ = j.Store.RecordImportError(ctx, j.ID, name, cause.Error())
+	_ = j.Store.IncImportCounters(ctx, j.ID, 1, 0, 1)
+	j.publish(Event{Type: "item", Path: name, Message: cause.Error(),
+		Processed: idx, Total: total})
 }
 
 func (j *Job) publish(ev Event) {
