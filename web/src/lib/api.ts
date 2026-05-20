@@ -67,6 +67,15 @@ export interface ImportEvent {
   total: number
 }
 
+export interface S3ImportConfig {
+  accessKeyId?: string
+  secretAccessKey?: string
+  sessionToken?: string
+  region?: string
+  bucket: string
+  prefix?: string
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -135,6 +144,15 @@ export const api = {
     const fd = new FormData()
     for (const f of files) fd.append('file', f, f.name)
     const res = await fetch(`${BASE}/api/imports`, { method: 'POST', body: fd })
+    return jsonOrThrow(res)
+  },
+
+  async uploadS3(cfg: S3ImportConfig): Promise<{ import_id: string; kind: string }> {
+    const res = await fetch(`${BASE}/api/imports/s3`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    })
     return jsonOrThrow(res)
   },
 
