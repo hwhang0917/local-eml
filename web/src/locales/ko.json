@@ -73,7 +73,23 @@
     "failed_fallback": "실패",
     "toast_done_title": "가져오기 완료",
     "toast_error_title": "가져오기 중 오류 발생",
-    "toast_summary": "{processed}개 처리 · 중복 {dup} · 오류 {err}"
+    "toast_summary": "{processed}개 처리 · 중복 {dup} · 오류 {err}",
+    "provider_local": "로컬 파일",
+    "provider_s3": "AWS S3",
+    "s3_title": "S3에서 가져오기",
+    "s3_creds_hint": "자격 증명을 비워두면 ~/.aws/credentials 또는 환경 변수를 사용합니다.",
+    "s3_access_key": "액세스 키 ID",
+    "s3_secret_key": "시크릿 액세스 키",
+    "s3_session_token": "세션 토큰",
+    "s3_region": "리전",
+    "s3_region_default": "프로필/환경에서 결정",
+    "s3_bucket": "버킷",
+    "s3_prefix": "접두사",
+    "s3_review": "검토",
+    "s3_confirm_hint": "접두사 아래의 모든 .eml 객체를 재귀적으로 가져옵니다.",
+    "s3_creds": "자격 증명",
+    "s3_creds_form": "입력값 사용",
+    "s3_creds_system": "시스템 사용 (~/.aws/credentials)"
   },
   "settings": {
     "section": {
