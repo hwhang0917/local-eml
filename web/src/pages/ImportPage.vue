@@ -4,12 +4,17 @@ import { useI18n } from 'vue-i18n'
 import { cn } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
+import type { S3ImportConfig } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
 const { t } = useI18n()
-const { runs, startImport } = useImports()
+const { runs, startImport, startS3Import } = useImports()
 
+type Provider = 'local' | 's3'
+const provider = ref<Provider>('local')
+
+// --- local upload (unchanged behavior) ---
 const stagedFiles = ref<File[]>([])
 const dragOver = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -63,54 +68,189 @@ const dropzoneClass = computed(() =>
     dragOver.value ? 'border-primary bg-accent/50' : 'border-border',
   ),
 )
+
+// --- S3 provider ---
+const s3 = ref<S3ImportConfig>({
+  accessKeyId: '',
+  secretAccessKey: '',
+  sessionToken: '',
+  region: '',
+  bucket: '',
+  prefix: '',
+})
+const s3Confirming = ref(false)
+
+const s3Valid = computed(() => s3.value.bucket.trim().length > 0)
+
+const s3CredsLabel = computed(() =>
+  s3.value.accessKeyId?.trim() ? t('import.s3_creds_form') : t('import.s3_creds_system'),
+)
+
+function reviewS3() {
+  if (s3Valid.value) s3Confirming.value = true
+}
+
+function cancelS3() {
+  s3Confirming.value = false
+}
+
+async function confirmS3() {
+  const cfg: S3ImportConfig = {
+    bucket: s3.value.bucket.trim(),
+    prefix: s3.value.prefix?.trim() || undefined,
+    region: s3.value.region?.trim() || undefined,
+    accessKeyId: s3.value.accessKeyId?.trim() || undefined,
+    secretAccessKey: s3.value.secretAccessKey || undefined,
+    sessionToken: s3.value.sessionToken || undefined,
+  }
+  s3Confirming.value = false
+  await startS3Import(cfg)
+}
+
+function providerBtnClass(p: Provider) {
+  return cn(
+    'px-4 py-1.5 text-sm rounded-md cursor-pointer transition-colors',
+    provider.value === p
+      ? 'bg-primary text-primary-foreground'
+      : 'text-muted-foreground hover:text-foreground',
+  )
+}
+
+const inputClass =
+  'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary'
 </script>
 
 <template>
   <div class="space-y-6">
-    <Card
-      v-if="stagedFiles.length === 0"
-      :class="dropzoneClass"
-      @dragover.prevent="dragOver = true"
-      @dragenter.prevent="dragOver = true"
-      @dragleave="dragOver = false"
-      @drop="onDrop"
-    >
-      <p class="text-lg mb-2">{{ t('import.drop') }}</p>
-      <p class="text-sm text-muted-foreground mb-4">{{ t('import.dedup_note') }}</p>
-      <div class="flex justify-center gap-2">
-        <Button variant="outline" @click="fileInput?.click()">{{ t('import.choose_files') }}</Button>
-        <Button variant="outline" @click="dirInput?.click()">{{ t('import.choose_folder') }}</Button>
-        <input ref="fileInput" type="file" multiple accept=".eml,.zip" class="hidden" @change="onFilePicked" />
-        <input
-          ref="dirInput"
-          type="file"
-          multiple
-          class="hidden"
-          @change="onFilePicked"
-          v-bind="{ webkitdirectory: true, directory: true } as any"
-        />
-      </div>
-    </Card>
+    <div class="inline-flex gap-1 p-1 rounded-lg bg-muted">
+      <button :class="providerBtnClass('local')" @click="provider = 'local'">
+        {{ t('import.provider_local') }}
+      </button>
+      <button :class="providerBtnClass('s3')" @click="provider = 's3'">
+        {{ t('import.provider_s3') }}
+      </button>
+    </div>
 
-    <Card v-else class="p-6">
-      <div class="flex items-start justify-between gap-4 mb-4">
+    <!-- LOCAL provider -->
+    <template v-if="provider === 'local'">
+      <Card
+        v-if="stagedFiles.length === 0"
+        :class="dropzoneClass"
+        @dragover.prevent="dragOver = true"
+        @dragenter.prevent="dragOver = true"
+        @dragleave="dragOver = false"
+        @drop="onDrop"
+      >
+        <p class="text-lg mb-2">{{ t('import.drop') }}</p>
+        <p class="text-sm text-muted-foreground mb-4">{{ t('import.dedup_note') }}</p>
+        <div class="flex justify-center gap-2">
+          <Button variant="outline" @click="fileInput?.click()">{{ t('import.choose_files') }}</Button>
+          <Button variant="outline" @click="dirInput?.click()">{{ t('import.choose_folder') }}</Button>
+          <input ref="fileInput" type="file" multiple accept=".eml,.zip" class="hidden" @change="onFilePicked" />
+          <input
+            ref="dirInput"
+            type="file"
+            multiple
+            class="hidden"
+            @change="onFilePicked"
+            v-bind="{ webkitdirectory: true, directory: true } as any"
+          />
+        </div>
+      </Card>
+
+      <Card v-else class="p-6">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
+            <p class="text-sm text-muted-foreground">{{ stagedSummary }}</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <Button variant="outline" @click="clearStaged">{{ t('import.cancel') }}</Button>
+            <Button @click="confirmUpload">{{ t('import.confirm') }}</Button>
+          </div>
+        </div>
+        <ul class="text-xs font-mono space-y-1 max-h-56 overflow-auto border border-hairline rounded-sm p-3 bg-muted/30">
+          <li v-for="(f, i) in stagedFiles" :key="i" class="flex justify-between gap-3">
+            <span class="truncate" :title="f.name">{{ f.name }}</span>
+            <span class="text-muted-foreground shrink-0">{{ formatBytes(f.size) }}</span>
+          </li>
+        </ul>
+      </Card>
+    </template>
+
+    <!-- S3 provider -->
+    <template v-else>
+      <Card v-if="!s3Confirming" class="p-6 space-y-4">
         <div>
-          <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
-          <p class="text-sm text-muted-foreground">{{ stagedSummary }}</p>
+          <h3 class="text-lg font-semibold mb-1">{{ t('import.s3_title') }}</h3>
+          <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_hint') }}</p>
         </div>
-        <div class="flex gap-2 shrink-0">
-          <Button variant="outline" @click="clearStaged">{{ t('import.cancel') }}</Button>
-          <Button @click="confirmUpload">{{ t('import.confirm') }}</Button>
-        </div>
-      </div>
-      <ul class="text-xs font-mono space-y-1 max-h-56 overflow-auto border border-hairline rounded-sm p-3 bg-muted/30">
-        <li v-for="(f, i) in stagedFiles" :key="i" class="flex justify-between gap-3">
-          <span class="truncate" :title="f.name">{{ f.name }}</span>
-          <span class="text-muted-foreground shrink-0">{{ formatBytes(f.size) }}</span>
-        </li>
-      </ul>
-    </Card>
 
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_access_key') }}</span>
+            <input v-model="s3.accessKeyId" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_secret_key') }}</span>
+            <input v-model="s3.secretAccessKey" type="password" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_session_token') }}</span>
+            <input v-model="s3.sessionToken" type="password" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_region') }}</span>
+            <input v-model="s3.region" :class="inputClass" placeholder="us-east-1" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_bucket') }} *</span>
+            <input v-model="s3.bucket" :class="inputClass" autocomplete="off" />
+          </label>
+          <label class="space-y-1">
+            <span class="text-sm">{{ t('import.s3_prefix') }}</span>
+            <input v-model="s3.prefix" :class="inputClass" placeholder="mail/2026/" autocomplete="off" />
+          </label>
+        </div>
+
+        <div class="flex justify-end">
+          <Button :disabled="!s3Valid" @click="reviewS3">{{ t('import.s3_review') }}</Button>
+        </div>
+      </Card>
+
+      <Card v-else class="p-6">
+        <div class="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
+            <p class="text-sm text-muted-foreground">{{ t('import.s3_confirm_hint') }}</p>
+          </div>
+          <div class="flex gap-2 shrink-0">
+            <Button variant="outline" @click="cancelS3">{{ t('import.cancel') }}</Button>
+            <Button @click="confirmS3">{{ t('import.confirm') }}</Button>
+          </div>
+        </div>
+        <dl class="text-sm space-y-2">
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_bucket') }}</dt>
+            <dd class="font-mono">{{ s3.bucket }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_prefix') }}</dt>
+            <dd class="font-mono">{{ s3.prefix || '—' }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_region') }}</dt>
+            <dd class="font-mono">{{ s3.region || t('import.s3_region_default') }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_creds') }}</dt>
+            <dd>{{ s3CredsLabel }}</dd>
+          </div>
+        </dl>
+      </Card>
+    </template>
+
+    <!-- progress (shared) -->
     <div v-for="run in runs" :key="run.id" class="space-y-2">
       <Card class="p-4">
         <div class="flex items-center gap-3 mb-2">
