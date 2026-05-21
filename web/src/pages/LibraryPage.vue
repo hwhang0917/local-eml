@@ -121,8 +121,7 @@ function setOffset(value: number) {
 }
 
 function select(sha: string) {
-  if (sha === selected.value) return
-  replaceQuery({ sel: sha })
+  replaceQuery({ sel: sha === selected.value ? undefined : sha })
 }
 
 const pageInfo = computed(() => {
