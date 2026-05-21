@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
 import { api, type Email, type Tag } from '@/lib/api'
@@ -9,6 +9,7 @@ import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import EmailDetail from '@/components/EmailDetail.vue'
 import {
   Sidebar,
   SidebarHeader,
@@ -19,20 +20,60 @@ import {
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
 
+type SortCol = 'sent_at' | 'from_addr' | 'subject' | 'size_bytes'
+type Order = 'asc' | 'desc'
+
+const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
 const items = ref<Email[]>([])
 const total = ref(0)
 const limit = ref(50)
-const offset = ref(0)
 const loading = ref(false)
-const q = ref('')
-const tag = ref('')
-const sort = ref<'sent_at' | 'from_addr' | 'subject' | 'size_bytes'>('sent_at')
-const order = ref<'asc' | 'desc'>('desc')
 const tags = ref<Tag[]>([])
 const sidebarOpen = useStorage('library-sidebar-open', true)
+
+function str(v: unknown, def = ''): string {
+  return typeof v === 'string' ? v : def
+}
+
+// route.query is the single source of truth for list state.
+const q = computed(() => str(route.query.q))
+const tag = computed(() => str(route.query.tag))
+const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
+const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
+const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
+const selected = computed(() => str(route.query.sel))
+
+// Local edit buffer for the search box; debounce-pushed to the URL.
+const searchInput = ref(q.value)
+const debouncedPushSearch = useDebounceFn((val: string) => {
+  pushQuery({ q: val || undefined, offset: undefined })
+}, 250)
+watch(searchInput, (val) => debouncedPushSearch(val))
+// Keep the box in sync when q changes externally (back/forward, link open).
+watch(q, (val) => { if (val !== searchInput.value) searchInput.value = val })
+
+function mergeQuery(patch: Record<string, string | undefined>): LocationQueryRaw {
+  const next: Record<string, string> = {}
+  for (const [k, v] of Object.entries(route.query)) {
+    if (typeof v === 'string') next[k] = v
+  }
+  for (const [k, v] of Object.entries(patch)) {
+    if (v === undefined || v === '') delete next[k]
+    else next[k] = v
+  }
+  return next
+}
+
+function pushQuery(patch: Record<string, string | undefined>) {
+  router.push({ query: mergeQuery(patch) })
+}
+
+function replaceQuery(patch: Record<string, string | undefined>) {
+  router.replace({ query: mergeQuery(patch) })
+}
 
 async function load() {
   loading.value = true
@@ -52,19 +93,29 @@ async function load() {
   }
 }
 
-const debouncedLoad = useDebounceFn(load, 250)
-
-watch([q, tag], () => { offset.value = 0; debouncedLoad() })
-watch([sort, order, offset], load)
+// Reload whenever any list-affecting query param changes (not selection).
+watch([q, tag, sort, order, offset], load)
 
 onMounted(async () => {
   tags.value = await api.listTags()
   await load()
 })
 
-function setSort(col: typeof sort.value) {
-  if (sort.value === col) order.value = order.value === 'asc' ? 'desc' : 'asc'
-  else { sort.value = col; order.value = 'desc' }
+function setSort(col: SortCol) {
+  if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc' })
+  else pushQuery({ sort: col, order: 'desc' })
+}
+
+function setTag(name: string) {
+  pushQuery({ tag: name || undefined, offset: undefined })
+}
+
+function setOffset(value: number) {
+  pushQuery({ offset: value > 0 ? String(value) : undefined })
+}
+
+function select(sha: string) {
+  replaceQuery({ sel: sha })
 }
 
 const pageInfo = computed(() => {
@@ -72,10 +123,6 @@ const pageInfo = computed(() => {
   const end = Math.min(offset.value + items.value.length, total.value)
   return t('library.page_count', { start: offset.value + 1, end, total: total.value })
 })
-
-function open(sha: string) {
-  router.push({ name: 'viewer', params: { sha } })
-}
 </script>
 
 <template>
@@ -94,13 +141,13 @@ function open(sha: string) {
       <SidebarContent>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton :active="tag === ''" @click="tag = ''">
+            <SidebarMenuButton :active="tag === ''" @click="setTag('')">
               {{ t('library.all') }}
               <span class="ml-auto text-xs text-muted-foreground">{{ total }}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem v-for="t2 in tags" :key="t2.name">
-            <SidebarMenuButton :active="tag === t2.name" @click="tag = t2.name">
+            <SidebarMenuButton :active="tag === t2.name" @click="setTag(t2.name)">
               {{ t2.name }}
               <span class="ml-auto text-xs text-muted-foreground">{{ t2.count }}</span>
             </SidebarMenuButton>
@@ -120,7 +167,7 @@ function open(sha: string) {
 
     <section class="flex-1 min-w-0">
       <div class="flex items-center gap-3 mb-4">
-        <Input v-model="q" :placeholder="t('library.search_placeholder')" class="max-w-md" />
+        <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
         <span class="text-sm text-muted-foreground ml-auto">{{ pageInfo }}</span>
       </div>
 
@@ -149,7 +196,8 @@ function open(sha: string) {
               v-for="e in items"
               :key="e.sha256"
               class="border-t hover:bg-accent/50 cursor-pointer"
-              @click="open(e.sha256)"
+              :class="{ 'bg-accent': e.sha256 === selected }"
+              @click="select(e.sha256)"
             >
               <td class="px-3 py-2 text-muted-foreground">
                 <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
@@ -168,11 +216,18 @@ function open(sha: string) {
       </Card>
 
       <div class="flex justify-between items-center mt-4">
-        <Button variant="outline" size="sm" :disabled="offset === 0" @click="offset = Math.max(0, offset - limit)">{{ t('library.prev') }}</Button>
+        <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
         <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
-        <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="offset += limit">{{ t('library.next') }}</Button>
+        <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
       </div>
     </section>
+
+    <aside class="w-[40rem] shrink-0 min-w-0">
+      <EmailDetail v-if="selected" :sha="selected" />
+      <Card v-else class="p-10 text-center text-muted-foreground">
+        {{ t('library.select_prompt') }}
+      </Card>
+    </aside>
   </div>
 </template>
 
