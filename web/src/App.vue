@@ -35,7 +35,6 @@ watchEffect(() => {
 <template>
   <div v-if="chromeless" class="min-h-screen px-6 py-6">
     <RouterView />
-    <Toaster position="bottom-right" rich-colors close-button />
   </div>
 
   <div v-else class="min-h-screen flex flex-col">
@@ -61,6 +60,7 @@ watchEffect(() => {
     <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
       <RouterView />
     </main>
-    <Toaster position="bottom-right" rich-colors close-button />
   </div>
+
+  <Toaster position="bottom-right" rich-colors close-button />
 </template>
