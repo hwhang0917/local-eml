@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import type { AcceptableInputValue } from 'reka-ui'
 import { api, type Email, type PartsManifest } from '@/lib/api'
+import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDate } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
 import {
@@ -59,8 +60,8 @@ watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
 })
 
-watch(() => email.value?.subject, (subject) => {
-  if (props.standalone) document.title = subject ? `${subject} — Local Eml` : 'Local Eml'
+watch([() => email.value?.subject, () => props.standalone], ([subject, standalone]) => {
+  if (standalone) document.title = subject ? `${subject} — ${APP_NAME}` : APP_NAME
 })
 
 function popOut() {
@@ -100,6 +101,7 @@ async function onTagRemove(tag: AcceptableInputValue) {
         <h1 class="text-xl font-semibold flex-1 min-w-0">{{ email.subject || t('library.no_subject') }}</h1>
         <button
           v-if="!standalone"
+          type="button"
           @click="popOut"
           class="shrink-0 text-xs text-muted-foreground hover:text-foreground rounded-sm px-2 py-1 hover:bg-accent"
         >
@@ -133,7 +135,7 @@ async function onTagRemove(tag: AcceptableInputValue) {
     </Card>
 
     <div class="flex items-center gap-1 border-b">
-      <button v-for="tb in tabs" :key="tb.key" @click="tab = tb.key"
+      <button v-for="tb in tabs" :key="tb.key" type="button" @click="tab = tb.key"
         :class="['px-3 py-2 text-sm border-b-2 -mb-px',
           tab === tb.key ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']">
         {{ tb.label }}
