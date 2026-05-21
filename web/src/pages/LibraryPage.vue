@@ -48,12 +48,18 @@ const selected = computed(() => str(route.query.sel))
 
 // Local edit buffer for the search box; debounce-pushed to the URL.
 const searchInput = ref(q.value)
+let lastPushedQ: string | null = null
 const debouncedPushSearch = useDebounceFn((val: string) => {
+  lastPushedQ = val
   pushQuery({ q: val || undefined, offset: undefined })
 }, 250)
 watch(searchInput, (val) => debouncedPushSearch(val))
-// Keep the box in sync when q changes externally (back/forward, link open).
-watch(q, (val) => { if (val !== searchInput.value) searchInput.value = val })
+// Sync the box only on external q changes (back/forward, link open),
+// not on the echo of our own push (which could clobber newer keystrokes).
+watch(q, (val) => {
+  if (val === lastPushedQ) return
+  if (val !== searchInput.value) searchInput.value = val
+})
 
 function mergeQuery(patch: Record<string, string | undefined>): LocationQueryRaw {
   const next: Record<string, string> = {}
@@ -102,8 +108,8 @@ onMounted(async () => {
 })
 
 function setSort(col: SortCol) {
-  if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc' })
-  else pushQuery({ sort: col, order: 'desc' })
+  if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc', offset: undefined })
+  else pushQuery({ sort: col, order: 'desc', offset: undefined })
 }
 
 function setTag(name: string) {
@@ -115,6 +121,7 @@ function setOffset(value: number) {
 }
 
 function select(sha: string) {
+  if (sha === selected.value) return
   replaceQuery({ sel: sha })
 }
 
