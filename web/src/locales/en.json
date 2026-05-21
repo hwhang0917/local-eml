@@ -9,6 +9,7 @@
   "library": {
     "tags": "Tags",
     "all": "All",
+    "select_prompt": "Select an email to read.",
     "search_placeholder": "Search subject, from, body…",
     "loading": "Loading…",
     "no_emails": "No emails.",
@@ -29,7 +30,7 @@
     "expand": "Expand sidebar"
   },
   "viewer": {
-    "back": "← back to library",
+    "pop_out": "⧉ Open in new window",
     "from": "From",
     "to": "To",
     "cc": "Cc",
