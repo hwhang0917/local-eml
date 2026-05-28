@@ -9,8 +9,6 @@ import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
-import EmailDetail from '@/components/EmailDetail.vue'
-import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 import {
   Sidebar,
   SidebarHeader,
@@ -45,7 +43,6 @@ const tag = computed(() => str(route.query.tag))
 const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
 const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
 const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
-const selected = computed(() => str(route.query.sel))
 
 // Local edit buffer for the search box; debounce-pushed to the URL.
 const searchInput = ref(q.value)
@@ -76,10 +73,6 @@ function mergeQuery(patch: Record<string, string | undefined>): LocationQueryRaw
 
 function pushQuery(patch: Record<string, string | undefined>) {
   router.push({ query: mergeQuery(patch) })
-}
-
-function replaceQuery(patch: Record<string, string | undefined>) {
-  router.replace({ query: mergeQuery(patch) })
 }
 
 async function load() {
@@ -121,8 +114,8 @@ function setOffset(value: number) {
   pushQuery({ offset: value > 0 ? String(value) : undefined })
 }
 
-function select(sha: string) {
-  replaceQuery({ sel: sha === selected.value ? undefined : sha })
+function openEmail(sha: string) {
+  router.push({ name: 'viewer', params: { sha } })
 }
 
 const pageInfo = computed(() => {
@@ -172,79 +165,61 @@ const pageInfo = computed(() => {
       <ChevronsRight class="h-4 w-4" />
     </button>
 
-    <SplitterGroup direction="horizontal" auto-save-id="library-split" class="flex-1 min-w-0">
-      <SplitterPanel :default-size="58" :min-size="30" class="min-w-0">
-        <section class="min-w-0">
-          <div class="flex items-center gap-3 mb-4">
-            <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
-            <span class="text-sm text-muted-foreground ml-auto">{{ pageInfo }}</span>
-          </div>
+    <section class="flex-1 min-w-0">
+      <div class="flex items-center gap-3 mb-4">
+        <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
+        <span class="text-sm text-muted-foreground ml-auto">{{ pageInfo }}</span>
+      </div>
 
-          <Card class="overflow-hidden">
-            <table class="w-full text-sm">
-              <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th class="text-left px-3 py-2 w-10"></th>
-                  <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
-                  <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
-                  <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
-                  <Th :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="loading && items.length === 0">
-                  <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
-                </tr>
-                <tr v-else-if="items.length === 0">
-                  <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
-                    {{ t('library.no_emails') }}
-                    <RouterLink to="/import" class="underline">{{ t('library.import_some') }}</RouterLink>
-                  </td>
-                </tr>
-                <tr
-                  v-for="e in items"
-                  :key="e.sha256"
-                  class="border-t hover:bg-accent/50 cursor-pointer"
-                  :class="{ 'bg-accent': e.sha256 === selected }"
-                  @click="select(e.sha256)"
-                >
-                  <td class="px-3 py-2 text-muted-foreground">
-                    <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
-                  </td>
-                  <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
-                  <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
-                  <td class="px-3 py-2 truncate">
-                    {{ e.subject || t('library.no_subject') }}
-                    <span v-for="t2 in e.tags" :key="t2" class="ml-1 inline-block text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">{{ t2 }}</span>
-                    <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
-                  </td>
-                  <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </Card>
+      <Card class="overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
+            <tr>
+              <th class="text-left px-3 py-2 w-10"></th>
+              <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
+              <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
+              <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
+              <Th :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading && items.length === 0">
+              <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
+            </tr>
+            <tr v-else-if="items.length === 0">
+              <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
+                {{ t('library.no_emails') }}
+                <RouterLink to="/import" class="underline">{{ t('library.import_some') }}</RouterLink>
+              </td>
+            </tr>
+            <tr
+              v-for="e in items"
+              :key="e.sha256"
+              class="border-t hover:bg-accent/50 cursor-pointer"
+              @click="openEmail(e.sha256)"
+            >
+              <td class="px-3 py-2 text-muted-foreground">
+                <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
+              </td>
+              <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
+              <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
+              <td class="px-3 py-2 truncate">
+                {{ e.subject || t('library.no_subject') }}
+                <span v-for="t2 in e.tags" :key="t2" class="ml-1 inline-block text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">{{ t2 }}</span>
+                <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
+              </td>
+              <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </Card>
 
-          <div class="flex justify-between items-center mt-4">
-            <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
-            <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
-            <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
-          </div>
-        </section>
-      </SplitterPanel>
-
-      <SplitterResizeHandle
-        class="w-1.5 mx-1 shrink-0 rounded-full bg-muted hover:bg-accent focus-visible:bg-accent focus:outline-none cursor-col-resize transition-colors"
-      />
-
-      <SplitterPanel :default-size="42" :min-size="25" class="min-w-0">
-        <aside class="min-w-0">
-          <EmailDetail v-if="selected" :sha="selected" />
-          <Card v-else class="p-10 text-center text-muted-foreground">
-            {{ t('library.select_prompt') }}
-          </Card>
-        </aside>
-      </SplitterPanel>
-    </SplitterGroup>
+      <div class="flex justify-between items-center mt-4">
+        <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
+        <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
+        <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
+      </div>
+    </section>
   </div>
 </template>
 
