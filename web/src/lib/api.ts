@@ -84,6 +84,15 @@ export interface IMAPImportConfig {
   folder?: string
 }
 
+export interface IMAPProfile {
+  id: number
+  name: string
+  host: string
+  port?: number
+  username: string
+  folder?: string
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -179,5 +188,26 @@ export const api = {
 
   importEventSource(id: string): EventSource {
     return new EventSource(`${BASE}/api/imports/${id}/events`)
+  },
+
+  listIMAPProfiles() {
+    return fetch(`${BASE}/api/imap/profiles`).then(jsonOrThrow<IMAPProfile[]>)
+  },
+
+  async saveIMAPProfile(p: Omit<IMAPProfile, 'id'>): Promise<IMAPProfile> {
+    const res = await fetch(`${BASE}/api/imap/profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p),
+    })
+    return jsonOrThrow<IMAPProfile>(res)
+  },
+
+  async deleteIMAPProfile(id: number): Promise<void> {
+    const res = await fetch(`${BASE}/api/imap/profiles/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
   },
 }
