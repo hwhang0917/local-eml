@@ -101,6 +101,17 @@ CREATE TABLE IF NOT EXISTS import_errors (
   message TEXT,
   FOREIGN KEY (import_id) REFERENCES imports(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS imap_profiles (
+  id INTEGER PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  host TEXT NOT NULL,
+  port INTEGER,
+  username TEXT NOT NULL,
+  folder TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `
 
 func (s *Store) migrate(ctx context.Context) error {
