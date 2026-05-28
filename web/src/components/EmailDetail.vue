@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 import type { AcceptableInputValue } from 'reka-ui'
 import { api, type Email, type PartsManifest } from '@/lib/api'
@@ -15,8 +16,9 @@ import {
   TagsInputItemDelete,
 } from '@/components/ui/tags-input'
 
-const props = defineProps<{ sha: string; standalone?: boolean }>()
+const props = defineProps<{ sha: string }>()
 const { t } = useI18n()
+const router = useRouter()
 
 const email = ref<Email | null>(null)
 const parts = ref<PartsManifest | null>(null)
@@ -60,12 +62,13 @@ watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
 })
 
-watch([() => email.value?.subject, () => props.standalone], ([subject, standalone]) => {
-  if (standalone) document.title = subject ? `${subject} — ${APP_NAME}` : APP_NAME
+watch(() => email.value?.subject, (subject) => {
+  document.title = subject ? `${subject} — ${APP_NAME}` : APP_NAME
 })
 
-function popOut() {
-  window.open(`/email/${props.sha}`, '_blank', 'popup,width=820,height=900')
+function goBack() {
+  if (window.history.length > 1) router.back()
+  else router.push('/')
 }
 
 async function onTagAdd(tag: AcceptableInputValue) {
@@ -96,17 +99,17 @@ async function onTagRemove(tag: AcceptableInputValue) {
   <div v-if="error" class="text-destructive">{{ error }}</div>
 
   <div v-else-if="email" class="space-y-4">
+    <button
+      type="button"
+      @click="goBack"
+      class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+    >
+      {{ t('viewer.back') }}
+    </button>
+
     <Card class="p-5">
-      <div class="flex items-start gap-3 mb-3">
-        <h1 class="text-xl font-semibold flex-1 min-w-0">{{ email.subject || t('library.no_subject') }}</h1>
-        <button
-          v-if="!standalone"
-          type="button"
-          @click="popOut"
-          class="shrink-0 text-xs text-muted-foreground hover:text-foreground rounded-sm px-2 py-1 hover:bg-accent"
-        >
-          {{ t('viewer.pop_out') }}
-        </button>
+      <div class="mb-3">
+        <h1 class="text-xl font-semibold">{{ email.subject || t('library.no_subject') }}</h1>
       </div>
       <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-muted-foreground">{{ t('viewer.from') }}</dt><dd>{{ email.from }}</dd>

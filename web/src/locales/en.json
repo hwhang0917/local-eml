@@ -30,7 +30,7 @@
     "expand": "Expand sidebar"
   },
   "viewer": {
-    "pop_out": "⧉ Open in new window",
+    "back": "← Back to library",
     "from": "From",
     "to": "To",
     "cc": "Cc",
