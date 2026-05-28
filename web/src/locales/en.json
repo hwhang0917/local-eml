@@ -107,6 +107,7 @@
     "imap_profile_delete": "Delete",
     "imap_profile_delete_confirm": "Delete profile \"{name}\"?",
     "imap_profile_save_error": "Couldn't save profile",
+    "imap_profile_load_error": "Couldn't load profiles",
     "imap_profile_delete_error": "Couldn't delete profile"
   },
   "settings": {

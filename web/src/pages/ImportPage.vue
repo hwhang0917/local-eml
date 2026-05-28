@@ -182,7 +182,7 @@ async function loadImapProfiles() {
   try {
     imapProfiles.value = await api.listIMAPProfiles()
   } catch (e) {
-    toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+    toast.error(t('import.imap_profile_load_error'), { description: String(e) })
   }
 }
 

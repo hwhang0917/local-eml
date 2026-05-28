@@ -107,6 +107,7 @@
     "imap_profile_delete": "삭제",
     "imap_profile_delete_confirm": "\"{name}\" 프로필을 삭제할까요?",
     "imap_profile_save_error": "프로필을 저장하지 못했어요",
+    "imap_profile_load_error": "프로필을 불러오지 못했어요",
     "imap_profile_delete_error": "프로필을 삭제하지 못했어요"
   },
   "settings": {
