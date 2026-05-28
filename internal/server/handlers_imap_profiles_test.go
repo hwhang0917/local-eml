@@ -26,22 +26,6 @@ func newTestServer(t *testing.T) *Server {
 	return &Server{Store: s}
 }
 
-func doJSON(t *testing.T, handler http.HandlerFunc, method, target string, body any) *httptest.ResponseRecorder {
-	t.Helper()
-	var rdr *bytes.Reader
-	if body != nil {
-		b, _ := json.Marshal(body)
-		rdr = bytes.NewReader(b)
-	} else {
-		rdr = bytes.NewReader(nil)
-	}
-	req := httptest.NewRequest(method, target, rdr)
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	handler(rec, req)
-	return rec
-}
-
 func TestIMAPProfilesHandler_SaveListDelete(t *testing.T) {
 	s := newTestServer(t)
 	r := s.Router()
