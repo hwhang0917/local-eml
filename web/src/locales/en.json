@@ -9,7 +9,6 @@
   "library": {
     "tags": "Tags",
     "all": "All",
-    "select_prompt": "Select an email to read.",
     "search_placeholder": "Search subject, from, body…",
     "loading": "Loading…",
     "no_emails": "No emails.",

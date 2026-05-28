@@ -5,5 +5,5 @@ defineProps<{ sha: string }>()
 </script>
 
 <template>
-  <EmailDetail :sha="sha" standalone />
+  <EmailDetail :sha="sha" />
 </template>

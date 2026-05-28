@@ -9,8 +9,6 @@ import { APP_NAME } from '@/lib/app'
 const { t } = useI18n()
 const route = useRoute()
 
-const chromeless = computed(() => route.meta.chromeless === true)
-
 const nav = computed(() => [
   { to: '/', label: t('nav.library') },
   { to: '/import', label: t('nav.import') },
@@ -23,21 +21,14 @@ const pageTitle = computed(() => {
 })
 
 watchEffect(() => {
-  // Chrome-less detail windows set their own title (the email subject)
-  // from inside EmailDetail; skip the app-level title there.
-  if (chromeless.value) return
-  document.title = pageTitle.value
-    ? `${APP_NAME} | ${pageTitle.value}`
-    : APP_NAME
+  // EmailDetail owns the title on the viewer route (it writes the subject).
+  if (route.name === 'viewer') return
+  document.title = pageTitle.value ? `${APP_NAME} | ${pageTitle.value}` : APP_NAME
 })
 </script>
 
 <template>
-  <div v-if="chromeless" class="min-h-screen px-6 py-6">
-    <RouterView />
-  </div>
-
-  <div v-else class="min-h-screen flex flex-col">
+  <div class="min-h-screen flex flex-col">
     <header class="bg-black text-white">
       <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
         <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
