@@ -99,7 +99,15 @@
     "imap_username": "Username",
     "imap_password": "Password",
     "imap_folder": "Folder",
-    "imap_confirm_hint": "Imports every message in the selected folder."
+    "imap_confirm_hint": "Imports every message in the selected folder.",
+    "imap_profile": "Profile",
+    "imap_profile_new": "— New —",
+    "imap_profile_save": "Save",
+    "imap_profile_save_prompt": "Profile name:",
+    "imap_profile_delete": "Delete",
+    "imap_profile_delete_confirm": "Delete profile \"{name}\"?",
+    "imap_profile_save_error": "Couldn't save profile",
+    "imap_profile_delete_error": "Couldn't delete profile"
   },
   "settings": {
     "section": {

@@ -99,7 +99,15 @@
     "imap_username": "사용자 이름",
     "imap_password": "비밀번호",
     "imap_folder": "폴더",
-    "imap_confirm_hint": "선택한 폴더의 모든 메시지를 가져옵니다."
+    "imap_confirm_hint": "선택한 폴더의 모든 메시지를 가져옵니다.",
+    "imap_profile": "프로필",
+    "imap_profile_new": "— 새 프로필 —",
+    "imap_profile_save": "저장",
+    "imap_profile_save_prompt": "프로필 이름:",
+    "imap_profile_delete": "삭제",
+    "imap_profile_delete_confirm": "\"{name}\" 프로필을 삭제할까요?",
+    "imap_profile_save_error": "프로필을 저장하지 못했어요",
+    "imap_profile_delete_error": "프로필을 삭제하지 못했어요"
   },
   "settings": {
     "section": {

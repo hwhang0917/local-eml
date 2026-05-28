@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cn } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
-import type { S3ImportConfig, IMAPImportConfig } from '@/lib/api'
+import { toast } from 'vue-sonner'
+import { api } from '@/lib/api'
+import type { S3ImportConfig, IMAPImportConfig, IMAPProfile } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -161,6 +163,90 @@ const imapValid = computed(
     imapForm.value.username.trim().length > 0 &&
     imapForm.value.password.length > 0,
 )
+
+// --- IMAP profiles ---
+const imapProfiles = ref<IMAPProfile[]>([])
+const selectedImapProfileId = ref<number | null>(null)
+
+const activeImapProfile = computed(() =>
+  imapProfiles.value.find((p) => p.id === selectedImapProfileId.value) ?? null,
+)
+
+const canSaveImapProfile = computed(
+  () =>
+    imapForm.value.host.trim().length > 0 &&
+    imapForm.value.username.trim().length > 0,
+)
+
+async function loadImapProfiles() {
+  try {
+    imapProfiles.value = await api.listIMAPProfiles()
+  } catch (e) {
+    toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+  }
+}
+
+onMounted(() => {
+  loadImapProfiles()
+})
+
+function applyImapProfile(p: IMAPProfile | null) {
+  if (!p) {
+    imapForm.value = { host: '', port: 993, username: '', password: '', folder: 'INBOX' }
+    return
+  }
+  imapForm.value = {
+    host: p.host,
+    port: p.port ?? 993,
+    username: p.username,
+    password: '',
+    folder: p.folder ?? 'INBOX',
+  }
+}
+
+function onImapProfileChange(idStr: string) {
+  const id = idStr ? Number(idStr) : null
+  selectedImapProfileId.value = id
+  applyImapProfile(id == null ? null : imapProfiles.value.find((p) => p.id === id) ?? null)
+}
+
+async function saveImapProfile() {
+  const existing = activeImapProfile.value
+  let name = existing?.name ?? ''
+  if (!existing) {
+    const entered = window.prompt(t('import.imap_profile_save_prompt'), '')
+    if (entered == null) return
+    name = entered.trim()
+    if (!name) return
+  }
+  try {
+    const saved = await api.saveIMAPProfile({
+      name,
+      host: imapForm.value.host.trim(),
+      port: imapForm.value.port || undefined,
+      username: imapForm.value.username.trim(),
+      folder: imapForm.value.folder?.trim() || undefined,
+    })
+    await loadImapProfiles()
+    selectedImapProfileId.value = saved.id
+  } catch (e) {
+    toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+  }
+}
+
+async function deleteImapProfile() {
+  const p = activeImapProfile.value
+  if (!p) return
+  if (!window.confirm(t('import.imap_profile_delete_confirm', { name: p.name }))) return
+  try {
+    await api.deleteIMAPProfile(p.id)
+    selectedImapProfileId.value = null
+    applyImapProfile(null)
+    await loadImapProfiles()
+  } catch (e) {
+    toast.error(t('import.imap_profile_delete_error'), { description: String(e) })
+  }
+}
 
 function reviewImap() {
   if (imapValid.value) imapConfirming.value = true
@@ -331,6 +417,26 @@ async function confirmImap() {
         <div>
           <h3 class="text-lg font-semibold mb-1">{{ t('import.imap_title') }}</h3>
           <p class="text-sm text-muted-foreground">{{ t('import.imap_hint') }}</p>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <label class="space-y-1 flex-1 max-w-xs">
+            <span class="text-sm">{{ t('import.imap_profile') }}</span>
+            <select
+              :value="selectedImapProfileId ?? ''"
+              @change="onImapProfileChange(($event.target as HTMLSelectElement).value)"
+              :class="inputClass"
+            >
+              <option value="">{{ t('import.imap_profile_new') }}</option>
+              <option v-for="p in imapProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+            </select>
+          </label>
+          <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
+            {{ t('import.imap_profile_save') }}
+          </Button>
+          <Button variant="outline" :disabled="!activeImapProfile" @click="deleteImapProfile">
+            {{ t('import.imap_profile_delete') }}
+          </Button>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
