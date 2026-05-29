@@ -24,7 +24,7 @@ type Email struct {
 	HasAttachments  bool      `json:"has_attachments"`
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
-	Tags            []string  `json:"tags"`
+	Starred         bool      `json:"starred"`
 }
 
 type EmailRow struct {
@@ -97,27 +97,40 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 	row := s.DB.QueryRowContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, sent_at, received_at, size_bytes, has_attachments,
-			attachment_count, imported_at
+			attachment_count, imported_at, starred
 		FROM emails WHERE sha256 = ?`, sha)
-	e, err := scanEmail(row)
-	if err != nil {
-		return nil, err
+	return scanEmail(row)
+}
+
+var ErrEmailNotFound = errors.New("email not found")
+
+func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) error {
+	flag := 0
+	if starred {
+		flag = 1
 	}
-	tags, err := s.GetTagsForEmail(ctx, sha)
+	res, err := s.DB.ExecContext(ctx,
+		`UPDATE emails SET starred = ? WHERE sha256 = ?`, flag, sha)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	e.Tags = tags
-	return e, nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrEmailNotFound
+	}
+	return nil
 }
 
 type ListOptions struct {
-	Query  string
-	Tag    string
-	Sort   string
-	Order  string
-	Limit  int
-	Offset int
+	Query        string
+	StarredOnly  bool
+	Sort         string
+	Order        string
+	Limit        int
+	Offset       int
 }
 
 func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
@@ -140,10 +153,8 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
 		args = append(args, fts)
 	}
-	if opts.Tag != "" {
-		conds = append(conds, `id IN (SELECT et.email_id FROM email_tags et
-			JOIN tags t ON t.id = et.tag_id WHERE t.name = ?)`)
-		args = append(args, opts.Tag)
+	if opts.StarredOnly {
+		conds = append(conds, `starred = 1`)
 	}
 	where := ""
 	if len(conds) > 0 {
@@ -157,7 +168,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 
 	listQ := `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 		message_id, sent_at, received_at, size_bytes, has_attachments,
-		attachment_count, imported_at FROM emails ` + where +
+		attachment_count, imported_at, starred FROM emails ` + where +
 		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
 	args = append(args, opts.Limit, opts.Offset)
 	rows, err := s.DB.QueryContext(ctx, listQ, args...)
@@ -167,27 +178,15 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	defer rows.Close()
 
 	out := []Email{}
-	ids := []int64{}
 	for rows.Next() {
 		e, err := scanEmail(rows)
 		if err != nil {
 			return nil, 0, err
 		}
 		out = append(out, *e)
-		ids = append(ids, e.ID)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
-	}
-
-	tagMap, err := s.TagsForEmailIDs(ctx, ids)
-	if err != nil {
-		return nil, 0, err
-	}
-	for i := range out {
-		if t, ok := tagMap[out[i].ID]; ok {
-			out[i].Tags = t
-		}
 	}
 	return out, total, nil
 }
@@ -197,16 +196,17 @@ type rowScanner interface {
 }
 
 func scanEmail(rs rowScanner) (*Email, error) {
-	e := Email{Tags: []string{}}
+	e := Email{}
 	var to, cc string
 	var sentAt, recvAt, importedAt int64
-	var hasAtt int
+	var hasAtt, starred int
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
 		&to, &cc, &e.MessageID, &sentAt, &recvAt, &e.SizeBytes,
-		&hasAtt, &e.AttachmentCount, &importedAt)
+		&hasAtt, &e.AttachmentCount, &importedAt, &starred)
 	if err != nil {
 		return nil, err
 	}
+	e.Starred = starred != 0
 	if to != "" {
 		_ = json.Unmarshal([]byte(to), &e.ToAddrs)
 	}

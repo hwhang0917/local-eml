@@ -37,10 +37,8 @@ func (s *Server) Router() http.Handler {
 		api.Get("/emails/{sha}/html", s.handleEmailHTML)
 		api.Get("/emails/{sha}/cid/{cid}", s.handleEmailCID)
 		api.Get("/emails/{sha}/attachments/{idx}", s.handleEmailAttachment)
-
-		api.Get("/tags", s.handleListTags)
-		api.Post("/emails/{sha}/tags", s.handleAddTag)
-		api.Delete("/emails/{sha}/tags/{name}", s.handleRemoveTag)
+		api.Put("/emails/{sha}/star", s.handleStarEmail)
+		api.Delete("/emails/{sha}/star", s.handleUnstarEmail)
 
 		api.Get("/imap/profiles", s.handleListIMAPProfiles)
 		api.Post("/imap/profiles", s.handleSaveIMAPProfile)

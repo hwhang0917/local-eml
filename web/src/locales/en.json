@@ -7,8 +7,6 @@
     "viewer": "Viewer"
   },
   "library": {
-    "tags": "Tags",
-    "all": "All",
     "search_placeholder": "Search subject, from, body…",
     "loading": "Loading…",
     "no_emails": "No emails.",
@@ -25,8 +23,14 @@
     "next": "Next",
     "page_count_zero": "0",
     "page_count": "{start}–{end} of {total}",
-    "collapse": "Collapse sidebar",
-    "expand": "Expand sidebar"
+    "star": "Star",
+    "unstar": "Unstar",
+    "starred": "Starred",
+    "show_starred": "Show starred only",
+    "show_all": "Show all",
+    "no_starred": "No starred emails.",
+    "per_page": "per page",
+    "reset": "Reset"
   },
   "viewer": {
     "back": "← Back to library",
@@ -35,10 +39,6 @@
     "cc": "Cc",
     "date": "Date",
     "size": "Size",
-    "tags": "Tags",
-    "add_tag": "add tag…",
-    "add": "Add",
-    "remove": "remove",
     "tabs": {
       "html": "HTML",
       "text": "Plain text",
@@ -50,9 +50,7 @@
     "no_text": "No plain-text part.",
     "no_attachments": "No attachments.",
     "download": "Download",
-    "loading": "Loading…",
-    "tag_invalid": "Invalid tag",
-    "tag_remove_failed": "Couldn't remove tag"
+    "loading": "Loading…"
   },
   "import": {
     "drop": "Drop .eml files, a directory, or a .zip here",
@@ -112,17 +110,19 @@
   "settings": {
     "section": {
       "about": "About",
-      "language": "Language",
-      "tags": "Tags",
+      "locale": "Locale",
       "attributions": "Attributions"
     },
     "version": "Version",
     "server": "Server",
     "data_location": "Data lives in {path}.",
     "github": "GitHub",
+    "language": "Language",
     "language_help": "Switch the interface language.",
-    "loading": "Loading…",
-    "no_tags": "No tags yet.",
+    "date_format": "Date format",
+    "date_format_help": "Choose how dates are displayed throughout the app.",
+    "date_format_absolute": "Absolute (e.g. May 28, 2026, 13:05)",
+    "date_format_relative": "Relative (e.g. 3 hours ago)",
     "attributions_intro": "Local Eml is built with these open-source projects.",
     "license_label": "license"
   }

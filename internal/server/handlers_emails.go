@@ -19,12 +19,12 @@ import (
 func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	opts := store.ListOptions{
-		Query:  q.Get("q"),
-		Tag:    q.Get("tag"),
-		Sort:   q.Get("sort"),
-		Order:  q.Get("order"),
-		Limit:  intParam(q.Get("limit"), 50),
-		Offset: intParam(q.Get("offset"), 0),
+		Query:       q.Get("q"),
+		StarredOnly: q.Get("starred") == "1",
+		Sort:        q.Get("sort"),
+		Order:       q.Get("order"),
+		Limit:       intParam(q.Get("limit"), 50),
+		Offset:      intParam(q.Get("offset"), 0),
 	}
 	emails, total, err := s.Store.ListEmails(r.Context(), opts)
 	if err != nil {

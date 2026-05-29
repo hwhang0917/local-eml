@@ -2,19 +2,11 @@
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue-sonner'
-import type { AcceptableInputValue } from 'reka-ui'
+import { Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDate } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
-import {
-  TagsInput,
-  TagsInputInput,
-  TagsInputItem,
-  TagsInputItemText,
-  TagsInputItemDelete,
-} from '@/components/ui/tags-input'
 
 const props = defineProps<{ sha: string }>()
 const { t } = useI18n()
@@ -71,26 +63,14 @@ function goBack() {
   else router.push('/')
 }
 
-async function onTagAdd(tag: AcceptableInputValue) {
+async function toggleStar() {
   if (!email.value) return
-  const trimmed = String(tag).trim()
-  if (!trimmed) return
+  const next = !email.value.starred
+  email.value.starred = next
   try {
-    await api.addTag(email.value.sha256, trimmed)
-    email.value.tags = [...email.value.tags, trimmed].sort()
-  } catch (e) {
-    toast.error(t('viewer.tag_invalid'), { description: String(e) })
-  }
-}
-
-async function onTagRemove(tag: AcceptableInputValue) {
-  if (!email.value) return
-  const name = String(tag)
-  try {
-    await api.removeTag(email.value.sha256, name)
-    email.value.tags = email.value.tags.filter((x) => x !== name)
-  } catch (e) {
-    toast.error(t('viewer.tag_remove_failed'), { description: String(e) })
+    await api.setStarred(email.value.sha256, next)
+  } catch {
+    if (email.value) email.value.starred = !next
   }
 }
 </script>
@@ -108,8 +88,18 @@ async function onTagRemove(tag: AcceptableInputValue) {
     </button>
 
     <Card class="p-5">
-      <div class="mb-3">
-        <h1 class="text-xl font-semibold">{{ email.subject || t('library.no_subject') }}</h1>
+      <div class="mb-3 flex items-start gap-3">
+        <h1 class="text-xl font-semibold flex-1 min-w-0">{{ email.subject || t('library.no_subject') }}</h1>
+        <button
+          type="button"
+          :title="email.starred ? t('library.unstar') : t('library.star')"
+          :aria-label="email.starred ? t('library.unstar') : t('library.star')"
+          :class="['inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0',
+            email.starred ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground']"
+          @click="toggleStar"
+        >
+          <Star class="h-5 w-5" :fill="email.starred ? 'currentColor' : 'none'" />
+        </button>
       </div>
       <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-muted-foreground">{{ t('viewer.from') }}</dt><dd>{{ email.from }}</dd>
@@ -118,23 +108,6 @@ async function onTagRemove(tag: AcceptableInputValue) {
         <dt class="text-muted-foreground">{{ t('viewer.date') }}</dt><dd>{{ formatDate(email.sent_at) }}</dd>
         <dt class="text-muted-foreground">{{ t('viewer.size') }}</dt><dd>{{ formatBytes(email.size_bytes) }}</dd>
       </dl>
-
-      <div class="mt-4">
-        <div class="text-xs uppercase tracking-wide text-muted-foreground mb-1.5">{{ t('viewer.tags') }}</div>
-        <TagsInput
-          :model-value="email.tags"
-          :add-on-paste="true"
-          :delimiter="/[,]/"
-          @add-tag="onTagAdd"
-          @remove-tag="onTagRemove"
-        >
-          <TagsInputItem v-for="tg in email.tags" :key="tg" :value="tg">
-            <TagsInputItemText>{{ tg }}</TagsInputItemText>
-            <TagsInputItemDelete />
-          </TagsInputItem>
-          <TagsInputInput :placeholder="t('viewer.add_tag')" />
-        </TagsInput>
-      </div>
     </Card>
 
     <div class="flex items-center gap-1 border-b">

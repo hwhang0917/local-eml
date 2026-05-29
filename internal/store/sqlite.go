@@ -59,7 +59,8 @@ CREATE TABLE IF NOT EXISTS emails (
   size_bytes INTEGER,
   has_attachments INTEGER,
   attachment_count INTEGER,
-  imported_at INTEGER
+  imported_at INTEGER,
+  starred INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_emails_sent_at ON emails(sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_emails_from ON emails(from_addr);
@@ -69,17 +70,8 @@ CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts5(
   content='', tokenize='unicode61 remove_diacritics 2'
 );
 
-CREATE TABLE IF NOT EXISTS tags (
-  id INTEGER PRIMARY KEY,
-  name TEXT UNIQUE NOT NULL
-);
-CREATE TABLE IF NOT EXISTS email_tags (
-  email_id INTEGER NOT NULL,
-  tag_id INTEGER NOT NULL,
-  PRIMARY KEY (email_id, tag_id),
-  FOREIGN KEY (email_id) REFERENCES emails(id) ON DELETE CASCADE,
-  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-);
+DROP TABLE IF EXISTS email_tags;
+DROP TABLE IF EXISTS tags;
 
 CREATE TABLE IF NOT EXISTS imports (
   id TEXT PRIMARY KEY,
@@ -115,6 +107,38 @@ CREATE TABLE IF NOT EXISTS imap_profiles (
 `
 
 func (s *Store) migrate(ctx context.Context) error {
-	_, err := s.DB.ExecContext(ctx, schemaSQL)
+	if _, err := s.DB.ExecContext(ctx, schemaSQL); err != nil {
+		return err
+	}
+	if err := s.ensureColumn(ctx, "emails", "starred", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	_, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_starred ON emails(starred) WHERE starred = 1`)
+	return err
+}
+
+func (s *Store) ensureColumn(ctx context.Context, table, column, ddl string) error {
+	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, ctype string
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx,
+		fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, ddl))
 	return err
 }

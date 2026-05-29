@@ -7,8 +7,6 @@
     "viewer": "이메일"
   },
   "library": {
-    "tags": "태그",
-    "all": "전체",
     "search_placeholder": "제목·발신자·본문 검색…",
     "loading": "불러오는 중…",
     "no_emails": "이메일이 없습니다.",
@@ -25,8 +23,14 @@
     "next": "다음",
     "page_count_zero": "0",
     "page_count": "{start}–{end} / 총 {total}",
-    "collapse": "사이드바 접기",
-    "expand": "사이드바 펼치기"
+    "star": "별표",
+    "unstar": "별표 해제",
+    "starred": "별표",
+    "show_starred": "별표 표시한 메일만 보기",
+    "show_all": "전체 보기",
+    "no_starred": "별표 표시한 메일이 없습니다.",
+    "per_page": "페이지당",
+    "reset": "초기화"
   },
   "viewer": {
     "back": "← 라이브러리로 돌아가기",
@@ -35,10 +39,6 @@
     "cc": "참조",
     "date": "날짜",
     "size": "크기",
-    "tags": "태그",
-    "add_tag": "태그 추가…",
-    "add": "추가",
-    "remove": "삭제",
     "tabs": {
       "html": "HTML",
       "text": "본문",
@@ -50,9 +50,7 @@
     "no_text": "텍스트 본문이 없습니다.",
     "no_attachments": "첨부파일이 없습니다.",
     "download": "다운로드",
-    "loading": "불러오는 중…",
-    "tag_invalid": "잘못된 태그",
-    "tag_remove_failed": "태그를 삭제하지 못했습니다"
+    "loading": "불러오는 중…"
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip을 여기에 드롭하세요",
@@ -112,17 +110,19 @@
   "settings": {
     "section": {
       "about": "정보",
-      "language": "언어",
-      "tags": "태그",
+      "locale": "로케일",
       "attributions": "오픈소스 라이선스"
     },
     "version": "버전",
     "server": "서버",
     "data_location": "데이터 저장 위치: {path}",
     "github": "GitHub",
+    "language": "언어",
     "language_help": "인터페이스 언어를 전환합니다.",
-    "loading": "불러오는 중…",
-    "no_tags": "태그가 없습니다.",
+    "date_format": "날짜 형식",
+    "date_format_help": "앱 전체에서 날짜를 어떻게 표시할지 선택합니다.",
+    "date_format_absolute": "절대 (예: 2026년 5월 28일 오후 1:05)",
+    "date_format_relative": "상대 (예: 3시간 전)",
     "attributions_intro": "Local Eml은 다음 오픈소스 프로젝트로 만들어졌습니다.",
     "license_label": "라이선스"
   }

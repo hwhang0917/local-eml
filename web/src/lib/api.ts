@@ -13,7 +13,7 @@ export interface Email {
   has_attachments: boolean
   attachment_count: number
   imported_at: string
-  tags: string[]
+  starred: boolean
 }
 
 export interface EmailList {
@@ -21,11 +21,6 @@ export interface EmailList {
   limit: number
   offset: number
   items: Email[]
-}
-
-export interface Tag {
-  name: string
-  count: number
 }
 
 export interface PartInfo {
@@ -104,12 +99,23 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
 }
 
 export const api = {
-  listEmails(params: { q?: string; tag?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
+  listEmails(params: { q?: string; starred?: boolean; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== '') qs.set(k, String(v))
+      if (v === undefined || v === '' || v === false) continue
+      qs.set(k, v === true ? '1' : String(v))
     }
     return fetch(`${BASE}/api/emails?${qs}`).then(jsonOrThrow<EmailList>)
+  },
+
+  async setStarred(sha: string, starred: boolean): Promise<void> {
+    const res = await fetch(`${BASE}/api/emails/${sha}/star`, {
+      method: starred ? 'PUT' : 'DELETE',
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
   },
 
   getEmail(sha: string) {
@@ -135,26 +141,6 @@ export const api = {
     const res = await fetch(api.rawURL(sha))
     if (!res.ok) throw new Error(`${res.status}`)
     return res.text()
-  },
-
-  listTags() {
-    return fetch(`${BASE}/api/tags`).then(jsonOrThrow<Tag[]>)
-  },
-
-  async addTag(sha: string, name: string): Promise<void> {
-    const res = await fetch(`${BASE}/api/emails/${sha}/tags`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    })
-    if (!res.ok) throw new Error(await res.text())
-  },
-
-  async removeTag(sha: string, name: string): Promise<void> {
-    const res = await fetch(`${BASE}/api/emails/${sha}/tags/${encodeURIComponent(name)}`, {
-      method: 'DELETE',
-    })
-    if (!res.ok) throw new Error(await res.text())
   },
 
   async upload(files: File[]): Promise<{ import_id: string; kind: string }> {

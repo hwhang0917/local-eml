@@ -2,22 +2,18 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronsLeft, ChevronsRight } from 'lucide-vue-next'
-import { api, type Email, type Tag } from '@/lib/api'
+import { RotateCcw, Star } from 'lucide-vue-next'
+import { api, type Email } from '@/lib/api'
 import { formatBytes, formatDate, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarTitle,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-} from '@/components/ui/sidebar'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+
+const PAGE_SIZES = [10, 25, 50, 100, 200] as const
+type PageSize = (typeof PAGE_SIZES)[number]
+const DEFAULT_PAGE_SIZE: PageSize = 50
 
 type SortCol = 'sent_at' | 'from_addr' | 'subject' | 'size_bytes'
 type Order = 'asc' | 'desc'
@@ -28,23 +24,29 @@ const { t } = useI18n()
 
 const items = ref<Email[]>([])
 const total = ref(0)
-const limit = ref(50)
 const loading = ref(false)
-const tags = ref<Tag[]>([])
-const sidebarOpen = useStorage('library-sidebar-open', true)
+
+const storedPageSize = useStorage<PageSize>('library-page-size', DEFAULT_PAGE_SIZE)
 
 function str(v: unknown, def = ''): string {
   return typeof v === 'string' ? v : def
 }
 
-// route.query is the single source of truth for list state.
+function normalizePageSize(n: number): PageSize {
+  return (PAGE_SIZES as readonly number[]).includes(n) ? (n as PageSize) : DEFAULT_PAGE_SIZE
+}
+
 const q = computed(() => str(route.query.q))
-const tag = computed(() => str(route.query.tag))
+const starredOnly = computed(() => str(route.query.starred) === '1')
 const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
 const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
 const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
+const limit = computed<PageSize>(() => {
+  const fromQuery = Number(str(route.query.limit))
+  if (fromQuery > 0) return normalizePageSize(fromQuery)
+  return normalizePageSize(storedPageSize.value)
+})
 
-// Local edit buffer for the search box; debounce-pushed to the URL.
 const searchInput = ref(q.value)
 let lastPushedQ: string | null = null
 const debouncedPushSearch = useDebounceFn((val: string) => {
@@ -52,8 +54,6 @@ const debouncedPushSearch = useDebounceFn((val: string) => {
   pushQuery({ q: val || undefined, offset: undefined })
 }, 250)
 watch(searchInput, (val) => debouncedPushSearch(val))
-// Sync the box only on external q changes (back/forward, link open),
-// not on the echo of our own push (which could clobber newer keystrokes).
 watch(q, (val) => {
   if (val === lastPushedQ) return
   if (val !== searchInput.value) searchInput.value = val
@@ -80,7 +80,7 @@ async function load() {
   try {
     const r = await api.listEmails({
       q: q.value || undefined,
-      tag: tag.value || undefined,
+      starred: starredOnly.value || undefined,
       sort: sort.value,
       order: order.value,
       limit: limit.value,
@@ -93,29 +93,70 @@ async function load() {
   }
 }
 
-// Reload whenever any list-affecting query param changes (not selection).
-watch([q, tag, sort, order, offset], load)
+watch([q, starredOnly, sort, order, offset, limit], load)
 
-onMounted(async () => {
-  tags.value = await api.listTags()
-  await load()
-})
+onMounted(load)
 
 function setSort(col: SortCol) {
   if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc', offset: undefined })
   else pushQuery({ sort: col, order: 'desc', offset: undefined })
 }
 
-function setTag(name: string) {
-  pushQuery({ tag: name || undefined, offset: undefined })
-}
-
 function setOffset(value: number) {
   pushQuery({ offset: value > 0 ? String(value) : undefined })
 }
 
+function toggleStarredFilter() {
+  pushQuery({ starred: starredOnly.value ? undefined : '1', offset: undefined })
+}
+
+const hasActiveFilters = computed(
+  () =>
+    q.value !== '' ||
+    starredOnly.value ||
+    sort.value !== 'sent_at' ||
+    order.value !== 'desc' ||
+    offset.value > 0,
+)
+
+function resetFilters() {
+  searchInput.value = ''
+  lastPushedQ = ''
+  pushQuery({
+    q: undefined,
+    starred: undefined,
+    sort: undefined,
+    order: undefined,
+    offset: undefined,
+  })
+}
+
+function setPageSize(v: unknown) {
+  if (v === null || v === undefined || v === '') return
+  const size = normalizePageSize(Number(v))
+  storedPageSize.value = size
+  pushQuery({
+    limit: size === DEFAULT_PAGE_SIZE ? undefined : String(size),
+    offset: undefined,
+  })
+}
+
 function openEmail(sha: string) {
   router.push({ name: 'viewer', params: { sha } })
+}
+
+async function toggleStar(e: Email) {
+  const next = !e.starred
+  e.starred = next
+  try {
+    await api.setStarred(e.sha256, next)
+    if (starredOnly.value && !next) {
+      items.value = items.value.filter((x) => x.sha256 !== e.sha256)
+      total.value = Math.max(0, total.value - 1)
+    }
+  } catch {
+    e.starred = !next
+  }
 }
 
 const pageInfo = computed(() => {
@@ -126,101 +167,110 @@ const pageInfo = computed(() => {
 </script>
 
 <template>
-  <div class="flex gap-6">
-    <Sidebar v-if="sidebarOpen">
-      <SidebarHeader>
-        <SidebarTitle>{{ t('library.tags') }}</SidebarTitle>
-        <button
-          @click="sidebarOpen = false"
-          :title="t('library.collapse')"
-          class="h-7 w-7 rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center"
-        >
-          <ChevronsLeft class="h-4 w-4" />
-        </button>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton :active="tag === ''" @click="setTag('')">
-              {{ t('library.all') }}
-              <span class="ml-auto text-xs text-muted-foreground">{{ total }}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem v-for="t2 in tags" :key="t2.name">
-            <SidebarMenuButton :active="tag === t2.name" @click="setTag(t2.name)">
-              {{ t2.name }}
-              <span class="ml-auto text-xs text-muted-foreground">{{ t2.count }}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarContent>
-    </Sidebar>
-
-    <button
-      v-else
-      @click="sidebarOpen = true"
-      :title="t('library.expand')"
-      class="self-start h-10 w-10 rounded-sm border border-hairline bg-card text-muted-foreground hover:bg-accent hover:text-foreground flex items-center justify-center"
-    >
-      <ChevronsRight class="h-4 w-4" />
-    </button>
-
-    <section class="flex-1 min-w-0">
-      <div class="flex items-center gap-3 mb-4">
-        <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
-        <span class="text-sm text-muted-foreground ml-auto">{{ pageInfo }}</span>
+  <section class="flex-1 min-w-0">
+    <div class="flex items-center flex-wrap gap-3 mb-4">
+      <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
+      <Button
+        variant="outline"
+        size="sm"
+        :title="starredOnly ? t('library.show_all') : t('library.show_starred')"
+        :class="starredOnly ? 'text-amber-500 border-amber-500' : ''"
+        @click="toggleStarredFilter"
+      >
+        <Star class="h-4 w-4" :fill="starredOnly ? 'currentColor' : 'none'" />
+        <span class="ml-1.5">{{ t('library.starred') }}</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        :title="t('library.reset')"
+        :disabled="!hasActiveFilters"
+        @click="resetFilters"
+      >
+        <RotateCcw class="h-4 w-4" />
+        <span class="ml-1.5">{{ t('library.reset') }}</span>
+      </Button>
+      <div class="ml-auto flex items-center gap-3">
+        <label class="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{{ t('library.per_page') }}</span>
+          <Select :model-value="String(limit)" @update:model-value="(v) => setPageSize(v)">
+            <SelectTrigger class="w-20 h-8">
+              <SelectValue>{{ limit }}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="size in PAGE_SIZES" :key="size" :value="String(size)">
+                {{ size }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </label>
+        <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
+        <div class="flex items-center gap-1">
+          <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
+          <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
+        </div>
       </div>
+    </div>
 
-      <Card class="overflow-hidden">
-        <table class="w-full text-sm">
-          <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th class="text-left px-3 py-2 w-10"></th>
-              <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
-              <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
-              <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
-              <Th :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="loading && items.length === 0">
-              <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
-            </tr>
-            <tr v-else-if="items.length === 0">
-              <td colspan="5" class="px-3 py-6 text-center text-muted-foreground">
+    <Card class="overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
+          <tr>
+            <th class="text-left px-3 py-2 w-10"></th>
+            <th class="text-left px-3 py-2 w-10"></th>
+            <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
+            <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
+            <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
+            <Th :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="loading && items.length === 0">
+            <td colspan="6" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
+          </tr>
+          <tr v-else-if="items.length === 0">
+            <td colspan="6" class="px-3 py-6 text-center text-muted-foreground">
+              <template v-if="starredOnly">{{ t('library.no_starred') }}</template>
+              <template v-else>
                 {{ t('library.no_emails') }}
                 <RouterLink to="/import" class="underline">{{ t('library.import_some') }}</RouterLink>
-              </td>
-            </tr>
-            <tr
-              v-for="e in items"
-              :key="e.sha256"
-              class="border-t hover:bg-accent/50 cursor-pointer"
-              @click="openEmail(e.sha256)"
-            >
-              <td class="px-3 py-2 text-muted-foreground">
-                <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
-              </td>
-              <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
-              <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
-              <td class="px-3 py-2 truncate">
-                {{ e.subject || t('library.no_subject') }}
-                <span v-for="t2 in e.tags" :key="t2" class="ml-1 inline-block text-[10px] px-1.5 py-0.5 rounded bg-accent text-accent-foreground">{{ t2 }}</span>
-                <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
-              </td>
-              <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </Card>
+              </template>
+            </td>
+          </tr>
+          <tr
+            v-for="e in items"
+            :key="e.sha256"
+            class="border-t hover:bg-accent/50 cursor-pointer"
+            @click="openEmail(e.sha256)"
+          >
+            <td class="px-3 py-2">
+              <button
+                type="button"
+                :title="e.starred ? t('library.unstar') : t('library.star')"
+                :aria-label="e.starred ? t('library.unstar') : t('library.star')"
+                :class="['inline-flex items-center justify-center h-6 w-6 rounded-sm hover:bg-accent',
+                  e.starred ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground']"
+                @click.stop="toggleStar(e)"
+              >
+                <Star class="h-4 w-4" :fill="e.starred ? 'currentColor' : 'none'" />
+              </button>
+            </td>
+            <td class="px-3 py-2 text-muted-foreground">
+              <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
+            </td>
+            <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
+            <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
+            <td class="px-3 py-2 truncate">
+              {{ e.subject || t('library.no_subject') }}
+              <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
+            </td>
+            <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </Card>
 
-      <div class="flex justify-between items-center mt-4">
-        <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
-        <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
-        <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
-      </div>
-    </section>
-  </div>
+  </section>
 </template>
 
 <script lang="ts">
