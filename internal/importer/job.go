@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/hwhang0917/local-eml/internal/store"
 )
@@ -14,6 +16,14 @@ type Job struct {
 	Hub      *Hub
 	Store    *store.Store
 	ID       string
+	Logger   *slog.Logger
+}
+
+func (j *Job) logger() *slog.Logger {
+	if j.Logger != nil {
+		return j.Logger
+	}
+	return slog.Default()
 }
 
 func (j *Job) RunSource(ctx context.Context, src Source) {
@@ -22,42 +32,69 @@ func (j *Job) RunSource(ctx context.Context, src Source) {
 		defer c.Close()
 	}
 
+	log := j.logger().With(slog.String("source", src.Label()))
+	start := time.Now()
+	log.Info("import job started")
+
 	j.publish(Event{Type: "step", Phase: "Scanning " + src.Label()})
 	items, err := src.Scan(ctx)
 	if err != nil {
+		log.Error("source scan failed", slog.String("err", err.Error()))
 		_ = j.Store.UpdateImportStatus(ctx, j.ID, "error", true)
 		j.publish(Event{Type: "error", Message: err.Error()})
 		return
 	}
 
 	total := len(items)
+	log.Info("source scan complete", slog.Int("total", total))
 	_ = j.Store.SetImportTotal(ctx, j.ID, total)
 	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
+	var processed, duplicates, errs int
 	for i, it := range items {
 		if ctxDone(ctx) {
+			log.Warn("import job cancelled",
+				slog.Int("processed", processed), slog.Int("total", total))
 			break
 		}
-		j.processItem(ctx, it, i+1, total)
+		ok, dup := j.processItem(ctx, it, i+1, total)
+		processed++
+		if dup {
+			duplicates++
+		}
+		if !ok {
+			errs++
+		}
 	}
 
 	j.publish(Event{Type: "step", Phase: "Finalizing"})
 	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
 	j.publish(Event{Type: "done", Processed: total, Total: total})
+
+	log.Info("import job finished",
+		slog.Int("processed", processed),
+		slog.Int("duplicates", duplicates),
+		slog.Int("errors", errs),
+		slog.Int("total", total),
+		slog.Duration("elapsed", time.Since(start)),
+	)
 }
 
-func (j *Job) processItem(ctx context.Context, it Item, idx, total int) {
+func (j *Job) processItem(ctx context.Context, it Item, idx, total int) (ok, duplicate bool) {
+	log := j.logger().With(slog.String("item", it.Name), slog.Int("idx", idx), slog.Int("total", total))
 	rc, err := it.Open(ctx)
 	if err != nil {
+		log.Warn("item open failed", slog.String("err", err.Error()))
 		j.recordItemError(ctx, it.Name, err, idx, total)
-		return
+		return false, false
 	}
 	defer rc.Close()
 
 	res, err := j.Importer.ImportReader(ctx, rc, it.Name)
 	if err != nil {
+		log.Warn("item import failed", slog.String("err", err.Error()))
 		j.recordItemError(ctx, it.Name, err, idx, total)
-		return
+		return false, false
 	}
 	dup := 0
 	if res.Duplicate {
@@ -66,6 +103,9 @@ func (j *Job) processItem(ctx context.Context, it Item, idx, total int) {
 	_ = j.Store.IncImportCounters(ctx, j.ID, 1, dup, 0)
 	j.publish(Event{Type: "item", Path: it.Name, SHA256: res.SHA256,
 		Duplicate: res.Duplicate, Processed: idx, Total: total})
+	log.Debug("item processed",
+		slog.String("sha256", res.SHA256), slog.Bool("duplicate", res.Duplicate))
+	return true, res.Duplicate
 }
 
 func (j *Job) recordItemError(ctx context.Context, name string, cause error, idx, total int) {

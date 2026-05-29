@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"strconv"
 
@@ -98,34 +99,43 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 		port = 993
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(port))
+	log := slog.Default().With(slog.String("addr", addr), slog.String("user", cfg.Username))
 
 	var (
 		c   *imapclient.Client
 		err error
 	)
 	if port == 143 {
+		log.Info("imap dial starttls")
 		c, err = imapclient.DialStartTLS(addr, nil)
 	} else {
+		log.Info("imap dial tls")
 		c, err = imapclient.DialTLS(addr, nil)
 	}
 	if err != nil {
+		log.Error("imap dial failed", slog.String("err", err.Error()))
 		return nil, fmt.Errorf("imap dial: %w", err)
 	}
 
 	if err := c.Login(cfg.Username, cfg.Password).Wait(); err != nil {
+		log.Error("imap login failed", slog.String("err", err.Error()))
 		_ = c.Close()
 		return nil, fmt.Errorf("imap login: %w", err)
 	}
+	log.Info("imap logged in")
 
 	folder := cfg.Folder
 	if folder == "" {
 		folder = "INBOX"
 	}
 	if _, err := c.Select(folder, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
+		log.Error("imap select failed",
+			slog.String("folder", folder), slog.String("err", err.Error()))
 		_ = c.Logout().Wait()
 		_ = c.Close()
 		return nil, fmt.Errorf("imap select %q: %w", folder, err)
 	}
+	log.Info("imap folder selected", slog.String("folder", folder))
 
 	return &imapClientSession{
 		client:      c,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -64,6 +65,9 @@ func (s *s3Source) Scan(ctx context.Context) ([]Item, error) {
 		return nil, err
 	}
 
+	log := slog.Default().With(
+		slog.String("bucket", s.cfg.Bucket), slog.String("prefix", s.cfg.Prefix))
+
 	var prefix *string
 	if s.cfg.Prefix != "" {
 		prefix = aws.String(s.cfg.Prefix)
@@ -71,6 +75,8 @@ func (s *s3Source) Scan(ctx context.Context) ([]Item, error) {
 
 	var items []Item
 	var token *string
+	pages := 0
+	scanned := 0
 	for {
 		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket:            aws.String(s.cfg.Bucket),
@@ -78,8 +84,11 @@ func (s *s3Source) Scan(ctx context.Context) ([]Item, error) {
 			ContinuationToken: token,
 		})
 		if err != nil {
+			log.Error("s3 list objects failed", slog.String("err", err.Error()))
 			return nil, fmt.Errorf("list objects: %w", err)
 		}
+		pages++
+		scanned += len(out.Contents)
 		for _, obj := range out.Contents {
 			key := aws.ToString(obj.Key)
 			if !isEML(key) {
@@ -98,6 +107,8 @@ func (s *s3Source) Scan(ctx context.Context) ([]Item, error) {
 		}
 		token = out.NextContinuationToken
 	}
+	log.Info("s3 scan complete",
+		slog.Int("pages", pages), slog.Int("objects", scanned), slog.Int("eml", len(items)))
 	return items, nil
 }
 

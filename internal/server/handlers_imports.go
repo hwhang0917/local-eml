@@ -77,7 +77,13 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 		src = importer.NewLocalSource(sourceName, paths, names, true)
 	}
 
-	go s.runJob(importID, src, func() { removeAll(paths) })
+	slog.Info("import requested",
+		slog.String("import_id", importID),
+		slog.String("kind", kind),
+		slog.String("source", sourceName),
+		slog.Int("files", len(files)),
+	)
+	go s.runJob(importID, kind, src, func() { removeAll(paths) })
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"import_id": importID,
@@ -85,21 +91,27 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) runJob(importID string, src importer.Source, cleanup func()) {
+func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func()) {
 	defer cleanup()
 	ctx := context.Background()
 	_ = s.Store.UpdateImportStatus(ctx, importID, "running", false)
+
+	log := slog.Default().With(
+		slog.String("import_id", importID),
+		slog.String("kind", kind),
+	)
 
 	job := &importer.Job{
 		Importer: s.Importer,
 		Hub:      s.Hub,
 		Store:    s.Store,
 		ID:       importID,
+		Logger:   log,
 	}
 
 	defer func() {
 		if rec := recover(); rec != nil {
-			slog.Error("import job panic", "import_id", importID, "panic", rec)
+			log.Error("import job panic", slog.Any("panic", rec))
 			_ = s.Store.UpdateImportStatus(ctx, importID, "error", true)
 			s.Hub.Publish(importID, importer.Event{Type: "error", Message: fmt.Sprint(rec)})
 			s.Hub.Close(importID)
@@ -272,7 +284,15 @@ func (s *Server) handleImportS3(w http.ResponseWriter, r *http.Request) {
 		Prefix:          body.Prefix,
 	})
 
-	go s.runJob(importID, src, func() {})
+	slog.Info("import requested",
+		slog.String("import_id", importID),
+		slog.String("kind", "s3"),
+		slog.String("bucket", body.Bucket),
+		slog.String("prefix", body.Prefix),
+		slog.String("region", body.Region),
+		slog.Bool("static_creds", body.AccessKeyID != ""),
+	)
+	go s.runJob(importID, "s3", src, func() {})
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"import_id": importID,
@@ -324,7 +344,15 @@ func (s *Server) handleImportImap(w http.ResponseWriter, r *http.Request) {
 		Folder:   body.Folder,
 	})
 
-	go s.runJob(importID, src, func() {})
+	slog.Info("import requested",
+		slog.String("import_id", importID),
+		slog.String("kind", "imap"),
+		slog.String("host", body.Host),
+		slog.Int("port", body.Port),
+		slog.String("username", body.Username),
+		slog.String("folder", folder),
+	)
+	go s.runJob(importID, "imap", src, func() {})
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"import_id": importID,
