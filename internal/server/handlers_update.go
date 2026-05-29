@@ -125,8 +125,8 @@ func (s *Server) handleUpdateInstall(w http.ResponseWriter, r *http.Request) {
 		slog.String("binary", currentPath),
 	)
 
-	// Reply before exiting so the client sees the success and starts polling
-	// /healthz instead of treating EOF as a generic failure.
+	// Reply before triggering restart so the client sees the success and
+	// starts polling /healthz instead of treating EOF as a generic failure.
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"status":     "installed",
 		"from":       s.Version,
@@ -134,11 +134,26 @@ func (s *Server) handleUpdateInstall(w http.ResponseWriter, r *http.Request) {
 		"restarting": true,
 	})
 
-	// Give the response a moment to flush, then exit. The service manager
-	// (systemd/launchd/SCM) respawns us with the new binary.
+	// On Linux/systemd, the auto-restart-after-exit path waits RestartSec
+	// (kardianos's default unit hardcodes RestartSec=120) — so a plain
+	// os.Exit would leave the server down for 2 minutes. Issue an explicit
+	// out-of-band restart instead; it bypasses RestartSec and tells systemd
+	// to bring us back up the moment our process exits. On macOS/launchd,
+	// KeepAlive already restarts within ~1s of exit so the nudge is a no-op.
 	go func() {
 		time.Sleep(250 * time.Millisecond)
-		slog.Info("exiting for service-manager restart")
+		if err := requestImmediateRestart(); err != nil {
+			slog.Warn("immediate restart request failed; falling back to service-manager auto-restart-on-exit",
+				slog.String("err", err.Error()))
+		} else {
+			slog.Info("queued explicit service-manager restart")
+		}
+		// Hold open briefly so the service manager's SIGTERM (sent as part
+		// of the queued restart) can drive the graceful Shutdown path. If
+		// no signal arrives, exit anyway — the auto-restart policy of the
+		// platform takes over.
+		time.Sleep(5 * time.Second)
+		slog.Info("no restart signal received within deadline; exiting")
 		os.Exit(0)
 	}()
 }

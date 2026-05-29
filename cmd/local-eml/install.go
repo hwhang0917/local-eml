@@ -19,6 +19,30 @@ type stubProgram struct{}
 func (stubProgram) Start(service.Service) error { return nil }
 func (stubProgram) Stop(service.Service) error  { return nil }
 
+// systemdUnit overrides kardianos's default systemd template. The default
+// hardcodes RestartSec=120, which leaves the service down for two full
+// minutes after any clean exit — including the binary swap performed by the
+// in-app update flow. RestartSec=2 here makes the auto-restart-on-exit path
+// fast, so even if our explicit `systemctl --user restart` nudge doesn't
+// land (PATH issue, dbus hiccup), systemd brings us back within seconds.
+//
+// The template otherwise mirrors the kardianos default for systemd-user
+// services. It's a `text/template`, executed against kardianos's internal
+// context, so the variables ({{.Description}}, {{.Path}}, etc.) match the
+// upstream template surface.
+const systemdUnit = `[Unit]
+Description={{.Description}}
+ConditionFileIsExecutable={{.Path|cmdEscape}}
+
+[Service]
+ExecStart={{.Path|cmdEscape}}{{range .Arguments}} {{.|cmd}}{{end}}
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+`
+
 func newService() (service.Service, error) {
 	cfg := &service.Config{
 		Name:        "local-eml",
@@ -26,9 +50,10 @@ func newService() (service.Service, error) {
 		Description: "Local EML viewer (loopback-only HTTP server)",
 		Arguments:   []string{"serve"},
 		Option: service.KeyValue{
-			"UserService": true,
-			"RunAtLoad":   true,
-			"KeepAlive":   true,
+			"UserService":   true,
+			"RunAtLoad":     true,
+			"KeepAlive":     true,
+			"SystemdScript": systemdUnit,
 		},
 	}
 	return service.New(stubProgram{}, cfg)
