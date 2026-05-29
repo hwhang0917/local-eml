@@ -4,7 +4,7 @@ import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { RotateCcw, Star } from 'lucide-vue-next'
 import { api, type Email } from '@/lib/api'
-import { formatBytes, formatDate, shortSHA } from '@/lib/format'
+import { formatBytes, formatDate, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
@@ -259,7 +259,7 @@ const pageInfo = computed(() => {
               <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
             </td>
             <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
-            <td class="px-3 py-2 truncate max-w-[18rem]" :title="e.from">{{ e.from }}</td>
+            <td class="px-3 py-2 whitespace-nowrap" :title="e.from">{{ senderName(e.from) }}</td>
             <td class="px-3 py-2 truncate">
               {{ e.subject || t('library.no_subject') }}
               <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>

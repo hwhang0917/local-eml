@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hwhang0917/local-eml/internal/exporter"
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/paths"
 	"github.com/hwhang0917/local-eml/internal/server"
@@ -87,7 +88,9 @@ func runServe(args []string) int {
 
 	imp := &importer.Importer{Store: st, Paths: p}
 	hub := importer.NewHub()
-	srv := &server.Server{Store: st, Importer: imp, Hub: hub}
+	exp := &exporter.Exporter{Store: st, Paths: p, Hub: hub}
+	canc := importer.NewCanceller()
+	srv := &server.Server{Store: st, Importer: imp, Exporter: exp, Hub: hub, Canceller: canc}
 
 	addr := fmt.Sprintf("127.0.0.1:%d", *port)
 	httpSrv := &http.Server{

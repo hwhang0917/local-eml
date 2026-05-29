@@ -88,6 +88,15 @@ export interface IMAPProfile {
   folder?: string
 }
 
+export interface S3Profile {
+  id: number
+  name: string
+  bucket: string
+  prefix?: string
+  region?: string
+  access_key_id?: string
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -192,6 +201,46 @@ export const api = {
   async deleteIMAPProfile(id: number): Promise<void> {
     const res = await fetch(`${BASE}/api/imap/profiles/${id}`, { method: 'DELETE' })
     if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+  },
+
+  listS3Profiles() {
+    return fetch(`${BASE}/api/s3/profiles`).then(jsonOrThrow<S3Profile[]>)
+  },
+
+  async saveS3Profile(p: Omit<S3Profile, 'id'>): Promise<S3Profile> {
+    const res = await fetch(`${BASE}/api/s3/profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(p),
+    })
+    return jsonOrThrow<S3Profile>(res)
+  },
+
+  async deleteS3Profile(id: number): Promise<void> {
+    const res = await fetch(`${BASE}/api/s3/profiles/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+  },
+
+  exportZipURL: () => `${BASE}/api/exports/zip`,
+
+  async exportS3(cfg: S3ImportConfig): Promise<{ export_id: string; kind: string }> {
+    const res = await fetch(`${BASE}/api/exports/s3`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    })
+    return jsonOrThrow(res)
+  },
+
+  async cancelJob(id: string): Promise<void> {
+    const res = await fetch(`${BASE}/api/jobs/${id}`, { method: 'DELETE' })
+    if (!res.ok && res.status !== 404) {
       const text = await res.text().catch(() => '')
       throw new Error(`${res.status} ${res.statusText}: ${text}`)
     }

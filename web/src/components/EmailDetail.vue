@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import { Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { APP_NAME } from '@/lib/app'
-import { formatBytes, formatDate } from '@/lib/format'
+import { formatBytes, formatDateAbsolute } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
 
 const props = defineProps<{ sha: string }>()
@@ -105,7 +105,7 @@ async function toggleStar() {
         <dt class="text-muted-foreground">{{ t('viewer.from') }}</dt><dd>{{ email.from }}</dd>
         <dt class="text-muted-foreground">{{ t('viewer.to') }}</dt><dd>{{ email.to.join(', ') }}</dd>
         <dt v-if="email.cc.length" class="text-muted-foreground">{{ t('viewer.cc') }}</dt><dd v-if="email.cc.length">{{ email.cc.join(', ') }}</dd>
-        <dt class="text-muted-foreground">{{ t('viewer.date') }}</dt><dd>{{ formatDate(email.sent_at) }}</dd>
+        <dt class="text-muted-foreground">{{ t('viewer.date') }}</dt><dd>{{ formatDateAbsolute(email.sent_at) }}</dd>
         <dt class="text-muted-foreground">{{ t('viewer.size') }}</dt><dd>{{ formatBytes(email.size_bytes) }}</dd>
       </dl>
     </Card>

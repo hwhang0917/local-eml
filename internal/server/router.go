@@ -6,14 +6,17 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/hwhang0917/local-eml/internal/exporter"
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
 type Server struct {
-	Store    *store.Store
-	Importer *importer.Importer
-	Hub      *importer.Hub
+	Store     *store.Store
+	Importer  *importer.Importer
+	Exporter  *exporter.Exporter
+	Hub       *importer.Hub
+	Canceller *importer.Canceller
 }
 
 func (s *Server) Router() http.Handler {
@@ -43,6 +46,15 @@ func (s *Server) Router() http.Handler {
 		api.Get("/imap/profiles", s.handleListIMAPProfiles)
 		api.Post("/imap/profiles", s.handleSaveIMAPProfile)
 		api.Delete("/imap/profiles/{id}", s.handleDeleteIMAPProfile)
+
+		api.Get("/s3/profiles", s.handleListS3Profiles)
+		api.Post("/s3/profiles", s.handleSaveS3Profile)
+		api.Delete("/s3/profiles/{id}", s.handleDeleteS3Profile)
+
+		api.Get("/exports/zip", s.handleExportZip)
+		api.Post("/exports/s3", s.handleExportS3)
+
+		api.Delete("/jobs/{id}", s.handleCancelJob)
 	})
 
 	r.Handle("/*", spaHandler())

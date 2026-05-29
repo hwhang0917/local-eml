@@ -1,8 +1,14 @@
 {
   "lang": "한국어",
+  "app": {
+    "server_offline": "local-eml 서버에 연결할 수 없어요. 서버가 실행 중인가요?",
+    "server_retry": "재시도",
+    "server_checking": "확인 중…"
+  },
   "nav": {
     "library": "라이브러리",
     "import": "가져오기",
+    "export": "내보내기",
     "settings": "설정",
     "viewer": "이메일"
   },
@@ -88,6 +94,15 @@
     "s3_creds": "자격 증명",
     "s3_creds_form": "입력값 사용",
     "s3_creds_system": "시스템 사용 (~/.aws/credentials)",
+    "s3_profile": "프로필",
+    "s3_profile_new": "— 새 프로필 —",
+    "s3_profile_save": "저장",
+    "s3_profile_save_prompt": "프로필 이름:",
+    "s3_profile_delete": "삭제",
+    "s3_profile_delete_confirm": "\"{name}\" 프로필을 삭제할까요?",
+    "s3_profile_save_error": "프로필을 저장하지 못했어요",
+    "s3_profile_load_error": "프로필을 불러오지 못했어요",
+    "s3_profile_delete_error": "프로필을 삭제하지 못했어요",
     "provider_imap": "IMAP",
     "imap_title": "IMAP에서 가져오기",
     "imap_hint": "읽기 전용으로 연결하며, 서버에서 메일을 읽음으로 표시하지 않습니다.",
@@ -105,7 +120,28 @@
     "imap_profile_delete_confirm": "\"{name}\" 프로필을 삭제할까요?",
     "imap_profile_save_error": "프로필을 저장하지 못했어요",
     "imap_profile_load_error": "프로필을 불러오지 못했어요",
-    "imap_profile_delete_error": "프로필을 삭제하지 못했어요"
+    "imap_profile_delete_error": "프로필을 삭제하지 못했어요",
+    "abort": "취소",
+    "cancel_error": "작업을 취소하지 못했어요"
+  },
+  "export": {
+    "mode_zip": "ZIP 다운로드",
+    "mode_s3": "S3 업로드",
+    "zip_title": "라이브러리를 ZIP으로 다운로드",
+    "zip_hint": "라이브러리의 모든 .eml을 zip 하나로 압축해 브라우저로 스트리밍합니다.",
+    "zip_download": ".zip 다운로드",
+    "s3_title": "S3로 라이브러리 업로드",
+    "s3_hint": "모든 .eml을 버킷으로 업로드합니다. 대상 프리픽스에 이미 있는 객체는 건너뜁니다.",
+    "s3_confirm_hint": "모든 로컬 이메일을 지정한 프리픽스 아래로 업로드하며, 기존 키는 건너뜁니다.",
+    "confirm_title": "내보낼 준비 완료",
+    "start": "내보내기 시작",
+    "queued": "대기 중",
+    "export_label": "내보내기 {id}",
+    "completed_fallback": "완료",
+    "failed_fallback": "실패",
+    "toast_done_title": "내보내기 완료",
+    "toast_error_title": "내보내기 중 오류 발생",
+    "toast_summary": "{processed}개 처리 · 중복 {dup} · 오류 {err}"
   },
   "settings": {
     "section": {
@@ -120,7 +156,7 @@
     "language": "언어",
     "language_help": "인터페이스 언어를 전환합니다.",
     "date_format": "날짜 형식",
-    "date_format_help": "앱 전체에서 날짜를 어떻게 표시할지 선택합니다.",
+    "date_format_help": "이메일 목록에서 날짜를 어떻게 표시할지 선택합니다. 상세 보기에서는 항상 전체 날짜를 보여줍니다.",
     "date_format_absolute": "절대 (예: 2026년 5월 28일 오후 1:05)",
     "date_format_relative": "상대 (예: 3시간 전)",
     "attributions_intro": "Local Eml은 다음 오픈소스 프로젝트로 만들어졌습니다.",

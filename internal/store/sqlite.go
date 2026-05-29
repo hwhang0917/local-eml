@@ -104,6 +104,17 @@ CREATE TABLE IF NOT EXISTS imap_profiles (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS s3_profiles (
+  id INTEGER PRIMARY KEY,
+  name TEXT UNIQUE NOT NULL,
+  bucket TEXT NOT NULL,
+  prefix TEXT,
+  region TEXT,
+  access_key_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `
 
 func (s *Store) migrate(ctx context.Context) error {

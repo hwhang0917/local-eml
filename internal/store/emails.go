@@ -104,6 +104,29 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 
 var ErrEmailNotFound = errors.New("email not found")
 
+type ExportEntry struct {
+	SHA256   string
+	Filename string
+}
+
+func (s *Store) AllExportEntries(ctx context.Context) ([]ExportEntry, error) {
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT sha256, COALESCE(filename, '') FROM emails ORDER BY sent_at DESC, id DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ExportEntry{}
+	for rows.Next() {
+		var e ExportEntry
+		if err := rows.Scan(&e.SHA256, &e.Filename); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) error {
 	flag := 0
 	if starred {

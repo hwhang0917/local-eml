@@ -51,8 +51,10 @@ func (j *Job) RunSource(ctx context.Context, src Source) {
 	j.publish(Event{Type: "step", Phase: fmt.Sprintf("Importing %d emails", total), Total: total})
 
 	var processed, duplicates, errs int
+	cancelled := false
 	for i, it := range items {
 		if ctxDone(ctx) {
+			cancelled = true
 			log.Warn("import job cancelled",
 				slog.Int("processed", processed), slog.Int("total", total))
 			break
@@ -67,9 +69,19 @@ func (j *Job) RunSource(ctx context.Context, src Source) {
 		}
 	}
 
-	j.publish(Event{Type: "step", Phase: "Finalizing"})
-	_ = j.Store.UpdateImportStatus(ctx, j.ID, "done", true)
-	j.publish(Event{Type: "done", Processed: total, Total: total})
+	// Use a fresh context for finalization writes: ctx is already cancelled
+	// when the user aborted, but we still need to record the terminal state.
+	finalCtx := context.Background()
+	if cancelled {
+		j.publish(Event{Type: "step", Phase: "Cancelled"})
+		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, "error", true)
+		j.publish(Event{Type: "error", Phase: "Cancelled",
+			Message: "cancelled", Processed: processed, Total: total})
+	} else {
+		j.publish(Event{Type: "step", Phase: "Finalizing"})
+		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, "done", true)
+		j.publish(Event{Type: "done", Processed: total, Total: total})
+	}
 
 	log.Info("import job finished",
 		slog.Int("processed", processed),

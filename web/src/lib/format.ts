@@ -15,9 +15,28 @@ export function formatDate(iso: string | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime()) || d.getFullYear() < 2) return ''
-  const locale = i18n.global.locale.value
-  if (dateFormat.value === 'relative') return formatRelative(d, locale)
-  return d.toLocaleString(locale, {
+  if (dateFormat.value === 'relative') return formatRelative(d, i18n.global.locale.value)
+  return absoluteShort(d)
+}
+
+export function formatDateAbsolute(iso: string | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime()) || d.getFullYear() < 2) return ''
+  return d.toLocaleString(i18n.global.locale.value, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short',
+  })
+}
+
+function absoluteShort(d: Date): string {
+  return d.toLocaleString(i18n.global.locale.value, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -47,4 +66,26 @@ function formatRelative(d: Date, locale: string): string {
 
 export function shortSHA(s: string): string {
   return s.slice(0, 8)
+}
+
+const SENDER_MAX_CHARS = 6
+
+export function senderName(addr: string | undefined): string {
+  if (!addr) return ''
+  const trimmed = addr.trim()
+  const angle = trimmed.indexOf('<')
+  let name = ''
+  if (angle > 0) {
+    name = trimmed.slice(0, angle).trim().replace(/^"(.*)"$/, '$1').trim()
+  }
+  if (!name) {
+    const bareEmail = trimmed.replace(/^<|>$/g, '')
+    const at = bareEmail.indexOf('@')
+    name = at > 0 ? bareEmail.slice(0, at) : bareEmail
+  }
+  const chars = Array.from(name)
+  if (chars.length > SENDER_MAX_CHARS) {
+    return chars.slice(0, SENDER_MAX_CHARS).join('') + '…'
+  }
+  return name
 }

@@ -93,7 +93,8 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func()) {
 	defer cleanup()
-	ctx := context.Background()
+	ctx, release := s.Canceller.Register(context.Background(), importID)
+	defer release()
 	_ = s.Store.UpdateImportStatus(ctx, importID, "running", false)
 
 	log := slog.Default().With(
@@ -112,7 +113,7 @@ func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Error("import job panic", slog.Any("panic", rec))
-			_ = s.Store.UpdateImportStatus(ctx, importID, "error", true)
+			_ = s.Store.UpdateImportStatus(context.Background(), importID, "error", true)
 			s.Hub.Publish(importID, importer.Event{Type: "error", Message: fmt.Sprint(rec)})
 			s.Hub.Close(importID)
 		}

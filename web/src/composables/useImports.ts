@@ -40,15 +40,16 @@ async function hydrateFromDB(run: ImportRun) {
 }
 
 function notify(run: ImportRun) {
-  const desc = t('import.toast_summary', {
+  const ns = run.kind.endsWith('-export') ? 'export' : 'import'
+  const desc = t(`${ns}.toast_summary`, {
     processed: run.processed,
     dup: run.duplicates,
     err: run.errors,
   })
   if (run.errors > 0) {
-    toast.error(t('import.toast_error_title'), { description: desc })
+    toast.error(t(`${ns}.toast_error_title`), { description: desc })
   } else {
-    toast.success(t('import.toast_done_title'), { description: desc })
+    toast.success(t(`${ns}.toast_done_title`), { description: desc })
   }
 }
 
@@ -100,6 +101,14 @@ function followProgress(run: ImportRun) {
       finish(run)
     }
     es.close()
+  }
+}
+
+async function cancelRun(id: string) {
+  try {
+    await api.cancelJob(id)
+  } catch (e) {
+    toast.error(t('import.cancel_error'), { description: String(e) })
   }
 }
 
@@ -158,5 +167,23 @@ export function useImports() {
     followProgress(run)
   }
 
-  return { runs, startImport, startS3Import, startImapImport }
+  async function startS3Export(cfg: S3ImportConfig) {
+    const { export_id, kind } = await api.exportS3(cfg)
+    const run = reactive<ImportRun>({
+      id: export_id,
+      kind,
+      phase: t('export.queued'),
+      current: '',
+      total: 0,
+      processed: 0,
+      duplicates: 0,
+      errors: 0,
+      done: false,
+      log: [],
+    })
+    runs.value.unshift(run)
+    followProgress(run)
+  }
+
+  return { runs, startImport, startS3Import, startImapImport, startS3Export, cancelRun }
 }

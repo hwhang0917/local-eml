@@ -6,12 +6,17 @@ import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
-import type { S3ImportConfig, IMAPImportConfig, IMAPProfile } from '@/lib/api'
+import type { S3ImportConfig, IMAPImportConfig, IMAPProfile, S3Profile } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+
+const NEW_PROFILE = '__new__'
 
 const { t } = useI18n()
-const { runs, startImport, startS3Import, startImapImport } = useImports()
+const { runs, startImport, startS3Import, startImapImport, cancelRun } = useImports()
+
+const importRuns = computed(() => runs.value.filter((r) => !r.kind.endsWith('-export')))
 
 type Provider = 'local' | 's3' | 'imap'
 const provider = ref<Provider>('local')
@@ -82,7 +87,99 @@ const s3 = ref<S3ImportConfig>({
 })
 const s3Confirming = ref(false)
 
+const s3Profiles = ref<S3Profile[]>([])
+const selectedS3ProfileId = ref<number | null>(null)
+
+const activeS3Profile = computed(() =>
+  s3Profiles.value.find((p) => p.id === selectedS3ProfileId.value) ?? null,
+)
+
+const canSaveS3Profile = computed(() => s3.value.bucket.trim().length > 0)
+
 const s3Valid = computed(() => s3.value.bucket.trim().length > 0)
+
+async function loadS3Profiles() {
+  try {
+    s3Profiles.value = await api.listS3Profiles()
+  } catch (e) {
+    toast.error(t('import.s3_profile_load_error'), { description: String(e) })
+  }
+}
+
+function applyS3Profile(p: S3Profile | null) {
+  if (!p) {
+    s3.value = {
+      accessKeyId: '', secretAccessKey: '', sessionToken: '',
+      region: '', bucket: '', prefix: '',
+    }
+    return
+  }
+  s3.value = {
+    accessKeyId: p.access_key_id ?? '',
+    secretAccessKey: '',
+    sessionToken: '',
+    region: p.region ?? '',
+    bucket: p.bucket,
+    prefix: p.prefix ?? '',
+  }
+}
+
+function onS3ProfileChange(value: string) {
+  if (value === NEW_PROFILE) {
+    selectedS3ProfileId.value = null
+    applyS3Profile(null)
+    return
+  }
+  const id = Number(value)
+  selectedS3ProfileId.value = id
+  applyS3Profile(s3Profiles.value.find((p) => p.id === id) ?? null)
+}
+
+const s3ProfileSelectValue = computed(() =>
+  selectedS3ProfileId.value == null ? NEW_PROFILE : String(selectedS3ProfileId.value),
+)
+
+const s3ProfileSelectLabel = computed(() =>
+  activeS3Profile.value?.name ?? t('import.s3_profile_new'),
+)
+
+async function saveS3Profile() {
+  const existing = activeS3Profile.value
+  let name = existing?.name ?? ''
+  if (!existing) {
+    const entered = window.prompt(t('import.s3_profile_save_prompt'), '')
+    if (entered == null) return
+    name = entered.trim()
+    if (!name) return
+  }
+  try {
+    const saved = await api.saveS3Profile({
+      name,
+      bucket: s3.value.bucket.trim(),
+      prefix: s3.value.prefix?.trim() || undefined,
+      region: s3.value.region?.trim() || undefined,
+      access_key_id: s3.value.accessKeyId?.trim() || undefined,
+    })
+    await loadS3Profiles()
+    selectedS3ProfileId.value = saved.id
+  } catch (e) {
+    toast.error(t('import.s3_profile_save_error'), { description: String(e) })
+  }
+}
+
+async function deleteS3Profile() {
+  const p = activeS3Profile.value
+  if (!p) return
+  if (!window.confirm(t('import.s3_profile_delete_confirm', { name: p.name }))) return
+  try {
+    await api.deleteS3Profile(p.id)
+    selectedS3ProfileId.value = null
+    applyS3Profile(null)
+    await loadS3Profiles()
+  } catch (e) {
+    toast.error(t('import.s3_profile_delete_error'), { description: String(e) })
+  }
+}
 
 const s3CredsLabel = computed(() =>
   s3.value.accessKeyId?.trim() ? t('import.s3_creds_form') : t('import.s3_creds_system'),
@@ -188,6 +285,7 @@ async function loadImapProfiles() {
 
 onMounted(() => {
   loadImapProfiles()
+  loadS3Profiles()
 })
 
 function applyImapProfile(p: IMAPProfile | null) {
@@ -204,11 +302,24 @@ function applyImapProfile(p: IMAPProfile | null) {
   }
 }
 
-function onImapProfileChange(idStr: string) {
-  const id = idStr ? Number(idStr) : null
+function onImapProfileChange(value: string) {
+  if (value === NEW_PROFILE) {
+    selectedImapProfileId.value = null
+    applyImapProfile(null)
+    return
+  }
+  const id = Number(value)
   selectedImapProfileId.value = id
-  applyImapProfile(id == null ? null : imapProfiles.value.find((p) => p.id === id) ?? null)
+  applyImapProfile(imapProfiles.value.find((p) => p.id === id) ?? null)
 }
+
+const imapProfileSelectValue = computed(() =>
+  selectedImapProfileId.value == null ? NEW_PROFILE : String(selectedImapProfileId.value),
+)
+
+const imapProfileSelectLabel = computed(() =>
+  activeImapProfile.value?.name ?? t('import.imap_profile_new'),
+)
 
 async function saveImapProfile() {
   const existing = activeImapProfile.value
@@ -338,6 +449,32 @@ async function confirmImap() {
           <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_hint') }}</p>
         </div>
 
+        <div class="flex items-end gap-2">
+          <div class="space-y-1 flex-1 max-w-xs">
+            <span class="text-sm">{{ t('import.s3_profile') }}</span>
+            <Select
+              :model-value="s3ProfileSelectValue"
+              @update:model-value="(v) => v && onS3ProfileChange(String(v))"
+            >
+              <SelectTrigger class="w-full">
+                <SelectValue>{{ s3ProfileSelectLabel }}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="NEW_PROFILE">{{ t('import.s3_profile_new') }}</SelectItem>
+                <SelectItem v-for="p in s3Profiles" :key="p.id" :value="String(p.id)">
+                  {{ p.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" :disabled="!canSaveS3Profile" @click="saveS3Profile">
+            {{ t('import.s3_profile_save') }}
+          </Button>
+          <Button variant="outline" :disabled="!activeS3Profile" @click="deleteS3Profile">
+            {{ t('import.s3_profile_delete') }}
+          </Button>
+        </div>
+
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.s3_access_key') }}</span>
@@ -420,17 +557,23 @@ async function confirmImap() {
         </div>
 
         <div class="flex items-end gap-2">
-          <label class="space-y-1 flex-1 max-w-xs">
+          <div class="space-y-1 flex-1 max-w-xs">
             <span class="text-sm">{{ t('import.imap_profile') }}</span>
-            <select
-              :value="selectedImapProfileId ?? ''"
-              @change="onImapProfileChange(($event.target as HTMLSelectElement).value)"
-              :class="inputClass"
+            <Select
+              :model-value="imapProfileSelectValue"
+              @update:model-value="(v) => v && onImapProfileChange(String(v))"
             >
-              <option value="">{{ t('import.imap_profile_new') }}</option>
-              <option v-for="p in imapProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
-            </select>
-          </label>
+              <SelectTrigger class="w-full">
+                <SelectValue>{{ imapProfileSelectLabel }}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="NEW_PROFILE">{{ t('import.imap_profile_new') }}</SelectItem>
+                <SelectItem v-for="p in imapProfiles" :key="p.id" :value="String(p.id)">
+                  {{ p.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
             {{ t('import.imap_profile_save') }}
           </Button>
@@ -499,8 +642,8 @@ async function confirmImap() {
       </Card>
     </template>
 
-    <!-- progress (shared) -->
-    <div v-for="run in runs" :key="run.id" class="space-y-2">
+    <!-- progress (imports only) -->
+    <div v-for="run in importRuns" :key="run.id" class="space-y-2">
       <Card class="p-4">
         <div class="flex items-center gap-3 mb-2">
           <span class="font-medium">{{ t('import.import_label', { id: run.id.slice(0, 8) }) }}</span>
@@ -510,6 +653,9 @@ async function confirmImap() {
             <span v-if="run.duplicates"> · {{ run.duplicates }} {{ t('import.dup') }}</span>
             <span v-if="run.errors" class="text-destructive"> · {{ run.errors }} {{ t('import.err') }}</span>
           </span>
+          <Button v-if="!run.done" size="sm" variant="outline" @click="cancelRun(run.id)">
+            {{ t('import.abort') }}
+          </Button>
         </div>
 
         <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">

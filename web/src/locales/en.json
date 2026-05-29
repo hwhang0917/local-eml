@@ -1,8 +1,14 @@
 {
   "lang": "English",
+  "app": {
+    "server_offline": "Can't reach the local-eml server. Is it running?",
+    "server_retry": "Retry",
+    "server_checking": "Checking…"
+  },
   "nav": {
     "library": "Library",
     "import": "Import",
+    "export": "Export",
     "settings": "Settings",
     "viewer": "Viewer"
   },
@@ -88,6 +94,15 @@
     "s3_creds": "Credentials",
     "s3_creds_form": "from form",
     "s3_creds_system": "from system (~/.aws/credentials)",
+    "s3_profile": "Profile",
+    "s3_profile_new": "— New —",
+    "s3_profile_save": "Save",
+    "s3_profile_save_prompt": "Profile name:",
+    "s3_profile_delete": "Delete",
+    "s3_profile_delete_confirm": "Delete profile \"{name}\"?",
+    "s3_profile_save_error": "Couldn't save profile",
+    "s3_profile_load_error": "Couldn't load profiles",
+    "s3_profile_delete_error": "Couldn't delete profile",
     "provider_imap": "IMAP",
     "imap_title": "Import from IMAP",
     "imap_hint": "Connects read-only; messages are never marked read on the server.",
@@ -105,7 +120,28 @@
     "imap_profile_delete_confirm": "Delete profile \"{name}\"?",
     "imap_profile_save_error": "Couldn't save profile",
     "imap_profile_load_error": "Couldn't load profiles",
-    "imap_profile_delete_error": "Couldn't delete profile"
+    "imap_profile_delete_error": "Couldn't delete profile",
+    "abort": "Cancel",
+    "cancel_error": "Couldn't cancel job"
+  },
+  "export": {
+    "mode_zip": "Download ZIP",
+    "mode_s3": "Upload to S3",
+    "zip_title": "Download library as ZIP",
+    "zip_hint": "Every .eml in your library is packed into one zip and streamed to your browser.",
+    "zip_download": "Download .zip",
+    "s3_title": "Upload library to S3",
+    "s3_hint": "Streams every .eml to the bucket. Objects already at the destination prefix are skipped.",
+    "s3_confirm_hint": "Uploads all local emails to the bucket under the given prefix; existing keys are skipped.",
+    "confirm_title": "Ready to export",
+    "start": "Start export",
+    "queued": "Queued",
+    "export_label": "Export {id}",
+    "completed_fallback": "Completed",
+    "failed_fallback": "Failed",
+    "toast_done_title": "Export complete",
+    "toast_error_title": "Export finished with errors",
+    "toast_summary": "{processed} processed · {dup} duplicates · {err} errors"
   },
   "settings": {
     "section": {
@@ -120,7 +156,7 @@
     "language": "Language",
     "language_help": "Switch the interface language.",
     "date_format": "Date format",
-    "date_format_help": "Choose how dates are displayed throughout the app.",
+    "date_format_help": "Choose how dates are shown in the email list. The detail view always uses the full date.",
     "date_format_absolute": "Absolute (e.g. May 28, 2026, 13:05)",
     "date_format_relative": "Relative (e.g. 3 hours ago)",
     "attributions_intro": "Local Eml is built with these open-source projects.",
