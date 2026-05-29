@@ -10,18 +10,32 @@ import (
 )
 
 type fakeIMAP struct {
-	uids     []imap.UID
-	bodies   map[imap.UID]string
-	fetchErr map[imap.UID]error
-	uidsErr  error
-	closed   bool
+	uids        []imap.UID
+	bodies      map[imap.UID]string
+	fetchErr    map[imap.UID]error
+	uidsErr     error
+	uidValidity uint32
+	lastMinUID  uint32
+	closed      bool
 }
 
-func (f *fakeIMAP) UIDs() ([]imap.UID, error) {
+func (f *fakeIMAP) UIDValidity() uint32 { return f.uidValidity }
+
+func (f *fakeIMAP) UIDs(minUID uint32) ([]imap.UID, error) {
+	f.lastMinUID = minUID
 	if f.uidsErr != nil {
 		return nil, f.uidsErr
 	}
-	return f.uids, nil
+	if minUID == 0 {
+		return f.uids, nil
+	}
+	var out []imap.UID
+	for _, u := range f.uids {
+		if uint32(u) >= minUID {
+			out = append(out, u)
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeIMAP) Fetch(uid imap.UID) ([]byte, error) {
@@ -100,6 +114,76 @@ func TestIMAPSourceCloseClosesSession(t *testing.T) {
 	}
 	if !f.closed {
 		t.Error("Close did not close the session")
+	}
+}
+
+func TestIMAPSourceIncrementalUsesSinceUID(t *testing.T) {
+	f := &fakeIMAP{
+		uids:        []imap.UID{42, 100},
+		bodies:      map[imap.UID]string{42: "old", 100: "new"},
+		uidValidity: 7,
+	}
+	src := sourceWithFake(f, IMAPConfig{
+		Host: "h", Username: "u",
+		Incremental: true, ExpectedUIDValidity: 7, SinceUID: 50,
+	})
+	items, err := src.Scan(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.lastMinUID != 51 {
+		t.Errorf("lastMinUID = %d, want 51 (SinceUID+1)", f.lastMinUID)
+	}
+	if len(items) != 1 {
+		t.Fatalf("want 1 item (uid 100 only), got %d", len(items))
+	}
+	res, ok := src.SyncResult()
+	if !ok {
+		t.Fatalf("expected SyncResult ok")
+	}
+	if res.UIDValidity != 7 || res.MaxUID != 100 {
+		t.Errorf("result = %+v, want {UIDValidity:7 MaxUID:100}", res)
+	}
+}
+
+func TestIMAPSourceUIDValidityMismatchFallsBackToFullScan(t *testing.T) {
+	f := &fakeIMAP{
+		uids:        []imap.UID{1, 2, 3},
+		bodies:      map[imap.UID]string{1: "a", 2: "b", 3: "c"},
+		uidValidity: 999, // server moved
+	}
+	src := sourceWithFake(f, IMAPConfig{
+		Host: "h", Username: "u",
+		Incremental: true, ExpectedUIDValidity: 7, SinceUID: 50,
+	})
+	items, err := src.Scan(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if f.lastMinUID != 0 {
+		t.Errorf("lastMinUID = %d, want 0 (full scan after UIDVALIDITY mismatch)", f.lastMinUID)
+	}
+	if len(items) != 3 {
+		t.Errorf("want 3 items after fallback, got %d", len(items))
+	}
+}
+
+func TestIMAPSourceEmptyIncrementalKeepsSinceUID(t *testing.T) {
+	f := &fakeIMAP{uidValidity: 9}
+	src := sourceWithFake(f, IMAPConfig{
+		Host: "h", Username: "u",
+		Incremental: true, ExpectedUIDValidity: 9, SinceUID: 200,
+	})
+	items, err := src.Scan(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("want 0 items, got %d", len(items))
+	}
+	res, ok := src.SyncResult()
+	if !ok || res.MaxUID != 200 {
+		t.Errorf("result = %+v ok=%v, want MaxUID=200 (preserve since)", res, ok)
 	}
 }
 

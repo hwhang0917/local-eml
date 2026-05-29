@@ -72,6 +72,7 @@ export interface S3ImportConfig {
 }
 
 export interface IMAPImportConfig {
+  profile_id?: number
   host: string
   port?: number
   username: string
@@ -86,6 +87,11 @@ export interface IMAPProfile {
   port?: number
   username: string
   folder?: string
+  sync_enabled: boolean
+  uid_validity?: number
+  last_uid?: number
+  last_synced_at?: number
+  has_password: boolean
 }
 
 export interface S3Profile {
@@ -189,7 +195,14 @@ export const api = {
     return fetch(`${BASE}/api/imap/profiles`).then(jsonOrThrow<IMAPProfile[]>)
   },
 
-  async saveIMAPProfile(p: Omit<IMAPProfile, 'id'>): Promise<IMAPProfile> {
+  async saveIMAPProfile(p: {
+    name: string
+    host: string
+    port?: number
+    username: string
+    folder?: string
+    sync_enabled?: boolean
+  }): Promise<IMAPProfile> {
     const res = await fetch(`${BASE}/api/imap/profiles`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -200,6 +213,14 @@ export const api = {
 
   async deleteIMAPProfile(id: number): Promise<void> {
     const res = await fetch(`${BASE}/api/imap/profiles/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+  },
+
+  async syncIMAPProfile(id: number): Promise<void> {
+    const res = await fetch(`${BASE}/api/imap/profiles/${id}/sync`, { method: 'POST' })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       throw new Error(`${res.status} ${res.statusText}: ${text}`)

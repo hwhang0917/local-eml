@@ -12,6 +12,7 @@ type Paths struct {
 	EML  string
 	DB   string
 	Logs string
+	Keys string
 }
 
 func Resolve() (Paths, error) {
@@ -25,6 +26,7 @@ func Resolve() (Paths, error) {
 		EML:  filepath.Join(base, "eml"),
 		DB:   filepath.Join(base, "db"),
 		Logs: filepath.Join(base, "logs"),
+		Keys: filepath.Join(base, "keys"),
 	}, nil
 }
 
@@ -34,11 +36,19 @@ func (p Paths) EnsureDirs() error {
 			return err
 		}
 	}
+	// Key material is more sensitive — mode 0700 so other local users can't read.
+	if err := os.MkdirAll(p.Keys, 0o700); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (p Paths) DBFile() string {
 	return filepath.Join(p.DB, "local-eml.db")
+}
+
+func (p Paths) KeyFile() string {
+	return filepath.Join(p.Keys, "secret.key")
 }
 
 func (p Paths) BlobFor(sha string) string {

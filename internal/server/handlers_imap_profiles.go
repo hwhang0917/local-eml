@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -13,11 +14,12 @@ import (
 )
 
 type imapProfileBody struct {
-	Name     string  `json:"name"`
-	Host     string  `json:"host"`
-	Port     *int    `json:"port,omitempty"`
-	Username string  `json:"username"`
-	Folder   *string `json:"folder,omitempty"`
+	Name        string  `json:"name"`
+	Host        string  `json:"host"`
+	Port        *int    `json:"port,omitempty"`
+	Username    string  `json:"username"`
+	Folder      *string `json:"folder,omitempty"`
+	SyncEnabled bool    `json:"sync_enabled,omitempty"`
 }
 
 const (
@@ -69,6 +71,7 @@ func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	saved, err := s.Store.UpsertIMAPProfile(r.Context(), store.IMAPProfile{
 		Name: name, Host: host, Port: body.Port, Username: username, Folder: folder,
+		SyncEnabled: body.SyncEnabled,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -93,4 +96,40 @@ func (s *Server) handleDeleteIMAPProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleSyncIMAPProfile triggers an incremental sync for a saved profile.
+// Returns 202 immediately and runs the import in a goroutine so callers get
+// the same import-job lifecycle they're used to.
+func (s *Server) handleSyncIMAPProfile(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.Error(w, "invalid id", http.StatusBadRequest)
+		return
+	}
+	profile, err := s.Store.GetIMAPProfile(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, store.ErrIMAPProfileNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !profile.SyncEnabled {
+		http.Error(w, "sync is disabled for this profile", http.StatusBadRequest)
+		return
+	}
+	if !profile.HasPassword {
+		http.Error(w, "no stored password — run a manual import once to seed it", http.StatusBadRequest)
+		return
+	}
+	go func() {
+		if err := s.RunIMAPSync(context.Background(), id); err != nil {
+			// Logging covered inside RunIMAPSync / runJob.
+			_ = err
+		}
+	}()
+	w.WriteHeader(http.StatusAccepted)
 }

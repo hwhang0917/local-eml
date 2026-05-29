@@ -253,6 +253,8 @@ const imapForm = ref<IMAPImportConfig>({
   folder: 'INBOX',
 })
 const imapConfirming = ref(false)
+const imapSyncEnabled = ref(false)
+const imapSyncing = ref(false)
 
 const imapValid = computed(
   () =>
@@ -291,6 +293,7 @@ onMounted(() => {
 function applyImapProfile(p: IMAPProfile | null) {
   if (!p) {
     imapForm.value = { host: '', port: 993, username: '', password: '', folder: 'INBOX' }
+    imapSyncEnabled.value = false
     return
   }
   imapForm.value = {
@@ -300,6 +303,7 @@ function applyImapProfile(p: IMAPProfile | null) {
     password: '',
     folder: p.folder ?? 'INBOX',
   }
+  imapSyncEnabled.value = p.sync_enabled
 }
 
 function onImapProfileChange(value: string) {
@@ -337,11 +341,27 @@ async function saveImapProfile() {
       port: imapForm.value.port || undefined,
       username: imapForm.value.username.trim(),
       folder: imapForm.value.folder?.trim() || undefined,
+      sync_enabled: imapSyncEnabled.value,
     })
     await loadImapProfiles()
     selectedImapProfileId.value = saved.id
   } catch (e) {
     toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+  }
+}
+
+async function syncImapNow() {
+  const p = activeImapProfile.value
+  if (!p) return
+  imapSyncing.value = true
+  try {
+    await api.syncIMAPProfile(p.id)
+    toast.success(t('import.imap_sync_started'))
+  } catch (e) {
+    toast.error(t('import.imap_sync_error'), { description: String(e) })
+  } finally {
+    imapSyncing.value = false
+    await loadImapProfiles()
   }
 }
 
@@ -369,6 +389,7 @@ function cancelImap() {
 
 async function confirmImap() {
   const cfg: IMAPImportConfig = {
+    profile_id: selectedImapProfileId.value ?? undefined,
     host: imapForm.value.host.trim(),
     username: imapForm.value.username.trim(),
     password: imapForm.value.password,
@@ -377,6 +398,10 @@ async function confirmImap() {
   }
   imapConfirming.value = false
   await startImapImport(cfg)
+}
+
+function formatRelativeSync(ts: number): string {
+  return new Date(ts * 1000).toLocaleString()
 }
 </script>
 
@@ -580,6 +605,44 @@ async function confirmImap() {
           <Button variant="outline" :disabled="!activeImapProfile" @click="deleteImapProfile">
             {{ t('import.imap_profile_delete') }}
           </Button>
+        </div>
+
+        <div class="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+          <label class="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              :checked="imapSyncEnabled"
+              @change="imapSyncEnabled = ($event.target as HTMLInputElement).checked"
+            />
+            <span class="text-sm">
+              <span class="font-medium">{{ t('import.imap_sync_label') }}</span>
+              <span class="block text-xs text-muted-foreground mt-0.5">
+                {{ t('import.imap_sync_help') }}
+              </span>
+            </span>
+          </label>
+          <div
+            v-if="activeImapProfile && activeImapProfile.sync_enabled"
+            class="flex items-center gap-3 text-xs text-muted-foreground pl-6"
+          >
+            <span v-if="activeImapProfile.last_synced_at">
+              {{ t('import.imap_last_synced', { when: formatRelativeSync(activeImapProfile.last_synced_at) }) }}
+            </span>
+            <span v-else>{{ t('import.imap_never_synced') }}</span>
+            <span v-if="!activeImapProfile.has_password" class="text-amber-600">
+              · {{ t('import.imap_sync_needs_password') }}
+            </span>
+            <Button
+              v-if="activeImapProfile.has_password"
+              size="sm"
+              variant="outline"
+              :disabled="imapSyncing"
+              @click="syncImapNow"
+            >
+              {{ imapSyncing ? t('import.imap_sync_running') : t('import.imap_sync_now') }}
+            </Button>
+          </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

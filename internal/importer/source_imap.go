@@ -19,11 +19,34 @@ type IMAPConfig struct {
 	Username string
 	Password string
 	Folder   string
+
+	// Sync mode (optional). When Incremental is true and the server's current
+	// UIDVALIDITY equals ExpectedUIDValidity, only UIDs strictly greater than
+	// SinceUID are searched. On a UIDVALIDITY mismatch we transparently fall
+	// back to a full scan since the old state is no longer trustworthy.
+	Incremental         bool
+	ExpectedUIDValidity uint32
+	SinceUID            uint32
+}
+
+// SyncResult captures what the source observed during Scan: the current
+// UIDVALIDITY of the selected mailbox and the highest UID known to it. The
+// caller persists these values so the next run can be incremental.
+type SyncResult struct {
+	UIDValidity uint32
+	MaxUID      uint32
+}
+
+// SyncReporter is satisfied by Sources that can report a SyncResult after
+// Scan returns. The importer Job calls it via a post-run hook (see runJob).
+type SyncReporter interface {
+	SyncResult() (SyncResult, bool)
 }
 
 // imapSession isolates the go-imap client so imapSource is unit-testable with a fake.
 type imapSession interface {
-	UIDs() ([]imap.UID, error)
+	UIDValidity() uint32
+	UIDs(minUID uint32) ([]imap.UID, error)
 	Fetch(uid imap.UID) ([]byte, error)
 	Close() error
 }
@@ -32,6 +55,9 @@ type imapSource struct {
 	cfg     IMAPConfig
 	dial    func(IMAPConfig) (imapSession, error)
 	session imapSession
+
+	result SyncResult
+	hasRun bool
 }
 
 func NewIMAPSource(cfg IMAPConfig) SourceCloser {
@@ -55,16 +81,35 @@ func (s *imapSource) Scan(_ context.Context) ([]Item, error) {
 		return nil, err
 	}
 
-	uids, err := sess.UIDs()
+	uidValidity := sess.UIDValidity()
+	var minUID uint32
+	if s.cfg.Incremental && uidValidity != 0 && uidValidity == s.cfg.ExpectedUIDValidity {
+		minUID = s.cfg.SinceUID + 1
+	}
+
+	rawUIDs, err := sess.UIDs(minUID)
 	if err != nil {
 		_ = sess.Close()
 		return nil, err
 	}
+	// Defensive filter: some servers expand UID N:* even when no message has
+	// UID >= N. Drop anything that slipped in below the requested floor.
+	uids := rawUIDs[:0]
+	for _, u := range rawUIDs {
+		if minUID > 0 && uint32(u) < minUID {
+			continue
+		}
+		uids = append(uids, u)
+	}
 	s.session = sess
 
+	maxUID := s.cfg.SinceUID
 	items := make([]Item, 0, len(uids))
 	for _, uid := range uids {
 		u := uid
+		if uint32(u) > maxUID {
+			maxUID = uint32(u)
+		}
 		items = append(items, Item{
 			Name: fmt.Sprintf("uid-%d.eml", u),
 			Open: func(context.Context) (io.ReadCloser, error) {
@@ -76,7 +121,14 @@ func (s *imapSource) Scan(_ context.Context) ([]Item, error) {
 			},
 		})
 	}
+
+	s.result = SyncResult{UIDValidity: uidValidity, MaxUID: maxUID}
+	s.hasRun = true
 	return items, nil
+}
+
+func (s *imapSource) SyncResult() (SyncResult, bool) {
+	return s.result, s.hasRun && s.result.UIDValidity != 0
 }
 
 func (s *imapSource) Close() error {
@@ -91,6 +143,7 @@ func (s *imapSource) Close() error {
 type imapClientSession struct {
 	client      *imapclient.Client
 	bodySection *imap.FetchItemBodySection
+	uidValidity uint32
 }
 
 func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
@@ -128,23 +181,39 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 	if folder == "" {
 		folder = "INBOX"
 	}
-	if _, err := c.Select(folder, &imap.SelectOptions{ReadOnly: true}).Wait(); err != nil {
+	selectData, err := c.Select(folder, &imap.SelectOptions{ReadOnly: true}).Wait()
+	if err != nil {
 		log.Error("imap select failed",
 			slog.String("folder", folder), slog.String("err", err.Error()))
 		_ = c.Logout().Wait()
 		_ = c.Close()
 		return nil, fmt.Errorf("imap select %q: %w", folder, err)
 	}
-	log.Info("imap folder selected", slog.String("folder", folder))
+	log.Info("imap folder selected",
+		slog.String("folder", folder),
+		slog.Uint64("uid_validity", uint64(selectData.UIDValidity)),
+		slog.Uint64("messages", uint64(selectData.NumMessages)),
+	)
 
 	return &imapClientSession{
 		client:      c,
 		bodySection: &imap.FetchItemBodySection{Specifier: imap.PartSpecifierNone, Peek: true},
+		uidValidity: selectData.UIDValidity,
 	}, nil
 }
 
-func (s *imapClientSession) UIDs() ([]imap.UID, error) {
-	data, err := s.client.UIDSearch(&imap.SearchCriteria{}, nil).Wait()
+func (s *imapClientSession) UIDValidity() uint32 {
+	return s.uidValidity
+}
+
+func (s *imapClientSession) UIDs(minUID uint32) ([]imap.UID, error) {
+	criteria := &imap.SearchCriteria{}
+	if minUID > 0 {
+		var set imap.UIDSet
+		set.AddRange(imap.UID(minUID), 0)
+		criteria.UID = []imap.UIDSet{set}
+	}
+	data, err := s.client.UIDSearch(criteria, nil).Wait()
 	if err != nil {
 		return nil, fmt.Errorf("imap search: %w", err)
 	}

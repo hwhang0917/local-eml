@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -91,7 +92,7 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func()) {
+func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func(), afterDone ...func()) {
 	defer cleanup()
 	ctx, release := s.Canceller.Register(context.Background(), importID)
 	defer release()
@@ -120,6 +121,12 @@ func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func
 	}()
 
 	job.RunSource(ctx, src)
+
+	for _, fn := range afterDone {
+		if fn != nil {
+			fn()
+		}
+	}
 }
 
 func (s *Server) handleImportStatus(w http.ResponseWriter, r *http.Request) {
@@ -303,30 +310,36 @@ func (s *Server) handleImportS3(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleImportImap(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Host     string `json:"host"`
-		Port     int    `json:"port"`
-		Username string `json:"username"`
-		Password string `json:"password"`
-		Folder   string `json:"folder"`
+		ProfileID int64  `json:"profile_id,omitempty"`
+		Host      string `json:"host"`
+		Port      int    `json:"port"`
+		Username  string `json:"username"`
+		Password  string `json:"password"`
+		Folder    string `json:"folder"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	body.Host = strings.TrimSpace(body.Host)
-	body.Username = strings.TrimSpace(body.Username)
-	body.Folder = strings.TrimSpace(body.Folder)
-	if body.Host == "" || body.Username == "" || body.Password == "" {
-		http.Error(w, "host, username and password are required", http.StatusBadRequest)
+
+	cfg, profile, err := s.resolveIMAPConfig(r.Context(), body.ProfileID, importer.IMAPConfig{
+		Host:     strings.TrimSpace(body.Host),
+		Port:     body.Port,
+		Username: strings.TrimSpace(body.Username),
+		Password: body.Password,
+		Folder:   strings.TrimSpace(body.Folder),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	folder := body.Folder
+	importID := newImportID()
+	folder := cfg.Folder
 	if folder == "" {
 		folder = "INBOX"
 	}
-	importID := newImportID()
-	sourceName := fmt.Sprintf("imap://%s@%s/%s", body.Username, body.Host, folder)
+	sourceName := fmt.Sprintf("imap://%s@%s/%s", cfg.Username, cfg.Host, folder)
 	if err := s.Store.CreateImport(r.Context(), store.Import{
 		ID:         importID,
 		SourceKind: "imap",
@@ -337,26 +350,107 @@ func (s *Server) handleImportImap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	src := importer.NewIMAPSource(importer.IMAPConfig{
-		Host:     body.Host,
-		Port:     body.Port,
-		Username: body.Username,
-		Password: body.Password,
-		Folder:   body.Folder,
-	})
+	// If the user supplied a fresh password while sync is enabled on a saved
+	// profile, lock it in so the background poller can use it later.
+	if profile != nil && profile.SyncEnabled && body.Password != "" && s.Secret != nil {
+		if blob, encErr := s.Secret.Encrypt([]byte(body.Password)); encErr == nil {
+			if err := s.Store.SetIMAPProfilePassword(r.Context(), profile.ID, blob); err != nil {
+				slog.Warn("store imap password failed",
+					slog.Int64("profile_id", profile.ID), slog.String("err", err.Error()))
+			}
+		}
+	}
+
+	src := importer.NewIMAPSource(cfg)
 
 	slog.Info("import requested",
 		slog.String("import_id", importID),
 		slog.String("kind", "imap"),
-		slog.String("host", body.Host),
-		slog.Int("port", body.Port),
-		slog.String("username", body.Username),
+		slog.String("host", cfg.Host),
+		slog.Int("port", cfg.Port),
+		slog.String("username", cfg.Username),
 		slog.String("folder", folder),
+		slog.Bool("incremental", cfg.Incremental),
 	)
-	go s.runJob(importID, "imap", src, func() {})
+
+	var afterDone func()
+	if profile != nil && profile.SyncEnabled {
+		profileID := profile.ID
+		afterDone = func() { s.persistIMAPSyncState(profileID, src) }
+	}
+	go s.runJob(importID, "imap", src, func() {}, afterDone)
 
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"import_id": importID,
 		"kind":      "imap",
 	})
+}
+
+// resolveIMAPConfig fills in defaults, optionally looks up a saved profile,
+// uses the stored encrypted password as a fallback when sync is enabled, and
+// applies incremental sync state. It returns a validation error if the final
+// config doesn't have everything needed to log in.
+func (s *Server) resolveIMAPConfig(ctx context.Context, profileID int64, base importer.IMAPConfig) (importer.IMAPConfig, *store.IMAPProfile, error) {
+	cfg := base
+	var profile *store.IMAPProfile
+	if profileID > 0 {
+		p, err := s.Store.GetIMAPProfile(ctx, profileID)
+		if err != nil {
+			return cfg, nil, fmt.Errorf("load profile: %w", err)
+		}
+		profile = p
+		if cfg.Host == "" {
+			cfg.Host = p.Host
+		}
+		if cfg.Port == 0 && p.Port != nil {
+			cfg.Port = *p.Port
+		}
+		if cfg.Username == "" {
+			cfg.Username = p.Username
+		}
+		if cfg.Folder == "" && p.Folder != nil {
+			cfg.Folder = *p.Folder
+		}
+		if cfg.Password == "" && p.SyncEnabled && p.HasPassword && s.Secret != nil {
+			blob, err := s.Store.GetIMAPProfilePassword(ctx, p.ID)
+			if err == nil && len(blob) > 0 {
+				plain, derr := s.Secret.Decrypt(blob)
+				if derr == nil {
+					cfg.Password = string(plain)
+				}
+			}
+		}
+		if p.SyncEnabled && p.UIDValidity != nil && p.LastUID != nil {
+			cfg.Incremental = true
+			cfg.ExpectedUIDValidity = *p.UIDValidity
+			cfg.SinceUID = *p.LastUID
+		} else if p.SyncEnabled {
+			// First sync — Incremental stays false so we fetch everything once
+			// and then start tracking. SyncReporter still records the result.
+		}
+	}
+	if cfg.Host == "" || cfg.Username == "" || cfg.Password == "" {
+		return cfg, profile, fmt.Errorf("host, username and password are required")
+	}
+	return cfg, profile, nil
+}
+
+// persistIMAPSyncState records the new UIDVALIDITY + max UID on the profile so
+// the next sync picks up where this one left off.
+func (s *Server) persistIMAPSyncState(profileID int64, src importer.Source) {
+	reporter, ok := src.(importer.SyncReporter)
+	if !ok {
+		return
+	}
+	res, ok := reporter.SyncResult()
+	if !ok {
+		return
+	}
+	if err := s.Store.UpdateIMAPProfileSyncState(
+		context.Background(), profileID,
+		res.UIDValidity, res.MaxUID, time.Now().Unix(),
+	); err != nil {
+		slog.Warn("persist imap sync state failed",
+			slog.Int64("profile_id", profileID), slog.String("err", err.Error()))
+	}
 }

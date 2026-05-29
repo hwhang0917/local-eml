@@ -8,6 +8,7 @@ import (
 
 	"github.com/hwhang0917/local-eml/internal/exporter"
 	"github.com/hwhang0917/local-eml/internal/importer"
+	"github.com/hwhang0917/local-eml/internal/secret"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
@@ -17,6 +18,7 @@ type Server struct {
 	Exporter  *exporter.Exporter
 	Hub       *importer.Hub
 	Canceller *importer.Canceller
+	Secret    *secret.Encryptor
 }
 
 func (s *Server) Router() http.Handler {
@@ -46,6 +48,7 @@ func (s *Server) Router() http.Handler {
 		api.Get("/imap/profiles", s.handleListIMAPProfiles)
 		api.Post("/imap/profiles", s.handleSaveIMAPProfile)
 		api.Delete("/imap/profiles/{id}", s.handleDeleteIMAPProfile)
+		api.Post("/imap/profiles/{id}/sync", s.handleSyncIMAPProfile)
 
 		api.Get("/s3/profiles", s.handleListS3Profiles)
 		api.Post("/s3/profiles", s.handleSaveS3Profile)

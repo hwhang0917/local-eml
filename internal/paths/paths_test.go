@@ -32,11 +32,12 @@ func TestEnsureDirsCreatesAll(t *testing.T) {
 		EML:  filepath.Join(tmp, "eml"),
 		DB:   filepath.Join(tmp, "db"),
 		Logs: filepath.Join(tmp, "logs"),
+		Keys: filepath.Join(tmp, "keys"),
 	}
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatalf("EnsureDirs: %v", err)
 	}
-	for _, d := range []string{p.EML, p.DB, p.Logs} {
+	for _, d := range []string{p.EML, p.DB, p.Logs, p.Keys} {
 		info, err := os.Stat(d)
 		if err != nil {
 			t.Errorf("missing dir %s: %v", d, err)

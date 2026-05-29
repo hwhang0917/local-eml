@@ -131,7 +131,21 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
 		return err
 	}
-	return s.backfillChosung(ctx)
+	if err := s.backfillChosung(ctx); err != nil {
+		return err
+	}
+	for _, col := range []struct{ name, ddl string }{
+		{"sync_enabled", "INTEGER NOT NULL DEFAULT 0"},
+		{"uid_validity", "INTEGER"},
+		{"last_uid", "INTEGER"},
+		{"last_synced_at", "INTEGER"},
+		{"encrypted_password", "BLOB"},
+	} {
+		if err := s.ensureColumn(ctx, "imap_profiles", col.name, col.ddl); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Store) backfillChosung(ctx context.Context) error {

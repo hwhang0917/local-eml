@@ -143,6 +143,7 @@ func newTestPaths(t *testing.T) paths.Paths {
 		EML:  filepath.Join(base, "eml"),
 		DB:   filepath.Join(base, "db"),
 		Logs: filepath.Join(base, "logs"),
+		Keys: filepath.Join(base, "keys"),
 	}
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatal(err)
