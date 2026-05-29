@@ -25,15 +25,23 @@ The installer downloads the latest release, verifies it, and registers Local Eml
 
 ## What you can do
 
-- **Import** emails from `.eml` files, folders, `.zip` archives, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped.
-- **Search** by sender, subject, or body — including Korean and other CJK languages.
+- **Import** emails from `.eml` files, folders, `.zip` archives, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
+- **Search** by sender, subject, or body. Korean and other CJK languages work out of the box, and typing only Hangul initial consonants (e.g. `ㅎㄱ` to find `한국`) does **초성검색** across the whole library.
+- **Receive new mail** automatically from any saved IMAP profile (opt-in per profile). Local Eml fetches only what's new since the last sync; default cadence is every 10 minutes.
 - **Read safely** — HTML messages render in a sandboxed iframe with remote images blocked by default.
-- **Star** messages you want to revisit.
-- **Export** your library as a single `.zip` or upload it back to an S3 bucket.
-- **Save profiles** for IMAP and S3 so you don't retype host names and bucket details (passwords and secret keys are never stored).
-- **Korean / English** interface, switchable in Settings.
+- **Star** messages you want to revisit and filter to just starred.
+- **Export** your library as a single `.zip` or upload it to an S3 bucket. Existing keys in the destination are skipped, so re-running is safe.
+- **Save profiles** for IMAP and S3 so you don't retype host names and bucket details.
+- **Korean / English** interface and **absolute / relative** date display, switchable in Settings.
 
-Your data lives in `~/.local-eml/` (or `%USERPROFILE%\.local-eml\` on Windows). Local Eml only listens on `127.0.0.1` — nothing is exposed to your network.
+Your data lives in `~/.local-eml/` (or `%USERPROFILE%\.local-eml\` on Windows). Local Eml only listens on `127.0.0.1` — nothing is exposed to your network. A red banner shows up at the top of the page if the background service stops responding.
+
+## Where credentials go
+
+- **AWS S3 secret key, session token** — never persisted. You re-enter them per import / export.
+- **IMAP password** — by default, never persisted; you re-enter it per import.
+  - If you turn on **"Receive new mail in the background"** on a saved IMAP profile, Local Eml needs to log in unattended. The password is then encrypted with AES-256-GCM and stored in the database; the encryption key lives in a separate file at `~/.local-eml/keys/secret.key` (mode `0600`). A leaked or backed-up database alone does not expose the password — the attacker also needs the keyfile. Turning the toggle off removes the stored password on the next save.
+- **Other profile fields** (host, bucket, region, username, access-key-id, etc.) — saved in plain SQLite, since they're not secrets.
 
 ## Uninstall
 

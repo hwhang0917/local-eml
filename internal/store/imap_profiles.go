@@ -184,6 +184,20 @@ func (s *Store) UpsertIMAPProfile(ctx context.Context, p IMAPProfile) (IMAPProfi
 			p.Host, portVal, p.Username, folderVal, syncFlag, now, existingID); err != nil {
 			return IMAPProfile{}, err
 		}
+		// Disabling sync revokes the stored password + sync cursor. The README
+		// promises this behavior; failing to drop the secret here would leave
+		// an unused but still-decryptable blob in the database.
+		if !p.SyncEnabled {
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE imap_profiles
+				SET encrypted_password = NULL,
+				    uid_validity = NULL,
+				    last_uid = NULL,
+				    last_synced_at = NULL
+				WHERE id = ?`, existingID); err != nil {
+				return IMAPProfile{}, err
+			}
+		}
 		p.ID = existingID
 		p.CreatedAt = existingCreated
 		p.UpdatedAt = now
