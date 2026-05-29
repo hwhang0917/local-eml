@@ -124,9 +124,49 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "starred", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
-	_, err := s.DB.ExecContext(ctx,
-		`CREATE INDEX IF NOT EXISTS idx_emails_starred ON emails(starred) WHERE starred = 1`)
-	return err
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_starred ON emails(starred) WHERE starred = 1`); err != nil {
+		return err
+	}
+	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
+		return err
+	}
+	return s.backfillChosung(ctx)
+}
+
+func (s *Store) backfillChosung(ctx context.Context) error {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT id, COALESCE(subject, ''), COALESCE(from_addr, '')
+		 FROM emails WHERE chosung_text IS NULL`)
+	if err != nil {
+		return err
+	}
+	type pending struct {
+		id   int64
+		text string
+	}
+	var todo []pending
+	for rows.Next() {
+		var id int64
+		var subject, from string
+		if err := rows.Scan(&id, &subject, &from); err != nil {
+			rows.Close()
+			return err
+		}
+		todo = append(todo, pending{id: id, text: ToChosung(subject + " " + from)})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	for _, p := range todo {
+		if _, err := s.DB.ExecContext(ctx,
+			`UPDATE emails SET chosung_text = ? WHERE id = ?`, p.text, p.id); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Store) ensureColumn(ctx context.Context, table, column, ddl string) error {

@@ -47,14 +47,15 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	chosung := ToChosung(e.Subject + " " + e.FromAddr)
 	res, err := tx.ExecContext(ctx, `
 		INSERT INTO emails (sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, sent_at, received_at, size_bytes, has_attachments,
-			attachment_count, imported_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			attachment_count, imported_at, chosung_text)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
 		e.MessageID, unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt), e.SizeBytes,
-		hasAtt, e.AttachmentCount, time.Now().Unix(),
+		hasAtt, e.AttachmentCount, time.Now().Unix(), chosung,
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -172,7 +173,12 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 
 	args := []any{}
 	conds := []string{}
-	if fts := buildFTSQuery(opts.Query); fts != "" {
+	if HasJamo(opts.Query) {
+		for _, term := range strings.Fields(opts.Query) {
+			conds = append(conds, `chosung_text LIKE ?`)
+			args = append(args, "%"+ToChosung(term)+"%")
+		}
+	} else if fts := buildFTSQuery(opts.Query); fts != "" {
 		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
 		args = append(args, fts)
 	}
