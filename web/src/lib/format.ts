@@ -68,7 +68,7 @@ export function shortSHA(s: string): string {
   return s.slice(0, 8)
 }
 
-const SENDER_MAX_CHARS = 6
+const SENDER_MAX_CHARS = 10
 
 export function senderName(addr: string | undefined): string {
   if (!addr) return ''
