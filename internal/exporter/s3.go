@@ -66,12 +66,14 @@ func (j *S3Job) Run(ctx context.Context) {
 	}
 
 	j.publish(importer.Event{Type: "step", Phase: "Listing existing objects in destination"})
-	existing, err := listExistingKeys(ctx, client, j.Cfg.Bucket, j.Cfg.Prefix)
+	dedup, err := buildDedup(ctx, client, j.Cfg.Bucket, j.Cfg.Prefix)
 	if err != nil {
 		j.fail(ctx, "list destination", err)
 		return
 	}
-	log.Info("destination scan complete", slog.Int("existing", len(existing)))
+	log.Info("destination scan complete",
+		slog.Int("full_keys", dedup.fullCount()),
+		slog.Int("legacy_short_shas", dedup.legacyCount()))
 
 	j.publish(importer.Event{Type: "step", Phase: "Listing local emails"})
 	entries, err := j.Exporter.Store.AllExportEntries(ctx)
@@ -92,8 +94,8 @@ func (j *S3Job) Run(ctx context.Context) {
 			log.Warn("export cancelled", slog.Int("processed", i))
 			break
 		}
-		key := j.Cfg.Prefix + objectName(em.SHA256, em.Filename)
-		dup := existing[key]
+		key := j.Cfg.Prefix + s3ObjectName(em.SHA256)
+		dup := dedup.has(em.SHA256)
 		idx := i + 1
 		if dup {
 			duplicates++
@@ -161,8 +163,37 @@ func (j *S3Job) fail(ctx context.Context, phase string, cause error) {
 		slog.String("phase", phase), slog.String("err", cause.Error()))
 }
 
-func listExistingKeys(ctx context.Context, client s3UploadAPI, bucket, prefix string) (map[string]bool, error) {
-	out := map[string]bool{}
+// s3Dedup tracks which emails already live in the destination so we can skip
+// re-uploading them. Two formats are recognized:
+//
+//  1. Current format: "<prefix><sha>.eml" — the canonical content-addressed
+//     key. Indexed by full 64-char SHA.
+//  2. Legacy format: "<prefix><sha[:8]>_<basename>.eml" — what older buggy
+//     builds wrote. Indexed by 8-char SHA prefix; we accept a match because
+//     a SHA-256 collision in the first 4 bytes of a single user's library is
+//     vanishingly unlikely, and the cost of a false positive (one skipped
+//     upload) is much smaller than the cost of a false negative (a duplicate
+//     piled on top of the user's already-duplicated bucket).
+type s3Dedup struct {
+	full   map[string]bool // full 64-char SHA
+	legacy map[string]bool // 8-char SHA prefix
+}
+
+func (d *s3Dedup) has(sha string) bool {
+	if d.full[sha] {
+		return true
+	}
+	if len(sha) >= 8 && d.legacy[sha[:8]] {
+		return true
+	}
+	return false
+}
+
+func (d *s3Dedup) fullCount() int   { return len(d.full) }
+func (d *s3Dedup) legacyCount() int { return len(d.legacy) }
+
+func buildDedup(ctx context.Context, client s3UploadAPI, bucket, prefix string) (*s3Dedup, error) {
+	d := &s3Dedup{full: map[string]bool{}, legacy: map[string]bool{}}
 	var token *string
 	for {
 		page, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
@@ -174,14 +205,38 @@ func listExistingKeys(ctx context.Context, client s3UploadAPI, bucket, prefix st
 			return nil, err
 		}
 		for _, obj := range page.Contents {
-			out[aws.ToString(obj.Key)] = true
+			indexKey(d, aws.ToString(obj.Key), prefix)
 		}
 		if page.IsTruncated == nil || !*page.IsTruncated {
 			break
 		}
 		token = page.NextContinuationToken
 	}
-	return out, nil
+	return d, nil
+}
+
+func indexKey(d *s3Dedup, key, prefix string) {
+	rel := strings.TrimPrefix(key, prefix)
+	if !strings.HasSuffix(strings.ToLower(rel), ".eml") {
+		return
+	}
+	base := rel[:len(rel)-len(".eml")]
+	switch {
+	case len(base) == 64 && isHexLower(base):
+		d.full[base] = true
+	case len(base) > 9 && base[8] == '_' && isHexLower(base[:8]):
+		d.legacy[base[:8]] = true
+	}
+}
+
+func isHexLower(s string) bool {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+			return false
+		}
+	}
+	return true
 }
 
 func nilIfEmpty(s string) *string {

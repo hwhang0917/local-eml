@@ -16,10 +16,11 @@ type Exporter struct {
 	Hub   *importer.Hub
 }
 
-// objectName returns a unique, safe name for the EML inside a ZIP or S3 bucket.
-// Format: "<sha[:8]>_<sanitized-filename>" so different emails sharing the same
-// original filename never collide, and content-addressed dedup is obvious.
-func objectName(sha, originalName string) string {
+// zipObjectName returns a flat, collision-resistant name for ZIP entries:
+// "<sha[:8]>_<sanitized-basename>". Inside a zip archive we lose any directory
+// structure anyway, so the short-SHA prefix guarantees two emails sharing a
+// basename don't overwrite each other on extract.
+func zipObjectName(sha, originalName string) string {
 	clean := sanitizeFilename(originalName)
 	if clean == "" {
 		return fmt.Sprintf("%s.eml", sha[:short(sha)])
@@ -28,6 +29,15 @@ func objectName(sha, originalName string) string {
 		clean += ".eml"
 	}
 	return fmt.Sprintf("%s_%s", sha[:short(sha)], clean)
+}
+
+// s3ObjectName returns a deterministic, content-addressed S3 object key for an
+// email: just "<sha>.eml". The same email always lands at the same key, so
+// re-running an export is a true no-op once the bucket is populated. We use
+// the full SHA-256 (not a short prefix) so the key doubles as a strong
+// content fingerprint that the user can verify with `aws s3 ls`.
+func s3ObjectName(sha string) string {
+	return sha + ".eml"
 }
 
 func short(s string) int {

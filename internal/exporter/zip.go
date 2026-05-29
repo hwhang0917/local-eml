@@ -34,7 +34,7 @@ func (e *Exporter) WriteZip(ctx context.Context, w io.Writer) (written, skipped 
 		if err := ctx.Err(); err != nil {
 			return written, skipped, err
 		}
-		if werr := writeOne(zw, e.Paths.BlobFor(em.SHA256), objectName(em.SHA256, em.Filename)); werr != nil {
+		if werr := writeOne(zw, e.Paths.BlobFor(em.SHA256), zipObjectName(em.SHA256, em.Filename)); werr != nil {
 			log.Warn("zip entry failed",
 				slog.String("sha256", em.SHA256), slog.String("err", werr.Error()))
 			skipped++
