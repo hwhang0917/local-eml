@@ -19,6 +19,11 @@ type Server struct {
 	Hub       *importer.Hub
 	Canceller *importer.Canceller
 	Secret    *secret.Encryptor
+	Version   string
+	// RunningInteractive is true when this process was launched from a terminal
+	// rather than by a service manager. Self-update needs the service manager
+	// to bring us back up after we exit, so it is gated on this flag.
+	RunningInteractive bool
 }
 
 func (s *Server) Router() http.Handler {
@@ -58,6 +63,9 @@ func (s *Server) Router() http.Handler {
 		api.Post("/exports/s3", s.handleExportS3)
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
+
+		api.Get("/update/check", s.handleUpdateCheck)
+		api.Post("/update/install", s.handleUpdateInstall)
 	})
 
 	r.Handle("/*", spaHandler())

@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/kardianos/service"
+
 	"github.com/hwhang0917/local-eml/internal/exporter"
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/paths"
@@ -120,6 +122,8 @@ func runServe(args []string) int {
 	srv := &server.Server{
 		Store: st, Importer: imp, Exporter: exp,
 		Hub: hub, Canceller: canc, Secret: sec,
+		Version:            version,
+		RunningInteractive: service.Interactive(),
 	}
 	srv.StartIMAPSyncer(ctx, syncInterval())
 

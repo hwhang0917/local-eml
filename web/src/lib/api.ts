@@ -80,6 +80,18 @@ export interface IMAPImportConfig {
   folder?: string
 }
 
+export interface UpdateStatus {
+  current: string
+  latest?: string
+  has_update: boolean
+  release_url?: string
+  notes?: string
+  asset_name?: string
+  can_install: boolean
+  install_note?: string
+  error?: string
+}
+
 export interface IMAPProfile {
   id: number
   name: string
@@ -257,6 +269,20 @@ export const api = {
       body: JSON.stringify(cfg),
     })
     return jsonOrThrow(res)
+  },
+
+  async checkUpdate(force = false): Promise<UpdateStatus> {
+    const url = `${BASE}/api/update/check${force ? '?force=1' : ''}`
+    return fetch(url).then(jsonOrThrow<UpdateStatus>)
+  },
+
+  async installUpdate(): Promise<{ status: string; from: string; to: string; restarting: boolean }> {
+    const res = await fetch(`${BASE}/api/update/install`, { method: 'POST' })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+    return res.json()
   },
 
   async cancelJob(id: string): Promise<void> {
