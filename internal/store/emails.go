@@ -25,6 +25,9 @@ type Email struct {
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
 	Starred         bool      `json:"starred"`
+	// Nil when uncategorized. A pointer so the JSON omits the field entirely
+	// rather than shipping a 0 the SPA would have to special-case.
+	CategoryID *int64 `json:"category_id,omitempty"`
 }
 
 type EmailRow struct {
@@ -142,7 +145,7 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 	row := s.DB.QueryRowContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, sent_at, received_at, size_bytes, has_attachments,
-			attachment_count, imported_at, starred
+			attachment_count, imported_at, starred, category_id
 		FROM emails WHERE sha256 = ?`, sha)
 	return scanEmail(row)
 }
@@ -203,6 +206,10 @@ type ListOptions struct {
 	// ends are inclusive, so the caller decides where a day starts and ends.
 	From int64
 	To   int64
+	// CategoryID restricts to one category; nil means any. Uncategorized wins
+	// when both are set, since "no category" and "this category" can't both hold.
+	CategoryID    *int64
+	Uncategorized bool
 }
 
 func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
@@ -233,6 +240,14 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	if opts.StarredOnly {
 		conds = append(conds, `starred = 1`)
 	}
+	// A plain predicate on emails, never a JOIN — the COUNT(*) below shares this
+	// WHERE, and a join would double-count.
+	if opts.Uncategorized {
+		conds = append(conds, `category_id IS NULL`)
+	} else if opts.CategoryID != nil {
+		conds = append(conds, `category_id = ?`)
+		args = append(args, *opts.CategoryID)
+	}
 	// Messages with no parseable Date header store sent_at = 0, so any bound
 	// drops them — which is what a date filter should do.
 	if opts.From > 0 {
@@ -255,7 +270,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 
 	listQ := `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 		message_id, sent_at, received_at, size_bytes, has_attachments,
-		attachment_count, imported_at, starred FROM emails ` + where +
+		attachment_count, imported_at, starred, category_id FROM emails ` + where +
 		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
 	args = append(args, opts.Limit, opts.Offset)
 	rows, err := s.DB.QueryContext(ctx, listQ, args...)
@@ -287,13 +302,18 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	var to, cc string
 	var sentAt, recvAt, importedAt int64
 	var hasAtt, starred int
+	var categoryID sql.NullInt64
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
 		&to, &cc, &e.MessageID, &sentAt, &recvAt, &e.SizeBytes,
-		&hasAtt, &e.AttachmentCount, &importedAt, &starred)
+		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID)
 	if err != nil {
 		return nil, err
 	}
 	e.Starred = starred != 0
+	if categoryID.Valid {
+		id := categoryID.Int64
+		e.CategoryID = &id
+	}
 	if to != "" {
 		_ = json.Unmarshal([]byte(to), &e.ToAddrs)
 	}

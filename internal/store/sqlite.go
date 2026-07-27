@@ -45,6 +45,18 @@ func (s *Store) Close() error {
 }
 
 const schemaSQL = `
+-- Finder's model: a fixed set of colours, one row each, seeded in migrate and
+-- never created or deleted — only renamed. Colour is therefore the identity and
+-- carries the UNIQUE, and an empty name means "show the colour's own name",
+-- which keeps the default localizable without the database knowing a locale.
+-- Declared before emails so the foreign key below always resolves.
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY,
+  color TEXT UNIQUE NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  position INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS emails (
   id INTEGER PRIMARY KEY,
   sha256 TEXT UNIQUE NOT NULL,
@@ -60,7 +72,8 @@ CREATE TABLE IF NOT EXISTS emails (
   has_attachments INTEGER,
   attachment_count INTEGER,
   imported_at INTEGER,
-  starred INTEGER NOT NULL DEFAULT 0
+  starred INTEGER NOT NULL DEFAULT 0,
+  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL
 );
 CREATE INDEX IF NOT EXISTS idx_emails_sent_at ON emails(sent_at DESC);
 CREATE INDEX IF NOT EXISTS idx_emails_from ON emails(from_addr);
@@ -142,6 +155,20 @@ func (s *Store) migrate(ctx context.Context) error {
 		return err
 	}
 	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
+		return err
+	}
+	// SQLite only permits ADD COLUMN with a REFERENCES clause when the default is
+	// NULL, which it is here.
+	if err := s.ensureColumn(ctx, "emails", "category_id",
+		"INTEGER REFERENCES categories(id) ON DELETE SET NULL"); err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_category ON emails(category_id)
+		 WHERE category_id IS NOT NULL`); err != nil {
+		return err
+	}
+	if err := s.seedCategories(ctx); err != nil {
 		return err
 	}
 	if err := s.backfillChosung(ctx); err != nil {
