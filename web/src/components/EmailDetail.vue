@@ -179,7 +179,7 @@ async function toggleStar() {
     </Card>
 
     <dialog ref="linkDialog"
-      class="w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
       <div class="space-y-3 p-5">
         <h2 class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('viewer.external_link.body') }}</p>
