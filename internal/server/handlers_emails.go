@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"os"
 	"strconv"
@@ -168,7 +169,24 @@ func (s *Server) handleEmailCID(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "cid not found", http.StatusNotFound)
 		return
 	}
-	w.Header().Set("Content-Type", part.ContentType)
+	// Content-Type here comes straight from the message, so a crafted email
+	// could declare an inline part as text/html and get it served from our own
+	// origin. Inside the viewer the iframe sandbox contains that, but "open
+	// image in new tab" is an unsandboxed top-level navigation — stored XSS
+	// with full API access. This endpoint only ever backs <img src="cid:...">,
+	// so images are the only thing worth serving.
+	mediaType, _, err := mime.ParseMediaType(part.ContentType)
+	if err != nil || !strings.HasPrefix(mediaType, "image/") {
+		http.Error(w, "cid part is not an image", http.StatusUnsupportedMediaType)
+		return
+	}
+	w.Header().Set("Content-Type", mediaType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("Content-Disposition", "inline")
+	// image/svg+xml is a legitimate image that can also carry <script>. The
+	// sandbox directive makes it inert if navigated to directly, without
+	// breaking it as an <img> source.
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	_, _ = w.Write(part.Content)
 }
@@ -195,6 +213,7 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 		filename = fmt.Sprintf("attachment-%d", idx)
 	}
 	w.Header().Set("Content-Type", p.ContentType)
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Disposition",
 		fmt.Sprintf(`attachment; filename="%s"`, safeFilename(filename)))
 	_, _ = w.Write(p.Content)
