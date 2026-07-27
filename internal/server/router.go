@@ -30,6 +30,7 @@ func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
+	r.Use(loopbackGuard)
 
 	r.Get("/healthz", s.handleHealth)
 

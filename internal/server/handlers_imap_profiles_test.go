@@ -32,7 +32,7 @@ func TestIMAPProfilesHandler_SaveListDelete(t *testing.T) {
 
 	body := map[string]any{"name": "Work", "host": "imap.example.com", "port": 993, "username": "u@example.com", "folder": "INBOX"}
 	b, _ := json.Marshal(body)
-	req := httptest.NewRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b))
+	req := newLoopbackRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
@@ -47,7 +47,7 @@ func TestIMAPProfilesHandler_SaveListDelete(t *testing.T) {
 		t.Fatalf("unexpected saved row: %+v", saved)
 	}
 
-	req = httptest.NewRequest(http.MethodGet, "/api/imap/profiles", nil)
+	req = newLoopbackRequest(http.MethodGet, "/api/imap/profiles", nil)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -61,7 +61,7 @@ func TestIMAPProfilesHandler_SaveListDelete(t *testing.T) {
 		t.Fatalf("unexpected list: %+v", list)
 	}
 
-	req = httptest.NewRequest(http.MethodDelete, "/api/imap/profiles/"+strconv.FormatInt(saved.ID, 10), nil)
+	req = newLoopbackRequest(http.MethodDelete, "/api/imap/profiles/"+strconv.FormatInt(saved.ID, 10), nil)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNoContent {
@@ -74,16 +74,16 @@ func TestIMAPProfilesHandler_UpdateByName(t *testing.T) {
 	r := s.Router()
 
 	b1, _ := json.Marshal(map[string]any{"name": "Work", "host": "old.example.com", "username": "u"})
-	r.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b1)))
+	r.ServeHTTP(httptest.NewRecorder(), newLoopbackRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b1)))
 
 	b2, _ := json.Marshal(map[string]any{"name": "Work", "host": "new.example.com", "username": "u2"})
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b2)))
+	r.ServeHTTP(rec, newLoopbackRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b2)))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("second save: status %d body %s", rec.Code, rec.Body.String())
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/api/imap/profiles", nil)
+	req := newLoopbackRequest(http.MethodGet, "/api/imap/profiles", nil)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	var list []store.IMAPProfile
@@ -116,7 +116,7 @@ func TestIMAPProfilesHandler_Validation(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			b, _ := json.Marshal(tc.body)
 			rec := httptest.NewRecorder()
-			r.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b)))
+			r.ServeHTTP(rec, newLoopbackRequest(http.MethodPost, "/api/imap/profiles", bytes.NewReader(b)))
 			if rec.Code != tc.want {
 				t.Fatalf("status: want %d got %d body=%s", tc.want, rec.Code, rec.Body.String())
 			}
@@ -129,13 +129,13 @@ func TestIMAPProfilesHandler_DeleteNotFound(t *testing.T) {
 	r := s.Router()
 
 	rec := httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/imap/profiles/999", nil))
+	r.ServeHTTP(rec, newLoopbackRequest(http.MethodDelete, "/api/imap/profiles/999", nil))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", rec.Code)
 	}
 
 	rec = httptest.NewRecorder()
-	r.ServeHTTP(rec, httptest.NewRequest(http.MethodDelete, "/api/imap/profiles/notanumber", nil))
+	r.ServeHTTP(rec, newLoopbackRequest(http.MethodDelete, "/api/imap/profiles/notanumber", nil))
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 on non-numeric id, got %d", rec.Code)
 	}
