@@ -7,9 +7,12 @@ import { api, type Email } from '@/lib/api'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
+import { useCategories } from '@/composables/useCategories'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import CategoryDot from '@/components/ui/CategoryDot.vue'
+import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
 import PageNav from '@/components/ui/PageNav.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -42,6 +45,7 @@ function normalizePageSize(n: number): PageSize {
 
 const q = computed(() => str(route.query.q))
 const starredOnly = computed(() => str(route.query.starred) === '1')
+const category = computed(() => str(route.query.category))
 const from = computed(() => str(route.query.from))
 const to = computed(() => str(route.query.to))
 const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
@@ -87,6 +91,7 @@ async function load() {
     const r = await api.listEmails({
       q: q.value || undefined,
       starred: starredOnly.value || undefined,
+      category: category.value || undefined,
       from: from.value || undefined,
       to: to.value || undefined,
       sort: sort.value,
@@ -101,7 +106,7 @@ async function load() {
   }
 }
 
-watch([q, starredOnly, from, to, sort, order, offset, limit], load)
+watch([q, starredOnly, category, from, to, sort, order, offset, limit], load)
 
 const tour = useTour()
 onMounted(() => {
@@ -137,6 +142,7 @@ const hasActiveFilters = computed(
   () =>
     q.value !== '' ||
     starredOnly.value ||
+    category.value !== '' ||
     from.value !== '' ||
     to.value !== '' ||
     sort.value !== 'sent_at' ||
@@ -150,12 +156,17 @@ function resetFilters() {
   pushQuery({
     q: undefined,
     starred: undefined,
+    category: undefined,
     from: undefined,
     to: undefined,
     sort: undefined,
     order: undefined,
     offset: undefined,
   })
+}
+
+function setCategoryFilter(v: string) {
+  pushQuery({ category: v === 'any' ? undefined : v, offset: undefined })
 }
 
 function setDateRange(range: { from: string; to: string }) {
@@ -206,6 +217,47 @@ async function toggleStar(e: Email) {
   }
 }
 
+const { categories, byId, labelFor, load: loadCategories } = useCategories()
+onMounted(loadCategories)
+
+// "any" and "none" are sentinels rather than ids, so they survive the round trip
+// through the URL alongside a numeric category id.
+const filterOptions = computed<CategoryOption[]>(() => [
+  { value: 'any', label: t('library.category_any') },
+  { value: 'none', label: t('library.category_none') },
+  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
+])
+const assignOptions = computed<CategoryOption[]>(() => [
+  { value: 'none', label: t('library.category_none') },
+  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
+])
+const filterLabel = computed(
+  () => filterOptions.value.find((o) => o.value === (category.value || 'any'))?.label ?? '',
+)
+const filterColor = computed(
+  () => filterOptions.value.find((o) => o.value === category.value)?.color,
+)
+
+async function setCategory(e: Email, value: string) {
+  const next = value === 'none' ? null : Number(value)
+  const prev = e.category_id
+  e.category_id = next ?? undefined
+  try {
+    await api.setCategory(e.sha256, next)
+    // Same as toggleStar: a row that no longer matches the active filter has to
+    // leave, or the list shows a lie until the next fetch.
+    const stillMatches =
+      category.value === '' ||
+      (category.value === 'none' ? next === null : String(next) === category.value)
+    if (!stillMatches) {
+      items.value = items.value.filter((x) => x.sha256 !== e.sha256)
+      total.value = Math.max(0, total.value - 1)
+    }
+  } catch {
+    e.category_id = prev
+  }
+}
+
 const pageInfo = computed(() => {
   if (total.value === 0) return t('library.page_count_zero')
   const end = Math.min(offset.value + items.value.length, total.value)
@@ -229,6 +281,25 @@ const pageInfo = computed(() => {
         <span class="ml-1.5">{{ t('library.starred') }}</span>
       </Button>
       <DateRangePicker :from="from" :to="to" @change="setDateRange" />
+      <CategoryMenu
+        :model-value="category || 'any'"
+        :options="filterOptions"
+        :label="t('library.category')"
+        @select="setCategoryFilter"
+      >
+        <template #trigger>
+          <button
+            type="button"
+            data-tour="categories"
+            :class="['inline-flex h-8 items-center gap-2 rounded-sm border border-hairline bg-pearl px-3 text-sm',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              category ? 'text-foreground' : 'text-muted-foreground']"
+          >
+            <CategoryDot v-if="category" :color="filterColor" />
+            <span>{{ filterLabel }}</span>
+          </button>
+        </template>
+      </CategoryMenu>
       <Button
         variant="outline"
         size="sm"
@@ -274,6 +345,9 @@ const pageInfo = computed(() => {
             <th scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.attachments') }}</span>
             </th>
+            <th scope="col" class="text-left px-3 py-2 w-10">
+              <span class="sr-only">{{ t('library.col.category') }}</span>
+            </th>
             <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
             <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
             <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
@@ -282,10 +356,10 @@ const pageInfo = computed(() => {
         </thead>
         <tbody>
           <tr v-if="loading && items.length === 0">
-            <td colspan="6" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
+            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
           </tr>
           <tr v-else-if="items.length === 0">
-            <td colspan="6" class="px-3 py-6 text-center text-muted-foreground">
+            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">
               <template v-if="starredOnly">{{ t('library.no_starred') }}</template>
               <template v-else>
                 {{ t('library.no_emails') }}
@@ -316,6 +390,30 @@ const pageInfo = computed(() => {
             </td>
             <td class="px-3 py-2 text-muted-foreground">
               <span v-if="e.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
+            </td>
+            <td class="px-3 py-2">
+              <CategoryMenu
+                :model-value="e.category_id ? String(e.category_id) : 'none'"
+                :options="assignOptions"
+                :label="t('library.set_category')"
+                @select="(v) => setCategory(e, v)"
+              >
+                <template #trigger>
+                  <button
+                    type="button"
+                    :aria-label="t('library.set_category')"
+                    class="inline-flex h-6 w-6 items-center justify-center rounded-sm hover:bg-accent"
+                    @click.stop
+                    @auxclick.stop
+                  >
+                    <CategoryDot
+                      size="md"
+                      :color="e.category_id ? byId.get(e.category_id)?.color : undefined"
+                      :name="e.category_id ? labelFor(byId.get(e.category_id)) : undefined"
+                    />
+                  </button>
+                </template>
+              </CategoryMenu>
             </td>
             <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">
               <time

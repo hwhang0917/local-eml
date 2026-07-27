@@ -48,6 +48,10 @@
     "help": {
       "title": "Need this again?",
       "body": "Press the question mark any time to replay this tour."
+    },
+    "categories": {
+      "title": "Sort with categories",
+      "body": "Give mail a coloured label, then filter to it here. Create and rename categories under Settings → Categories; each email can carry one."
     }
   },
   "library": {
@@ -64,7 +68,8 @@
       "subject": "Subject",
       "size": "Size",
       "starred": "Starred",
-      "attachments": "Attachments"
+      "attachments": "Attachments",
+      "category": "Category"
     },
     "prev": "Prev",
     "next": "Next",
@@ -85,7 +90,12 @@
     "date_clear": "Clear dates",
     "date_apply": "Apply",
     "zoom_out": "Zoom out",
-    "pagination": "Pagination"
+    "pagination": "Pagination",
+    "category": "Category",
+    "category_any": "Any category",
+    "category_none": "No category",
+    "set_category": "Set category",
+    "no_category_matches": "No emails in this category."
   },
   "viewer": {
     "back": "← Back to library",
@@ -149,7 +159,6 @@
     "provider_local": "Local files",
     "provider_s3": "AWS S3",
     "s3_title": "Import from S3",
-    "s3_creds_hint": "Leave credentials blank to use ~/.aws/credentials or the environment.",
     "s3_access_key": "Access Key ID",
     "s3_secret_key": "Secret Access Key",
     "s3_session_token": "Session Token",
@@ -199,7 +208,8 @@
     "imap_sync_started": "Sync started",
     "imap_sync_error": "Couldn't start sync",
     "abort": "Cancel",
-    "cancel_error": "Couldn't cancel job"
+    "cancel_error": "Couldn't cancel job",
+    "s3_creds_optional": "Leave Access Key ID and Secret Access Key blank to use the credentials in ~/.aws/credentials or the AWS_* environment variables."
   },
   "export": {
     "mode_zip": "Download ZIP",
@@ -224,7 +234,8 @@
     "section": {
       "about": "About",
       "locale": "Locale",
-      "attributions": "Attributions"
+      "attributions": "Attributions",
+      "categories": "Categories"
     },
     "version": "Version",
     "server": "Server",
@@ -252,6 +263,18 @@
     "date_format_absolute": "Absolute (e.g. May 28, 2026, 13:05)",
     "date_format_relative": "Relative (e.g. 3 hours ago)",
     "attributions_intro": "Local Eml is built with these open-source projects.",
-    "license_label": "license"
+    "license_label": "license",
+    "categories_help": "Seven colour labels for organising mail, like Finder tags. Each email can carry one. Rename them here; leave a name blank to use the colour's own name.",
+    "category_name": "Category name",
+    "category_save_error": "Couldn't save the category",
+    "color": {
+      "red": "Red",
+      "orange": "Orange",
+      "yellow": "Yellow",
+      "green": "Green",
+      "blue": "Blue",
+      "purple": "Purple",
+      "grey": "Grey"
+    }
   }
 }

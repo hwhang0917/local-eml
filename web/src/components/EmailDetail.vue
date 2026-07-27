@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { FileWarning, Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
+import { useCategories } from '@/composables/useCategories'
 import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDateAbsolute } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
+import CategoryDot from '@/components/ui/CategoryDot.vue'
+import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import Card from '@/components/ui/Card.vue'
 
 const props = defineProps<{ sha: string }>()
@@ -138,6 +141,29 @@ async function indexOrphan() {
   }
 }
 
+const { categories, byId, labelFor, load: loadCategories } = useCategories()
+onMounted(loadCategories)
+
+const assignOptions = computed<CategoryOption[]>(() => [
+  { value: 'none', label: t('library.category_none') },
+  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
+])
+const currentCategory = computed(() =>
+  email.value?.category_id ? byId.value.get(email.value.category_id) : undefined,
+)
+
+async function setCategory(value: string) {
+  if (!email.value) return
+  const next = value === 'none' ? null : Number(value)
+  const prev = email.value.category_id
+  email.value.category_id = next ?? undefined
+  try {
+    await api.setCategory(email.value.sha256, next)
+  } catch {
+    if (email.value) email.value.category_id = prev
+  }
+}
+
 async function toggleStar() {
   if (!email.value) return
   const next = !email.value.starred
@@ -165,6 +191,26 @@ async function toggleStar() {
     <Card class="p-5">
       <div class="mb-3 flex items-start gap-3">
         <h1 class="text-xl font-semibold flex-1 min-w-0">{{ email.subject || t('library.no_subject') }}</h1>
+        <CategoryMenu
+          v-if="!email.blob_missing"
+          :model-value="email.category_id ? String(email.category_id) : 'none'"
+          :options="assignOptions"
+          :label="t('library.set_category')"
+        @select="setCategory"
+        >
+          <template #trigger>
+            <button
+              type="button"
+              :aria-label="t('library.set_category')"
+              class="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
+            >
+              <CategoryDot :color="currentCategory?.color" />
+              <span :class="currentCategory ? '' : 'text-muted-foreground'">
+                {{ currentCategory ? labelFor(currentCategory) : t('library.category_none') }}
+              </span>
+            </button>
+          </template>
+        </CategoryMenu>
         <button
           type="button"
           :title="email.starred ? t('library.unstar') : t('library.star')"

@@ -48,6 +48,10 @@
     "help": {
       "title": "다시 보고 싶다면",
       "body": "언제든 물음표 버튼을 누르면 이 안내를 다시 볼 수 있어요."
+    },
+    "categories": {
+      "title": "분류로 정리하기",
+      "body": "메일에 색상 분류를 지정하고 여기서 분류별로 걸러 보세요. 분류는 설정 → 분류에서 만들고 이름을 바꿀 수 있으며, 메일 하나에 분류 하나를 지정할 수 있어요."
     }
   },
   "library": {
@@ -64,7 +68,8 @@
       "subject": "제목",
       "size": "크기",
       "starred": "별표",
-      "attachments": "첨부파일"
+      "attachments": "첨부파일",
+      "category": "분류"
     },
     "prev": "이전",
     "next": "다음",
@@ -85,7 +90,12 @@
     "date_clear": "날짜 지우기",
     "date_apply": "적용",
     "zoom_out": "기간 넓게 보기",
-    "pagination": "페이지 이동"
+    "pagination": "페이지 이동",
+    "category": "분류",
+    "category_any": "모든 분류",
+    "category_none": "분류 없음",
+    "set_category": "분류 지정",
+    "no_category_matches": "이 분류에 해당하는 메일이 없습니다."
   },
   "viewer": {
     "back": "← 라이브러리로 돌아가기",
@@ -149,7 +159,6 @@
     "provider_local": "로컬 파일",
     "provider_s3": "AWS S3",
     "s3_title": "S3에서 가져오기",
-    "s3_creds_hint": "자격 증명을 비워두면 ~/.aws/credentials 또는 환경 변수를 사용합니다.",
     "s3_access_key": "액세스 키 ID",
     "s3_secret_key": "시크릿 액세스 키",
     "s3_session_token": "세션 토큰",
@@ -199,7 +208,8 @@
     "imap_sync_started": "동기화를 시작했어요",
     "imap_sync_error": "동기화를 시작하지 못했어요",
     "abort": "취소",
-    "cancel_error": "작업을 취소하지 못했어요"
+    "cancel_error": "작업을 취소하지 못했어요",
+    "s3_creds_optional": "액세스 키 ID와 시크릿 액세스 키를 비워두면 ~/.aws/credentials 또는 AWS_* 환경 변수의 자격 증명을 사용합니다."
   },
   "export": {
     "mode_zip": "ZIP 다운로드",
@@ -224,7 +234,8 @@
     "section": {
       "about": "정보",
       "locale": "로케일",
-      "attributions": "오픈소스 라이선스"
+      "attributions": "오픈소스 라이선스",
+      "categories": "분류"
     },
     "version": "버전",
     "server": "서버",
@@ -252,6 +263,18 @@
     "date_format_absolute": "절대 (예: 2026년 5월 28일 오후 1:05)",
     "date_format_relative": "상대 (예: 3시간 전)",
     "attributions_intro": "Local Eml은 다음 오픈소스 프로젝트로 만들어졌습니다.",
-    "license_label": "라이선스"
+    "license_label": "라이선스",
+    "categories_help": "Finder 태그처럼 메일을 정리하는 7가지 색상 분류입니다. 메일 하나에 분류 하나를 지정할 수 있어요. 여기서 이름을 바꿀 수 있고, 비워두면 색상 이름을 사용합니다.",
+    "category_name": "분류 이름",
+    "category_save_error": "분류를 저장하지 못했어요",
+    "color": {
+      "red": "빨강",
+      "orange": "주황",
+      "yellow": "노랑",
+      "green": "초록",
+      "blue": "파랑",
+      "purple": "보라",
+      "grey": "회색"
+    }
   }
 }

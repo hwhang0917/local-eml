@@ -17,7 +17,7 @@ export function useTour() {
       doneBtnText: t('tour.done'),
       // Nav first, left to right, then the library controls in the order they
       // sit in the filter bar, then how to get the tour back.
-      steps: ['library', 'import', 'export', 'settings', 'search', 'starred', 'dates', 'help'].map(
+      steps: ['library', 'import', 'export', 'settings', 'search', 'starred', 'dates', 'categories', 'help'].map(
         (key) => ({
           element: `[data-tour="${key}"]`,
           popover: { title: t(`tour.${key}.title`), description: t(`tour.${key}.body`) },

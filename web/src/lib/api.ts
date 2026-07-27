@@ -18,6 +18,16 @@ export interface Email {
   blob_missing?: boolean
   /** .eml is on disk but no row exists; metadata was parsed from the file. */
   not_indexed?: boolean
+  /** Absent when uncategorized. Resolve against the cached category list. */
+  category_id?: number
+}
+
+export interface Category {
+  id: number
+  color: string
+  /** Empty until renamed; the UI then shows the colour's own name. */
+  name: string
+  position: number
 }
 
 export interface EmailList {
@@ -137,7 +147,7 @@ async function okOrThrow(res: Response): Promise<void> {
 }
 
 export const api = {
-  listEmails(params: { q?: string; starred?: boolean; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
+  listEmails(params: { q?: string; starred?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === '' || v === false) continue
@@ -154,6 +164,26 @@ export const api = {
       const text = await res.text().catch(() => '')
       throw new Error(`${res.status} ${res.statusText}: ${text}`)
     }
+  },
+
+  listCategories() {
+    return fetch(`${BASE}/api/categories`).then(jsonOrThrow<Category[]>)
+  },
+
+  /** The only write: the palette is fixed, so a category can only be renamed. */
+  renameCategory(id: number, name: string) {
+    return fetch(`${BASE}/api/categories/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    }).then(jsonOrThrow<Category>)
+  },
+
+  setCategory(sha: string, categoryId: number | null) {
+    const url = categoryId === null
+      ? `${BASE}/api/emails/${sha}/category`
+      : `${BASE}/api/emails/${sha}/category/${categoryId}`
+    return fetch(url, { method: categoryId === null ? 'DELETE' : 'PUT' }).then(okOrThrow)
   },
 
   getEmail(sha: string) {
