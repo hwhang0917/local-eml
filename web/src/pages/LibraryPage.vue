@@ -14,7 +14,8 @@ import DateRangePicker from '@/components/ui/DateRangePicker.vue'
 import PageNav from '@/components/ui/PageNav.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
-const PAGE_SIZES = [10, 25, 50, 100, 200] as const
+// 500 is the server's ceiling; anything larger is silently clamped back to 50.
+const PAGE_SIZES = [10, 25, 50, 100, 200, 500] as const
 type PageSize = (typeof PAGE_SIZES)[number]
 const DEFAULT_PAGE_SIZE: PageSize = 50
 
@@ -242,7 +243,7 @@ const pageInfo = computed(() => {
         <label class="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{{ t('library.per_page') }}</span>
           <Select :model-value="String(limit)" @update:model-value="(v) => setPageSize(v)">
-            <SelectTrigger class="w-20 h-8">
+            <SelectTrigger class="w-24 h-8">
               <SelectValue>{{ limit }}</SelectValue>
             </SelectTrigger>
             <SelectContent>
