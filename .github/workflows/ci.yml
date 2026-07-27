@@ -27,6 +27,9 @@ jobs:
       - name: go test
         run: go test ./... -race -count=1
 
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   web:
     runs-on: ubuntu-latest
     steps:

@@ -12,7 +12,7 @@ require (
 	github.com/jhillyerd/enmime v1.3.0
 	github.com/kardianos/service v1.2.4
 	github.com/microcosm-cc/bluemonday v1.0.27
-	golang.org/x/net v0.26.0
+	golang.org/x/net v0.57.0
 	modernc.org/sqlite v1.50.1
 )
 
@@ -48,8 +48,8 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
-	golang.org/x/sys v0.42.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
