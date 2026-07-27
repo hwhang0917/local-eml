@@ -30,15 +30,22 @@ func Resolve() (Paths, error) {
 	}, nil
 }
 
+// Everything under the base directory is private mail: the .eml blobs, the
+// SQLite database, the logs (which carry subjects and addresses) and the
+// encryption key. 0700 on every directory keeps other local users out.
+const dirMode = 0o700
+
 func (p Paths) EnsureDirs() error {
-	for _, d := range []string{p.EML, p.DB, p.Logs} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
+	for _, d := range []string{p.Base, p.EML, p.DB, p.Logs, p.Keys} {
+		if err := os.MkdirAll(d, dirMode); err != nil {
 			return err
 		}
-	}
-	// Key material is more sensitive — mode 0700 so other local users can't read.
-	if err := os.MkdirAll(p.Keys, 0o700); err != nil {
-		return err
+		// MkdirAll leaves an existing directory's mode alone, so installs
+		// created before this default tightened would keep their 0755 bits
+		// forever without an explicit chmod.
+		if err := os.Chmod(d, dirMode); err != nil {
+			return err
+		}
 	}
 	return nil
 }
