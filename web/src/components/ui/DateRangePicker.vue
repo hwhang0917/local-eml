@@ -18,7 +18,6 @@ import {
   RangeCalendarGridRow,
   RangeCalendarHeadCell,
   RangeCalendarHeader,
-  RangeCalendarHeading,
   RangeCalendarRoot,
 } from 'reka-ui'
 import Button from '@/components/ui/Button.vue'
@@ -136,6 +135,28 @@ const heading = computed(() => {
   )
 })
 
+function monthLabel(d: DateParts) {
+  return new Intl.DateTimeFormat(locale.value, { month: 'long' }).format(
+    new Date(d.year, d.month - 1, 1),
+  )
+}
+
+// Absolute weekday, not the locale's column index: a locale whose week starts
+// on Monday would otherwise paint the wrong two columns. These are plain
+// classes, so every state variant (selected, disabled, outside-view) carries an
+// attribute selector and outranks them.
+function weekendClass(d: DateParts | undefined) {
+  if (!d) return ''
+  switch (new Date(d.year, d.month - 1, d.day).getDay()) {
+    case 0:
+      return 'text-red-600 dark:text-red-400'
+    case 6:
+      return 'text-blue-600 dark:text-blue-400'
+    default:
+      return ''
+  }
+}
+
 function zoomOut() {
   view.value = view.value === 'day' ? 'month' : 'year'
 }
@@ -212,7 +233,7 @@ function clear() {
       <PopoverContent
         :side-offset="6"
         align="start"
-        class="z-50 rounded-lg border border-hairline bg-background p-4 shadow-lg sm:min-w-[30rem]"
+        class="z-50 rounded-lg border border-hairline bg-background p-4 shadow-lg sm:min-w-[18rem]"
       >
         <PopoverArrow class="fill-background" />
         <RangeCalendarRoot
@@ -220,7 +241,7 @@ function clear() {
           v-model="range"
           v-model:placeholder="placeholder"
           :locale="locale"
-          :number-of-months="2"
+          :number-of-months="1"
           :min-value="FIRST_EMAIL"
           :max-value="maxDate"
           fixed-weeks
@@ -246,8 +267,7 @@ function clear() {
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               @click="zoomOut"
             >
-              <RangeCalendarHeading v-if="view === 'day'" as="span" />
-              <span v-else>{{ heading }}</span>
+              <span>{{ heading }}</span>
               <ChevronDown v-if="view !== 'year'" class="h-3.5 w-3.5 opacity-60" />
             </button>
             <button
@@ -302,12 +322,14 @@ function clear() {
 
           <div v-else class="flex flex-col gap-4 sm:flex-row">
             <RangeCalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full border-collapse">
+              <caption class="mb-1 text-center text-sm font-medium">{{ monthLabel(month.value) }}</caption>
               <RangeCalendarGridHead>
                 <RangeCalendarGridRow class="mb-1 flex w-full justify-between">
                   <RangeCalendarHeadCell
-                    v-for="day in weekDays"
+                    v-for="(day, i) in weekDays"
                     :key="day"
-                    class="w-8 text-center text-xs font-normal text-muted-foreground"
+                    :class="['w-8 text-center text-xs font-normal',
+                      weekendClass(month.rows[0][i]) || 'text-muted-foreground']"
                   >
                     {{ day }}
                   </RangeCalendarHeadCell>
@@ -328,6 +350,7 @@ function clear() {
                     <RangeCalendarCellTrigger
                       :day="weekDate"
                       :month="month.value"
+                      :class="weekendClass(weekDate)"
                       class="relative inline-flex h-8 w-8 items-center justify-center rounded-sm
                         hover:bg-accent
                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
