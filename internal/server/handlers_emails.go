@@ -34,6 +34,14 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 		From:        dayBound(q.Get("from"), false),
 		To:          dayBound(q.Get("to"), true),
 	}
+	// "none" selects uncategorized mail; a bare id selects that category.
+	// Anything else falls through to "any", matching how dayBound treats junk —
+	// a half-typed filter should not blank the library.
+	if cat := q.Get("category"); cat == "none" {
+		opts.Uncategorized = true
+	} else if id, err := strconv.ParseInt(cat, 10, 64); err == nil && id > 0 {
+		opts.CategoryID = &id
+	}
 	emails, total, err := s.Store.ListEmails(r.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

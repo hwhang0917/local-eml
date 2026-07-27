@@ -52,6 +52,8 @@ func (s *Server) Router() http.Handler {
 		api.Post("/emails/{sha}/index", s.handleIndexEmail)
 		api.Put("/emails/{sha}/star", s.handleStarEmail)
 		api.Delete("/emails/{sha}/star", s.handleUnstarEmail)
+		api.Put("/emails/{sha}/category/{id}", s.handleSetEmailCategory)
+		api.Delete("/emails/{sha}/category", s.handleClearEmailCategory)
 
 		api.Get("/imap/profiles", s.handleListIMAPProfiles)
 		api.Post("/imap/profiles", s.handleSaveIMAPProfile)
@@ -61,6 +63,9 @@ func (s *Server) Router() http.Handler {
 		api.Get("/s3/profiles", s.handleListS3Profiles)
 		api.Post("/s3/profiles", s.handleSaveS3Profile)
 		api.Delete("/s3/profiles/{id}", s.handleDeleteS3Profile)
+
+		api.Get("/categories", s.handleListCategories)
+		api.Put("/categories/{id}", s.handleRenameCategory)
 
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
