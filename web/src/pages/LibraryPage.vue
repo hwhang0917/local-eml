@@ -4,7 +4,7 @@ import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { RotateCcw, Star } from 'lucide-vue-next'
 import { api, type Email } from '@/lib/api'
-import { formatBytes, formatDate, senderName, shortSHA } from '@/lib/format'
+import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
 import Input from '@/components/ui/Input.vue'
@@ -288,7 +288,12 @@ const pageInfo = computed(() => {
             <td class="px-3 py-2 text-muted-foreground">
               <span v-if="e.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
             </td>
-            <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
+            <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">
+              <time
+                :datetime="e.sent_at || undefined"
+                :title="dateFormat === 'relative' ? formatDateAbsolute(e.sent_at) : undefined"
+              >{{ formatDate(e.sent_at) }}</time>
+            </td>
             <td class="px-3 py-2 whitespace-nowrap" :title="e.from">{{ senderName(e.from) }}</td>
             <td class="px-3 py-2 truncate">
               <RouterLink
