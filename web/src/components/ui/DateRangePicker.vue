@@ -269,9 +269,11 @@ function clear() {
               type="button"
               :disabled="isMonthDisabled(i + 1)"
               :class="[
-                'h-10 rounded-sm text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-30',
+                'h-10 rounded-sm text-sm disabled:pointer-events-none disabled:opacity-30',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                i + 1 === placeholder.month ? 'bg-primary text-primary-foreground' : '',
+                i + 1 === placeholder.month
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'hover:bg-accent',
               ]"
               @click="pickMonth(i + 1)"
             >
@@ -286,9 +288,11 @@ function clear() {
               type="button"
               :disabled="isYearDisabled(year)"
               :class="[
-                'h-10 rounded-sm text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-30',
+                'h-10 rounded-sm text-sm disabled:pointer-events-none disabled:opacity-30',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                year === placeholder.year ? 'bg-primary text-primary-foreground' : '',
+                year === placeholder.year
+                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : 'hover:bg-accent',
               ]"
               @click="pickYear(year)"
             >
@@ -329,10 +333,12 @@ function clear() {
                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                         data-[outside-view]:text-muted-foreground/40
                         data-[unavailable]:pointer-events-none data-[unavailable]:line-through
+                        data-[disabled]:pointer-events-none data-[disabled]:text-muted-foreground/30
                         data-[selected]:not-data-[selection-start]:not-data-[selection-end]:bg-primary/10
                         data-[highlighted]:not-data-[selection-start]:not-data-[selection-end]:bg-primary/10
                         data-[selection-end]:bg-primary data-[selection-end]:text-primary-foreground
                         data-[selection-start]:bg-primary data-[selection-start]:text-primary-foreground
+                        data-[selection-start]:hover:bg-primary data-[selection-end]:hover:bg-primary
                         data-[today]:font-semibold data-[today]:underline"
                     />
                   </RangeCalendarCell>
