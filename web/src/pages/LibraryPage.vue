@@ -146,8 +146,24 @@ function setPageSize(v: unknown) {
   })
 }
 
-function openEmail(sha: string) {
+function emailHref(sha: string) {
+  return router.resolve({ name: 'viewer', params: { sha } }).href
+}
+
+function openEmail(sha: string, ev: MouseEvent) {
+  // Rows aren't anchors, so the modifier conventions browsers give links for
+  // free have to be reimplemented here.
+  if (ev.ctrlKey || ev.metaKey || ev.shiftKey) {
+    window.open(emailHref(sha), '_blank', 'noopener')
+    return
+  }
   router.push({ name: 'viewer', params: { sha } })
+}
+
+function openEmailAux(sha: string, ev: MouseEvent) {
+  if (ev.button !== 1) return
+  ev.preventDefault()
+  window.open(emailHref(sha), '_blank', 'noopener')
 }
 
 async function toggleStar(e: Email) {
@@ -247,7 +263,9 @@ const pageInfo = computed(() => {
             v-for="e in items"
             :key="e.sha256"
             class="border-t hover:bg-accent/50 cursor-pointer"
-            @click="openEmail(e.sha256)"
+            @click="openEmail(e.sha256, $event)"
+            @auxclick="openEmailAux(e.sha256, $event)"
+            @mousedown.middle.prevent
           >
             <td class="px-3 py-2">
               <button
@@ -257,6 +275,7 @@ const pageInfo = computed(() => {
                 :class="['inline-flex items-center justify-center h-6 w-6 rounded-sm hover:bg-accent',
                   e.starred ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground']"
                 @click.stop="toggleStar(e)"
+                @auxclick.stop
               >
                 <Star class="h-4 w-4" :fill="e.starred ? 'currentColor' : 'none'" />
               </button>
