@@ -70,6 +70,19 @@ CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts5(
   content='', tokenize='unicode61 remove_diacritics 2'
 );
 
+-- emails_fts is contentless, so SQLite refuses a plain DELETE and the documented
+-- 'delete' command needs the original body_text, which a contentless index does
+-- not keep. Deleting a row therefore has to orphan its index entry, which is
+-- harmless only while its rowid is never handed to a different email: a
+-- duplicate rowid insert into a contentless index succeeds silently, and the
+-- old terms would then resolve to the new message. Plain INTEGER PRIMARY KEY
+-- reuses max(id)+1 after the highest row is deleted, so ids come from this
+-- high-water mark instead and only ever move forward.
+CREATE TABLE IF NOT EXISTS email_id_seq (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  next_id INTEGER NOT NULL
+);
+
 DROP TABLE IF EXISTS email_tags;
 DROP TABLE IF EXISTS tags;
 
@@ -132,6 +145,11 @@ func (s *Store) migrate(ctx context.Context) error {
 		return err
 	}
 	if err := s.backfillChosung(ctx); err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`INSERT OR IGNORE INTO email_id_seq (id, next_id)
+		 SELECT 1, IFNULL(MAX(id), 0) + 1 FROM emails`); err != nil {
 		return err
 	}
 	for _, col := range []struct{ name, ddl string }{

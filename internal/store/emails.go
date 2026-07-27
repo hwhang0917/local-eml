@@ -47,13 +47,21 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// Ids come from the high-water mark rather than SQLite's max(id)+1 so a
+	// deleted row's number is never handed out again — see email_id_seq in the
+	// schema for why the contentless FTS index depends on that.
+	id, err := nextEmailID(ctx, tx)
+	if err != nil {
+		return 0, err
+	}
+
 	chosung := ToChosung(e.Subject + " " + e.FromAddr)
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO emails (sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO emails (id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, sent_at, received_at, size_bytes, has_attachments,
 			attachment_count, imported_at, chosung_text)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		id, e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
 		e.MessageID, unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt), e.SizeBytes,
 		hasAtt, e.AttachmentCount, time.Now().Unix(), chosung,
 	)
@@ -61,10 +69,6 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 		if isUniqueViolation(err) {
 			return 0, ErrDuplicate
 		}
-		return 0, err
-	}
-	id, err := res.LastInsertId()
-	if err != nil {
 		return 0, err
 	}
 
@@ -80,6 +84,46 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+func nextEmailID(ctx context.Context, tx *sql.Tx) (int64, error) {
+	// MAX against the live table too, so a database written before the sequence
+	// existed cannot hand out an id that is already taken.
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE email_id_seq
+		SET next_id = MAX(next_id, (SELECT IFNULL(MAX(id), 0) + 1 FROM emails))
+		WHERE id = 1`); err != nil {
+		return 0, err
+	}
+	var id int64
+	if err := tx.QueryRowContext(ctx,
+		`SELECT next_id FROM email_id_seq WHERE id = 1`).Scan(&id); err != nil {
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx,
+		`UPDATE email_id_seq SET next_id = ? WHERE id = 1`, id+1); err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+// DeleteEmailBySHA removes the row for a message whose blob has gone missing.
+// The contentless FTS index cannot be updated (see email_id_seq in the schema),
+// so its entry is left behind; it resolves to no row and its id is never
+// reissued, so searches stay correct.
+func (s *Store) DeleteEmailBySHA(ctx context.Context, sha string) error {
+	res, err := s.DB.ExecContext(ctx, `DELETE FROM emails WHERE sha256 = ?`, sha)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return ErrEmailNotFound
+	}
+	return nil
 }
 
 func (s *Store) EmailExists(ctx context.Context, sha string) (bool, error) {
