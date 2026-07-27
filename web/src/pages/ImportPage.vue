@@ -470,8 +470,7 @@ function formatRelativeSync(ts: number): string {
     <template v-else-if="provider === 's3'">
       <Card v-if="!s3Confirming" class="p-6 space-y-4">
         <div>
-          <h3 class="text-lg font-semibold mb-1">{{ t('import.s3_title') }}</h3>
-          <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_hint') }}</p>
+          <h3 class="text-lg font-semibold">{{ t('import.s3_title') }}</h3>
         </div>
 
         <div class="flex items-end gap-2">
@@ -500,6 +499,7 @@ function formatRelativeSync(ts: number): string {
           </Button>
         </div>
 
+        <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_optional') }}</p>
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.s3_access_key') }}</span>

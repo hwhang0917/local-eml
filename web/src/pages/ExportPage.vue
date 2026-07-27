@@ -223,6 +223,7 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
           </Button>
         </div>
 
+        <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_optional') }}</p>
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.s3_access_key') }}</span>
