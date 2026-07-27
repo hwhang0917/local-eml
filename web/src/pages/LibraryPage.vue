@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
+import PageNav from '@/components/ui/PageNav.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const PAGE_SIZES = [10, 25, 50, 100, 200] as const
@@ -114,6 +115,17 @@ function setSort(col: SortCol) {
 
 function setOffset(value: number) {
   pushQuery({ offset: value > 0 ? String(value) : undefined })
+}
+
+const canPrevPage = computed(() => offset.value > 0)
+const canNextPage = computed(() => offset.value + limit.value < total.value)
+
+function goPrevPage() {
+  setOffset(Math.max(0, offset.value - limit.value))
+}
+
+function goNextPage() {
+  setOffset(offset.value + limit.value)
 }
 
 function toggleStarredFilter() {
@@ -240,11 +252,13 @@ const pageInfo = computed(() => {
             </SelectContent>
           </Select>
         </label>
-        <span class="text-sm text-muted-foreground">{{ pageInfo }}</span>
-        <div class="flex items-center gap-1">
-          <Button variant="outline" size="sm" :disabled="offset === 0" @click="setOffset(Math.max(0, offset - limit))">{{ t('library.prev') }}</Button>
-          <Button variant="outline" size="sm" :disabled="offset + limit >= total" @click="setOffset(offset + limit)">{{ t('library.next') }}</Button>
-        </div>
+        <PageNav
+          :info="pageInfo"
+          :can-prev="canPrevPage"
+          :can-next="canNextPage"
+          @prev="goPrevPage"
+          @next="goNextPage"
+        />
       </div>
     </div>
 
@@ -328,6 +342,15 @@ const pageInfo = computed(() => {
       </table>
     </Card>
 
+    <div v-if="items.length" class="mt-4 flex justify-end">
+      <PageNav
+        :info="pageInfo"
+        :can-prev="canPrevPage"
+        :can-next="canNextPage"
+        @prev="goPrevPage"
+        @next="goNextPage"
+      />
+    </div>
   </section>
 </template>
 
