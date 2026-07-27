@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { computed, watchEffect } from 'vue'
-import { RouterLink, RouterView, useRoute } from 'vue-router'
+import { computed, nextTick, watchEffect } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { CircleHelp } from 'lucide-vue-next'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
 import { APP_NAME } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
+import { useTour } from '@/composables/useTour'
 
 const { t } = useI18n()
 const route = useRoute()
+const router = useRouter()
 const { online, checking, retry } = useHealth()
+const tour = useTour()
+
+// Two of the steps point at library controls, so the tour has to run from the
+// library route or those steps would highlight nothing.
+async function replayTour() {
+  if (route.name !== 'library') {
+    await router.push('/')
+    await nextTick()
+  }
+  tour.start()
+}
 
 const nav = computed(() => [
   { to: '/', label: t('nav.library'), tour: undefined },
@@ -67,6 +81,17 @@ watchEffect(() => {
               {{ r.label }}
             </RouterLink>
           </nav>
+          <button
+            type="button"
+            :title="t('tour.replay')"
+            :aria-label="t('tour.replay')"
+            class="ml-auto inline-flex items-center justify-center h-7 w-7 rounded-sm text-white/70
+              hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-white/60"
+            @click="replayTour"
+          >
+            <CircleHelp class="h-4 w-4" />
+          </button>
         </div>
       </header>
     </div>

@@ -13,6 +13,7 @@
     "viewer": "Viewer"
   },
   "tour": {
+    "replay": "Show the guided tour",
     "next": "Next",
     "prev": "Back",
     "done": "Done",
