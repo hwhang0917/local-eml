@@ -14,6 +14,10 @@ export interface Email {
   attachment_count: number
   imported_at: string
   starred: boolean
+  /** Row exists but its .eml is gone from disk. */
+  blob_missing?: boolean
+  /** .eml is on disk but no row exists; metadata was parsed from the file. */
+  not_indexed?: boolean
 }
 
 export interface EmailList {
@@ -125,6 +129,13 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
   return (await res.json()) as T
 }
 
+async function okOrThrow(res: Response): Promise<void> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`${res.status} ${res.statusText}: ${text}`)
+  }
+}
+
 export const api = {
   listEmails(params: { q?: string; starred?: boolean; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams()
@@ -147,6 +158,15 @@ export const api = {
 
   getEmail(sha: string) {
     return fetch(`${BASE}/api/emails/${sha}`).then(jsonOrThrow<Email>)
+  },
+
+  deleteEmail(sha: string) {
+    return fetch(`${BASE}/api/emails/${sha}`, { method: 'DELETE' }).then(okOrThrow)
+  },
+
+  indexEmail(sha: string) {
+    return fetch(`${BASE}/api/emails/${sha}/index`, { method: 'POST' })
+      .then(jsonOrThrow<{ sha256: string; email_id: number; duplicate: boolean }>)
   },
 
   getParts(sha: string) {

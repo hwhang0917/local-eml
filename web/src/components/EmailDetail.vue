@@ -2,7 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { Star } from 'lucide-vue-next'
+import { FileWarning, Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDateAbsolute } from '@/lib/format'
@@ -38,8 +38,18 @@ async function load() {
   textBody.value = ''
   rawBody.value = ''
   try {
-    const [e, p] = await Promise.all([api.getEmail(props.sha), api.getParts(props.sha)])
+    const e = await api.getEmail(props.sha)
     email.value = e
+    // With no file on disk every body endpoint 404s, so stop here and let the
+    // template offer to clear the dangling row.
+    if (e.blob_missing) {
+      parts.value = null
+      // Arriving from a raw/text tab would otherwise keep that panel mounted
+      // and fire a body fetch that can only 404.
+      tab.value = 'html'
+      return
+    }
+    const p = await api.getParts(props.sha)
     parts.value = p
     if (p.has_html) tab.value = 'html'
     else if (p.has_text) tab.value = 'text'
@@ -91,6 +101,43 @@ function openPendingLink() {
   linkDialog.value?.close()
 }
 
+const repairing = ref(false)
+const indexDialog = ref<HTMLDialogElement | null>(null)
+
+// flush: 'post' — the dialog element only exists once the email has rendered.
+watch(
+  () => email.value?.not_indexed,
+  (orphaned) => {
+    if (orphaned) indexDialog.value?.showModal()
+  },
+  { flush: 'post' },
+)
+
+async function deleteDangling() {
+  repairing.value = true
+  try {
+    await api.deleteEmail(props.sha)
+    router.push('/')
+  } catch (err) {
+    error.value = String(err)
+  } finally {
+    repairing.value = false
+  }
+}
+
+async function indexOrphan() {
+  repairing.value = true
+  try {
+    await api.indexEmail(props.sha)
+    indexDialog.value?.close()
+    await load()
+  } catch (err) {
+    error.value = String(err)
+  } finally {
+    repairing.value = false
+  }
+}
+
 async function toggleStar() {
   if (!email.value) return
   const next = !email.value.starred
@@ -138,7 +185,29 @@ async function toggleStar() {
       </dl>
     </Card>
 
-    <div class="flex items-center gap-1 border-b">
+    <Card v-if="email.blob_missing" class="p-6">
+      <div class="flex items-start gap-4">
+        <FileWarning class="mt-0.5 h-6 w-6 shrink-0 text-destructive" />
+        <div class="flex-1 space-y-2">
+          <h2 class="font-semibold">{{ t('viewer.missing_file.title') }}</h2>
+          <p class="text-sm text-muted-foreground">{{ t('viewer.missing_file.body') }}</p>
+          <p class="rounded-sm bg-accent p-2 font-mono text-xs break-all">
+            {{ email.filename || `${email.sha256}.eml` }}
+          </p>
+          <p class="text-sm">{{ t('viewer.missing_file.question') }}</p>
+          <div class="flex gap-2 pt-1">
+            <Button variant="destructive" size="sm" :disabled="repairing" @click="deleteDangling">
+              {{ t('viewer.missing_file.confirm') }}
+            </Button>
+            <Button variant="ghost" size="sm" :disabled="repairing" @click="goBack">
+              {{ t('viewer.missing_file.decline') }}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Card>
+
+    <div v-else class="flex items-center gap-1 border-b">
       <button v-for="tb in tabs" :key="tb.key" type="button" @click="tab = tb.key"
         :class="['px-3 py-2 text-sm border-b-2 -mb-px',
           tab === tb.key ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']">
@@ -151,7 +220,7 @@ async function toggleStar() {
       </div>
     </div>
 
-    <div v-if="tab === 'html'" class="border rounded-lg overflow-hidden bg-white">
+    <div v-if="!email.blob_missing && tab === 'html'" class="border rounded-lg overflow-hidden bg-white">
       <iframe v-if="parts?.has_html" :src="htmlSrc" sandbox="allow-same-origin"
         class="w-full h-[70vh]" referrerpolicy="no-referrer" @load="guardIframeLinks"></iframe>
       <p v-else class="p-6 text-muted-foreground">{{ t('viewer.no_html') }}</p>
@@ -178,6 +247,22 @@ async function toggleStar() {
       </ul>
       <p v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</p>
     </Card>
+
+    <dialog ref="indexDialog"
+      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+      <div class="space-y-3 p-5">
+        <h2 class="font-semibold">{{ t('viewer.not_indexed.title') }}</h2>
+        <p class="text-sm text-muted-foreground">{{ t('viewer.not_indexed.body') }}</p>
+        <div class="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" :disabled="repairing" @click="indexDialog?.close()">
+            {{ t('viewer.not_indexed.decline') }}
+          </Button>
+          <Button size="sm" :disabled="repairing" @click="indexOrphan">
+            {{ t('viewer.not_indexed.confirm') }}
+          </Button>
+        </div>
+      </div>
+    </dialog>
 
     <dialog ref="linkDialog"
       class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">

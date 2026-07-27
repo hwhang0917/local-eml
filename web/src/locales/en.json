@@ -111,6 +111,19 @@
       "body": "This link goes to an external site and will open in a new tab.",
       "cancel": "Cancel",
       "open": "Open link"
+    },
+    "missing_file": {
+      "title": "Message file is missing",
+      "body": "This message is listed in the database, but its .eml file can't be found on disk. It may have been deleted or moved outside Local Eml.",
+      "question": "Remove this entry from the database?",
+      "confirm": "Yes, remove it",
+      "decline": "No, keep it"
+    },
+    "not_indexed": {
+      "title": "Not in the database",
+      "body": "This .eml file is on disk but has no database entry, so it won't appear in the library or in search results. Add it now?",
+      "confirm": "Add to database",
+      "decline": "Not now"
     }
   },
   "import": {

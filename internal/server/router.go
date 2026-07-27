@@ -48,6 +48,8 @@ func (s *Server) Router() http.Handler {
 		api.Get("/emails/{sha}/html", s.handleEmailHTML)
 		api.Get("/emails/{sha}/cid/{cid}", s.handleEmailCID)
 		api.Get("/emails/{sha}/attachments/{idx}", s.handleEmailAttachment)
+		api.Delete("/emails/{sha}", s.handleDeleteEmail)
+		api.Post("/emails/{sha}/index", s.handleIndexEmail)
 		api.Put("/emails/{sha}/star", s.handleStarEmail)
 		api.Delete("/emails/{sha}/star", s.handleUnstarEmail)
 

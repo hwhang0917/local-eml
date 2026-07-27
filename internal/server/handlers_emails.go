@@ -1,8 +1,12 @@
 package server
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"os"
@@ -43,18 +47,153 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// emailResponse reports the two ways the database and the blob store can drift
+// apart, so the viewer can offer a repair instead of a bare 404.
+type emailResponse struct {
+	*store.Email
+	BlobMissing bool `json:"blob_missing,omitempty"`
+	NotIndexed  bool `json:"not_indexed,omitempty"`
+}
+
 func (s *Server) handleGetEmail(w http.ResponseWriter, r *http.Request) {
 	sha := chi.URLParam(r, "sha")
 	if !validSHA(sha) {
 		http.Error(w, "invalid sha", http.StatusBadRequest)
 		return
 	}
+	onDisk := s.blobExists(sha)
+
 	e, err := s.Store.GetEmailBySHA(r.Context(), sha)
-	if err != nil {
+	if err == nil {
+		writeJSON(w, http.StatusOK, emailResponse{Email: e, BlobMissing: !onDisk})
+		return
+	}
+	if !onDisk {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, e)
+
+	// On disk but unknown to the database — readable, so serve it and let the
+	// viewer offer to index it.
+	unindexed, err := s.parseBlobMetadata(sha)
+	if err != nil {
+		http.Error(w, "parse: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, emailResponse{Email: unindexed, NotIndexed: true})
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func (s *Server) blobExists(sha string) bool {
+	_, err := os.Stat(s.Importer.Paths.BlobFor(sha))
+	return err == nil
+}
+
+func (s *Server) parseBlobMetadata(sha string) (*store.Email, error) {
+	path := s.Importer.Paths.BlobFor(sha)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	parsed, err := parser.Parse(f)
+	if err != nil {
+		return nil, err
+	}
+	var size int64
+	if info, err := f.Stat(); err == nil {
+		size = info.Size()
+	}
+	return &store.Email{
+		SHA256:          sha,
+		Filename:        sha + ".eml",
+		Subject:         parsed.Subject,
+		FromAddr:        parsed.From,
+		ToAddrs:         parsed.To,
+		CcAddrs:         parsed.Cc,
+		MessageID:       parsed.MessageID,
+		SentAt:          parsed.Date,
+		SizeBytes:       size,
+		HasAttachments:  parsed.AttachmentCount > 0,
+		AttachmentCount: parsed.AttachmentCount,
+	}, nil
+}
+
+// handleDeleteEmail clears a row whose message file has gone missing. It
+// refuses while the file is still there: this is a repair for dangling
+// metadata, not a way to delete mail.
+func (s *Server) handleDeleteEmail(w http.ResponseWriter, r *http.Request) {
+	sha := chi.URLParam(r, "sha")
+	if !validSHA(sha) {
+		http.Error(w, "invalid sha", http.StatusBadRequest)
+		return
+	}
+	if s.blobExists(sha) {
+		http.Error(w, "message file is still on disk", http.StatusConflict)
+		return
+	}
+	if err := s.Store.DeleteEmailBySHA(r.Context(), sha); err != nil {
+		if errors.Is(err, store.ErrEmailNotFound) {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	slog.Info("deleted email with missing blob", slog.String("sha256", sha))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleIndexEmail adds an existing blob to the database. ImportFile already
+// hashes, de-duplicates, parses and inserts, and its copy step is a no-op when
+// the source is already the blob it would write.
+func (s *Server) handleIndexEmail(w http.ResponseWriter, r *http.Request) {
+	sha := chi.URLParam(r, "sha")
+	if !validSHA(sha) {
+		http.Error(w, "invalid sha", http.StatusBadRequest)
+		return
+	}
+	path := s.Importer.Paths.BlobFor(sha)
+	if !s.blobExists(sha) {
+		http.Error(w, "no message file on disk", http.StatusNotFound)
+		return
+	}
+	// Blobs are named by content hash. Importing a file whose contents hash to
+	// something else would index it under its real hash and leave this one
+	// behind as a second, unreferenced copy, so refuse instead.
+	sum, err := hashFile(path)
+	if err != nil {
+		http.Error(w, "hash: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if sum != sha {
+		http.Error(w, "file contents do not match its name (expected "+sum+")", http.StatusConflict)
+		return
+	}
+	res, err := s.Importer.ImportFile(r.Context(), path, sha+".eml")
+	if err != nil {
+		http.Error(w, "index: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	slog.Info("indexed orphaned blob",
+		slog.String("sha256", res.SHA256), slog.Bool("duplicate", res.Duplicate))
+	writeJSON(w, http.StatusOK, map[string]any{
+		"sha256":    res.SHA256,
+		"email_id":  res.EmailID,
+		"duplicate": res.Duplicate,
+	})
 }
 
 func (s *Server) handleEmailRaw(w http.ResponseWriter, r *http.Request) {
