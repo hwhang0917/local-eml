@@ -83,7 +83,9 @@
     "date_range": "기간",
     "date_any": "전체 기간",
     "date_clear": "날짜 지우기",
-    "date_apply": "적용"
+    "date_apply": "적용",
+    "zoom_out": "기간 넓게 보기",
+    "pagination": "페이지 이동"
   },
   "viewer": {
     "back": "← 라이브러리로 돌아가기",

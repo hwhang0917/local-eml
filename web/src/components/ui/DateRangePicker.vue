@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
-import { CalendarDate } from '@internationalized/date'
+import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
+import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
 import {
   PopoverArrow,
@@ -19,8 +19,6 @@ import {
   RangeCalendarHeadCell,
   RangeCalendarHeader,
   RangeCalendarHeading,
-  RangeCalendarNext,
-  RangeCalendarPrev,
   RangeCalendarRoot,
 } from 'reka-ui'
 import Button from '@/components/ui/Button.vue'
@@ -93,6 +91,101 @@ const label = computed(() => {
 
 const hasRange = computed(() => props.from !== '' || props.to !== '')
 
+type RekaDate = NonNullable<DateRange['start']>
+
+// Ray Tomlinson sent the first networked email in 1971. Nothing in a local
+// archive can predate that, so it makes a better floor than an arbitrary year
+// — and it keeps the year list from scrolling into antiquity.
+const FIRST_EMAIL = new CalendarDate(1971, 9, 26) as unknown as RekaDate
+const maxDate = today(getLocalTimeZone()) as unknown as RekaDate
+
+const YEARS_PER_PAGE = 12
+
+// Days -> months -> years, the zoom-out ladder behind the heading button.
+type View = 'day' | 'month' | 'year'
+const view = ref<View>('day')
+const placeholder = shallowRef<RekaDate>(range.value.start ?? maxDate)
+
+// Reopening should not strand the user wherever they browsed to last time.
+watch(open, (isOpen) => {
+  if (!isOpen) return
+  view.value = 'day'
+  placeholder.value = range.value.start ?? maxDate
+})
+
+const monthNames = computed(() => {
+  const fmt = new Intl.DateTimeFormat(locale.value, { month: 'short' })
+  return Array.from({ length: 12 }, (_, i) => fmt.format(new Date(2001, i, 1)))
+})
+
+// Pages are anchored to the floor year so the grid never shifts under you as
+// you page back and forth.
+const yearPageStart = computed(
+  () => placeholder.value.year - ((placeholder.value.year - FIRST_EMAIL.year) % YEARS_PER_PAGE),
+)
+const yearPage = computed(() =>
+  Array.from({ length: YEARS_PER_PAGE }, (_, i) => yearPageStart.value + i),
+)
+
+const heading = computed(() => {
+  if (view.value === 'year') {
+    return `${yearPage.value[0]} – ${yearPage.value[YEARS_PER_PAGE - 1]}`
+  }
+  return new Intl.DateTimeFormat(locale.value, { year: 'numeric' }).format(
+    new Date(placeholder.value.year, 0, 1),
+  )
+})
+
+function zoomOut() {
+  view.value = view.value === 'day' ? 'month' : 'year'
+}
+
+function pickMonth(month: number) {
+  // day: 1 avoids overflow — .set({ month: 2 }) from a 31st would otherwise
+  // have to be constrained.
+  placeholder.value = placeholder.value.set({ month, day: 1 })
+  view.value = 'day'
+}
+
+function pickYear(year: number) {
+  placeholder.value = placeholder.value.set({ year, day: 1 })
+  view.value = 'month'
+}
+
+function isMonthDisabled(month: number) {
+  const first = placeholder.value.set({ month, day: 1 })
+  const last = first.add({ months: 1 }).subtract({ days: 1 })
+  return last.compare(FIRST_EMAIL) < 0 || first.compare(maxDate) > 0
+}
+
+function isYearDisabled(year: number) {
+  return year < FIRST_EMAIL.year || year > maxDate.year
+}
+
+function page(direction: 1 | -1) {
+  if (view.value === 'day') placeholder.value = placeholder.value.add({ months: direction })
+  else if (view.value === 'month') placeholder.value = placeholder.value.add({ years: direction })
+  else placeholder.value = placeholder.value.add({ years: direction * YEARS_PER_PAGE })
+}
+
+// A page is reachable only if some part of it falls inside the allowed span.
+const canPagePrev = computed(() => {
+  if (view.value === 'year') return yearPageStart.value > FIRST_EMAIL.year
+  const prev = view.value === 'day'
+    ? placeholder.value.subtract({ months: 1 })
+    : placeholder.value.subtract({ years: 1 })
+  const end = view.value === 'day' ? prev.add({ months: 1 }) : prev.set({ month: 12, day: 31 })
+  return end.compare(FIRST_EMAIL) >= 0
+})
+const canPageNext = computed(() => {
+  if (view.value === 'year') return yearPageStart.value + YEARS_PER_PAGE <= maxDate.year
+  const next = view.value === 'day'
+    ? placeholder.value.add({ months: 1 })
+    : placeholder.value.add({ years: 1 })
+  const start = view.value === 'day' ? next : next.set({ month: 1, day: 1 })
+  return start.compare(maxDate) <= 0
+})
+
 function clear() {
   range.value = { start: undefined, end: undefined }
   emit('change', { from: '', to: '' })
@@ -119,34 +212,91 @@ function clear() {
       <PopoverContent
         :side-offset="6"
         align="start"
-        class="z-50 rounded-lg border border-hairline bg-background p-4 shadow-lg"
+        class="z-50 rounded-lg border border-hairline bg-background p-4 shadow-lg sm:min-w-[30rem]"
       >
         <PopoverArrow class="fill-background" />
         <RangeCalendarRoot
           v-slot="{ grid, weekDays }"
           v-model="range"
+          v-model:placeholder="placeholder"
           :locale="locale"
           :number-of-months="2"
+          :min-value="FIRST_EMAIL"
+          :max-value="maxDate"
           fixed-weeks
           class="select-none"
         >
           <RangeCalendarHeader class="relative mb-3 flex items-center justify-center">
-            <RangeCalendarPrev
+            <button
+              type="button"
               :aria-label="t('library.prev')"
-              class="absolute left-0 inline-flex h-7 w-7 items-center justify-center rounded-sm hover:bg-accent"
+              :disabled="!canPagePrev"
+              class="absolute left-0 inline-flex h-7 w-7 items-center justify-center rounded-sm
+                hover:bg-accent disabled:pointer-events-none disabled:opacity-30"
+              @click="page(-1)"
             >
               <ChevronLeft class="h-4 w-4" />
-            </RangeCalendarPrev>
-            <RangeCalendarHeading class="text-sm font-semibold" />
-            <RangeCalendarNext
+            </button>
+            <button
+              type="button"
+              :aria-label="t('library.zoom_out')"
+              :disabled="view === 'year'"
+              class="inline-flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-semibold
+                hover:bg-accent disabled:pointer-events-none
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              @click="zoomOut"
+            >
+              <RangeCalendarHeading v-if="view === 'day'" as="span" />
+              <span v-else>{{ heading }}</span>
+              <ChevronDown v-if="view !== 'year'" class="h-3.5 w-3.5 opacity-60" />
+            </button>
+            <button
+              type="button"
               :aria-label="t('library.next')"
-              class="absolute right-0 inline-flex h-7 w-7 items-center justify-center rounded-sm hover:bg-accent"
+              :disabled="!canPageNext"
+              class="absolute right-0 inline-flex h-7 w-7 items-center justify-center rounded-sm
+                hover:bg-accent disabled:pointer-events-none disabled:opacity-30"
+              @click="page(1)"
             >
               <ChevronRight class="h-4 w-4" />
-            </RangeCalendarNext>
+            </button>
           </RangeCalendarHeader>
 
-          <div class="flex flex-col gap-4 sm:flex-row">
+          <div v-if="view === 'month'" class="grid grid-cols-4 gap-1">
+            <button
+              v-for="(name, i) in monthNames"
+              :key="name"
+              type="button"
+              :disabled="isMonthDisabled(i + 1)"
+              :class="[
+                'h-10 rounded-sm text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-30',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                i + 1 === placeholder.month ? 'bg-primary text-primary-foreground' : '',
+              ]"
+              @click="pickMonth(i + 1)"
+            >
+              {{ name }}
+            </button>
+          </div>
+
+          <div v-else-if="view === 'year'" class="grid grid-cols-4 gap-1">
+            <button
+              v-for="year in yearPage"
+              :key="year"
+              type="button"
+              :disabled="isYearDisabled(year)"
+              :class="[
+                'h-10 rounded-sm text-sm hover:bg-accent disabled:pointer-events-none disabled:opacity-30',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                year === placeholder.year ? 'bg-primary text-primary-foreground' : '',
+              ]"
+              @click="pickYear(year)"
+            >
+              {{ year }}
+            </button>
+          </div>
+
+          <div v-else class="flex flex-col gap-4 sm:flex-row">
             <RangeCalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full border-collapse">
               <RangeCalendarGridHead>
                 <RangeCalendarGridRow class="mb-1 flex w-full justify-between">

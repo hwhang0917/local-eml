@@ -83,7 +83,9 @@
     "date_range": "Date range",
     "date_any": "Any date",
     "date_clear": "Clear dates",
-    "date_apply": "Apply"
+    "date_apply": "Apply",
+    "zoom_out": "Zoom out",
+    "pagination": "Pagination"
   },
   "viewer": {
     "back": "← Back to library",
