@@ -65,7 +65,13 @@
     "show_all": "Show all",
     "no_starred": "No starred emails.",
     "per_page": "per page",
-    "reset": "Reset"
+    "reset": "Reset",
+    "date_from": "From date",
+    "date_to": "To date",
+    "date_range": "Date range",
+    "date_any": "Any date",
+    "date_clear": "Clear dates",
+    "date_apply": "Apply"
   },
   "viewer": {
     "back": "← Back to library",

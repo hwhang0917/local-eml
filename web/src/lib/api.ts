@@ -126,7 +126,7 @@ async function jsonOrThrow<T>(res: Response): Promise<T> {
 }
 
 export const api = {
-  listEmails(params: { q?: string; starred?: boolean; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
+  listEmails(params: { q?: string; starred?: boolean; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === '' || v === false) continue

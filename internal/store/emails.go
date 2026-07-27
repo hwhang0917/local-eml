@@ -149,12 +149,16 @@ func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) e
 }
 
 type ListOptions struct {
-	Query        string
-	StarredOnly  bool
-	Sort         string
-	Order        string
-	Limit        int
-	Offset       int
+	Query       string
+	StarredOnly bool
+	Sort        string
+	Order       string
+	Limit       int
+	Offset      int
+	// From and To bound sent_at, in unix seconds; zero means unbounded. Both
+	// ends are inclusive, so the caller decides where a day starts and ends.
+	From int64
+	To   int64
 }
 
 func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
@@ -184,6 +188,16 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	}
 	if opts.StarredOnly {
 		conds = append(conds, `starred = 1`)
+	}
+	// Messages with no parseable Date header store sent_at = 0, so any bound
+	// drops them — which is what a date filter should do.
+	if opts.From > 0 {
+		conds = append(conds, `sent_at >= ?`)
+		args = append(args, opts.From)
+	}
+	if opts.To > 0 {
+		conds = append(conds, `sent_at <= ?`)
+		args = append(args, opts.To)
 	}
 	where := ""
 	if len(conds) > 0 {

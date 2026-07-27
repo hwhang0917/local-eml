@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@fontsource/roboto": "^5.2.10",
+    "@internationalized/date": "^3.12.2",
     "@vueuse/core": "^14.3.0",
     "clsx": "^2.1.1",
     "driver.js": "^1.8.0",

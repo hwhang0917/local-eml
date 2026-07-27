@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jhillyerd/enmime"
@@ -26,6 +27,8 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 		Order:       q.Get("order"),
 		Limit:       intParam(q.Get("limit"), 50),
 		Offset:      intParam(q.Get("offset"), 0),
+		From:        dayBound(q.Get("from"), false),
+		To:          dayBound(q.Get("to"), true),
 	}
 	emails, total, err := s.Store.ListEmails(r.Context(), opts)
 	if err != nil {
@@ -290,6 +293,27 @@ func intParam(s string, def int) int {
 		return def
 	}
 	return n
+}
+
+// dayBound turns a YYYY-MM-DD filter value into a unix second. The dates come
+// from a browser <input type="date">, which has no timezone, and the browser
+// and server are the same machine — so a day means a local day. endOfDay
+// pushes to 23:59:59 so a from/to pair with the same date selects that whole
+// day rather than an empty instant. Unparseable input yields 0 (unbounded)
+// rather than an error: a half-typed date should not blank the library.
+func dayBound(v string, endOfDay bool) int64 {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0
+	}
+	d, err := time.ParseInLocation(time.DateOnly, v, time.Local)
+	if err != nil {
+		return 0
+	}
+	if endOfDay {
+		d = d.AddDate(0, 0, 1).Add(-time.Second)
+	}
+	return d.Unix()
 }
 
 func validSHA(s string) bool {

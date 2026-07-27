@@ -65,7 +65,13 @@
     "show_all": "전체 보기",
     "no_starred": "별표 표시한 메일이 없습니다.",
     "per_page": "페이지당",
-    "reset": "초기화"
+    "reset": "초기화",
+    "date_from": "시작 날짜",
+    "date_to": "종료 날짜",
+    "date_range": "기간",
+    "date_any": "전체 기간",
+    "date_clear": "날짜 지우기",
+    "date_apply": "적용"
   },
   "viewer": {
     "back": "← 라이브러리로 돌아가기",
