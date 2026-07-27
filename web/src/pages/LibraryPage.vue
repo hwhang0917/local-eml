@@ -6,6 +6,7 @@ import { RotateCcw, Star } from 'lucide-vue-next'
 import { api, type Email } from '@/lib/api'
 import { formatBytes, formatDate, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
+import { useTour } from '@/composables/useTour'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -95,7 +96,11 @@ async function load() {
 
 watch([q, starredOnly, sort, order, offset, limit], load)
 
-onMounted(load)
+const tour = useTour()
+onMounted(() => {
+  load()
+  tour.startIfFirstVisit()
+})
 
 function setSort(col: SortCol) {
   if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc', offset: undefined })
@@ -169,10 +174,11 @@ const pageInfo = computed(() => {
 <template>
   <section class="flex-1 min-w-0">
     <div class="flex items-center flex-wrap gap-3 mb-4">
-      <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" />
+      <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" data-tour="search" />
       <Button
         variant="outline"
         size="sm"
+        data-tour="starred"
         :title="starredOnly ? t('library.show_all') : t('library.show_starred')"
         :class="starredOnly ? 'text-amber-500 border-amber-500' : ''"
         @click="toggleStarredFilter"

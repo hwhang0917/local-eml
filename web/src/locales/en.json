@@ -12,6 +12,31 @@
     "settings": "Settings",
     "viewer": "Viewer"
   },
+  "tour": {
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "import": {
+      "title": "Import your mail",
+      "body": "Drop .eml files, folders, or .zip archives here — or pull straight from an S3 bucket or IMAP mailbox. Duplicates are skipped automatically."
+    },
+    "search": {
+      "title": "Search everything",
+      "body": "Find messages by sender, subject, or body. Hangul initial consonants work too — type ㅎㄱ to find 한국."
+    },
+    "starred": {
+      "title": "Star what matters",
+      "body": "Star messages from the list or the viewer, then use this filter to see only starred mail."
+    },
+    "export": {
+      "title": "Export your library",
+      "body": "Download everything as a single .zip, or upload to an S3 bucket. Re-running an export skips what's already there."
+    },
+    "settings": {
+      "title": "Make it yours",
+      "body": "Switch between Korean and English, change date display, and manage saved IMAP and S3 profiles."
+    }
+  },
   "library": {
     "search_placeholder": "Search subject, from, body…",
     "loading": "Loading…",

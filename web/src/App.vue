@@ -12,10 +12,10 @@ const route = useRoute()
 const { online, checking, retry } = useHealth()
 
 const nav = computed(() => [
-  { to: '/', label: t('nav.library') },
-  { to: '/import', label: t('nav.import') },
-  { to: '/export', label: t('nav.export') },
-  { to: '/settings', label: t('nav.settings') },
+  { to: '/', label: t('nav.library'), tour: undefined },
+  { to: '/import', label: t('nav.import'), tour: 'import' },
+  { to: '/export', label: t('nav.export'), tour: 'export' },
+  { to: '/settings', label: t('nav.settings'), tour: 'settings' },
 ])
 
 const pageTitle = computed(() => {
@@ -60,6 +60,7 @@ watchEffect(() => {
               v-for="r in nav"
               :key="r.to"
               :to="r.to"
+              :data-tour="r.tour"
               class="px-3 py-1 rounded-xs text-white/70 hover:text-white"
               active-class="text-white"
             >
