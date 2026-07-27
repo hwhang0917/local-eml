@@ -16,9 +16,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # go-version-file would pin the exact 1.25.0 from go.mod, freezing the
+      # stdlib at a year of missed security patches; stable tracks the latest
+      # patched toolchain, which go.mod's floor still permits.
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
 
       - name: go vet

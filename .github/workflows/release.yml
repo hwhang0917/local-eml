@@ -56,9 +56,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Must match ci.yml: shipped binaries statically embed the stdlib, so a
+      # pinned 1.25.0 toolchain would bake known-vulnerable crypto/tls and
+      # net/http into every release.
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
 
       - uses: actions/download-artifact@v4
