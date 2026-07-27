@@ -130,6 +130,7 @@ func (s *Server) handleEmailHTML(w http.ResponseWriter, r *http.Request) {
 	out, err := sanitize.Sanitize(env.HTML, sanitize.Options{
 		CIDBaseURL: fmt.Sprintf("/api/emails/%s/cid/", sha),
 		ShowRemote: showRemote,
+		Lang:       r.URL.Query().Get("lang"),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

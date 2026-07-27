@@ -155,7 +155,8 @@ export const api = {
 
   textURL: (sha: string) => `${BASE}/api/emails/${sha}/text`,
   rawURL: (sha: string) => `${BASE}/api/emails/${sha}/raw`,
-  htmlURL: (sha: string, remote = false) => `${BASE}/api/emails/${sha}/html${remote ? '?remote=1' : ''}`,
+  htmlURL: (sha: string, remote = false, lang = 'en') =>
+    `${BASE}/api/emails/${sha}/html?lang=${encodeURIComponent(lang)}${remote ? '&remote=1' : ''}`,
   attachmentURL: (sha: string, idx: number) => `${BASE}/api/emails/${sha}/attachments/${idx}`,
 
   async getText(sha: string): Promise<string> {

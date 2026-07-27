@@ -1,6 +1,7 @@
 package sanitize
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 )
@@ -70,7 +71,7 @@ func TestBlocksRemoteImagesByDefault(t *testing.T) {
 	if strings.Contains(out, ` src="https://tracker.example.com/p.gif"`) {
 		t.Errorf("remote URL stayed in src attribute: %s", out)
 	}
-	if !strings.Contains(out, ` src="data:image/gif;base64,`) {
+	if !strings.Contains(out, ` src="data:image/svg+xml;base64,`) {
 		t.Errorf("src should be replaced with placeholder data URL: %s", out)
 	}
 	if !strings.Contains(out, `data-remote-blocked="1"`) {
@@ -106,5 +107,36 @@ func TestPreservesSafeStructure(t *testing.T) {
 	}
 	if !strings.Contains(out, "color:red") {
 		t.Errorf("inline style dropped: %s", out)
+	}
+}
+
+func TestBlockedPlaceholderIsLocalizedAndSelfDescribing(t *testing.T) {
+	src := `<img src="https://tracker.example.com/pixel.gif">`
+
+	for _, tc := range []struct {
+		lang string
+		want string
+	}{
+		{"ko", "외부 이미지 차단됨"},
+		{"en", "Remote image blocked"},
+		{"de", "Remote image blocked"}, // unknown locale falls back to English
+	} {
+		out, err := Sanitize(src, Options{Lang: tc.lang})
+		if err != nil {
+			t.Fatalf("sanitize(%s): %v", tc.lang, err)
+		}
+		if !strings.Contains(out, "data:image/svg+xml;base64,") {
+			t.Fatalf("lang %s: placeholder is not an inline SVG: %s", tc.lang, out)
+		}
+		start := strings.Index(out, "base64,") + len("base64,")
+		rest := out[start:]
+		end := strings.IndexAny(rest, `"' `)
+		decoded, err := base64.StdEncoding.DecodeString(rest[:end])
+		if err != nil {
+			t.Fatalf("lang %s: placeholder is not valid base64: %v", tc.lang, err)
+		}
+		if !strings.Contains(string(decoded), tc.want) {
+			t.Errorf("lang %s: placeholder does not say %q: %s", tc.lang, tc.want, decoded)
+		}
 	}
 }

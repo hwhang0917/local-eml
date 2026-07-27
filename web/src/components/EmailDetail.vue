@@ -10,7 +10,7 @@ import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 
 const props = defineProps<{ sha: string }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const router = useRouter()
 
 const email = ref<Email | null>(null)
@@ -23,7 +23,8 @@ const error = ref('')
 const pendingLink = ref('')
 const linkDialog = ref<HTMLDialogElement | null>(null)
 
-const htmlSrc = computed(() => email.value ? api.htmlURL(email.value.sha256, showRemote.value) : '')
+const htmlSrc = computed(() =>
+  email.value ? api.htmlURL(email.value.sha256, showRemote.value, locale.value) : '')
 
 const tabs = computed(() => [
   { key: 'html' as const, label: t('viewer.tabs.html') },
