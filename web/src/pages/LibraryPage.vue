@@ -10,6 +10,7 @@ import { useTour } from '@/composables/useTour'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import DateRangePicker from '@/components/ui/DateRangePicker.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const PAGE_SIZES = [10, 25, 50, 100, 200] as const
@@ -39,6 +40,8 @@ function normalizePageSize(n: number): PageSize {
 
 const q = computed(() => str(route.query.q))
 const starredOnly = computed(() => str(route.query.starred) === '1')
+const from = computed(() => str(route.query.from))
+const to = computed(() => str(route.query.to))
 const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
 const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
 const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
@@ -82,6 +85,8 @@ async function load() {
     const r = await api.listEmails({
       q: q.value || undefined,
       starred: starredOnly.value || undefined,
+      from: from.value || undefined,
+      to: to.value || undefined,
       sort: sort.value,
       order: order.value,
       limit: limit.value,
@@ -94,7 +99,7 @@ async function load() {
   }
 }
 
-watch([q, starredOnly, sort, order, offset, limit], load)
+watch([q, starredOnly, from, to, sort, order, offset, limit], load)
 
 const tour = useTour()
 onMounted(() => {
@@ -119,6 +124,8 @@ const hasActiveFilters = computed(
   () =>
     q.value !== '' ||
     starredOnly.value ||
+    from.value !== '' ||
+    to.value !== '' ||
     sort.value !== 'sent_at' ||
     order.value !== 'desc' ||
     offset.value > 0,
@@ -130,10 +137,16 @@ function resetFilters() {
   pushQuery({
     q: undefined,
     starred: undefined,
+    from: undefined,
+    to: undefined,
     sort: undefined,
     order: undefined,
     offset: undefined,
   })
+}
+
+function setDateRange(range: { from: string; to: string }) {
+  pushQuery({ from: range.from || undefined, to: range.to || undefined, offset: undefined })
 }
 
 function setPageSize(v: unknown) {
@@ -202,6 +215,7 @@ const pageInfo = computed(() => {
         <Star class="h-4 w-4" :fill="starredOnly ? 'currentColor' : 'none'" />
         <span class="ml-1.5">{{ t('library.starred') }}</span>
       </Button>
+      <DateRangePicker :from="from" :to="to" @change="setDateRange" />
       <Button
         variant="outline"
         size="sm"
@@ -294,14 +308,17 @@ const pageInfo = computed(() => {
                 :title="dateFormat === 'relative' ? formatDateAbsolute(e.sent_at) : undefined"
               >{{ formatDate(e.sent_at) }}</time>
             </td>
-            <td class="px-3 py-2 whitespace-nowrap" :title="e.from">{{ senderName(e.from) }}</td>
+            <td class="px-3 py-2 whitespace-nowrap" :title="e.from">
+              <Highlight :text="senderName(e.from)" :query="q" />
+            </td>
             <td class="px-3 py-2 truncate">
               <RouterLink
                 :to="{ name: 'viewer', params: { sha: e.sha256 } }"
                 class="rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 @click.stop
               >
-                {{ e.subject || t('library.no_subject') }}
+                <Highlight v-if="e.subject" :text="e.subject" :query="q" />
+                <template v-else>{{ t('library.no_subject') }}</template>
               </RouterLink>
               <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
             </td>
@@ -316,6 +333,24 @@ const pageInfo = computed(() => {
 
 <script lang="ts">
 import { defineComponent, h } from 'vue'
+import { highlightSegments } from '@/lib/highlight'
+
+// <mark> is the element the platform already has for "matched here", so
+// find-in-page styling and assistive tech get it for free.
+export const Highlight = defineComponent({
+  props: {
+    text: { type: String, required: true },
+    query: { type: String, default: '' },
+  },
+  setup(props) {
+    return () =>
+      highlightSegments(props.text, props.query).map((seg) =>
+        seg.match
+          ? h('mark', { class: 'rounded-xs bg-amber-200 text-inherit dark:bg-amber-400/30' }, seg.text)
+          : seg.text,
+      )
+  },
+})
 
 export const Th = defineComponent({
   props: {
