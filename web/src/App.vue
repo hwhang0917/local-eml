@@ -26,7 +26,7 @@ async function replayTour() {
 }
 
 const nav = computed(() => [
-  { to: '/', label: t('nav.library'), tour: undefined },
+  { to: '/', label: t('nav.library'), tour: 'library' },
   { to: '/import', label: t('nav.import'), tour: 'import' },
   { to: '/export', label: t('nav.export'), tour: 'export' },
   { to: '/settings', label: t('nav.settings'), tour: 'settings' },
@@ -83,6 +83,7 @@ watchEffect(() => {
           </nav>
           <button
             type="button"
+            data-tour="help"
             :title="t('tour.replay')"
             :aria-label="t('tour.replay')"
             class="ml-auto inline-flex items-center justify-center h-7 w-7 rounded-sm text-white/70

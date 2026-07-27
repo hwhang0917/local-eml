@@ -15,28 +15,14 @@ export function useTour() {
       nextBtnText: t('tour.next'),
       prevBtnText: t('tour.prev'),
       doneBtnText: t('tour.done'),
-      steps: [
-        {
-          element: '[data-tour="import"]',
-          popover: { title: t('tour.import.title'), description: t('tour.import.body') },
-        },
-        {
-          element: '[data-tour="search"]',
-          popover: { title: t('tour.search.title'), description: t('tour.search.body') },
-        },
-        {
-          element: '[data-tour="starred"]',
-          popover: { title: t('tour.starred.title'), description: t('tour.starred.body') },
-        },
-        {
-          element: '[data-tour="export"]',
-          popover: { title: t('tour.export.title'), description: t('tour.export.body') },
-        },
-        {
-          element: '[data-tour="settings"]',
-          popover: { title: t('tour.settings.title'), description: t('tour.settings.body') },
-        },
-      ],
+      // Nav first, left to right, then the library controls in the order they
+      // sit in the filter bar, then how to get the tour back.
+      steps: ['library', 'import', 'export', 'settings', 'search', 'starred', 'dates', 'help'].map(
+        (key) => ({
+          element: `[data-tour="${key}"]`,
+          popover: { title: t(`tour.${key}.title`), description: t(`tour.${key}.body`) },
+        }),
+      ),
     }).drive()
   }
 

@@ -17,17 +17,13 @@
     "next": "Next",
     "prev": "Back",
     "done": "Done",
+    "library": {
+      "title": "Your library",
+      "body": "Every message you've imported lives here. Click a subject to read it, or middle-click to open it in a new tab."
+    },
     "import": {
       "title": "Import your mail",
       "body": "Drop .eml files, folders, or .zip archives here — or pull straight from an S3 bucket or IMAP mailbox. Duplicates are skipped automatically."
-    },
-    "search": {
-      "title": "Search everything",
-      "body": "Find messages by sender, subject, or body. Hangul initial consonants work too — type ㅎㄱ to find 한국."
-    },
-    "starred": {
-      "title": "Star what matters",
-      "body": "Star messages from the list or the viewer, then use this filter to see only starred mail."
     },
     "export": {
       "title": "Export your library",
@@ -36,6 +32,22 @@
     "settings": {
       "title": "Make it yours",
       "body": "Switch between Korean and English, change date display, and manage saved IMAP and S3 profiles."
+    },
+    "search": {
+      "title": "Search everything",
+      "body": "Find messages by sender, subject, or body. Hangul initial consonants work too — type ㅎㄱ to find 한국. Matching characters are highlighted in the results."
+    },
+    "starred": {
+      "title": "Star what matters",
+      "body": "Star messages from the list or the viewer, then use this filter to see only starred mail."
+    },
+    "dates": {
+      "title": "Narrow by date",
+      "body": "Pick a start and end date to show only mail sent in that window. Both ends are included."
+    },
+    "help": {
+      "title": "Need this again?",
+      "body": "Press the question mark any time to replay this tour."
     }
   },
   "library": {

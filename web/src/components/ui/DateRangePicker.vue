@@ -103,6 +103,7 @@ function clear() {
 <template>
   <PopoverRoot v-model:open="open">
     <PopoverTrigger
+      data-tour="dates"
       :aria-label="t('library.date_range')"
       :class="[
         'inline-flex h-8 items-center gap-2 rounded-sm border border-hairline bg-pearl px-3 text-sm',
