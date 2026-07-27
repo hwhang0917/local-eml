@@ -6,6 +6,7 @@ import { Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDateAbsolute } from '@/lib/format'
+import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
 
 const props = defineProps<{ sha: string }>()
@@ -19,6 +20,8 @@ const textBody = ref('')
 const rawBody = ref('')
 const showRemote = ref(false)
 const error = ref('')
+const pendingLink = ref('')
+const linkDialog = ref<HTMLDialogElement | null>(null)
 
 const htmlSrc = computed(() => email.value ? api.htmlURL(email.value.sha256, showRemote.value) : '')
 
@@ -61,6 +64,30 @@ watch(() => email.value?.subject, (subject) => {
 function goBack() {
   if (window.history.length > 1) router.back()
   else router.push('/')
+}
+
+// The message iframe is sandboxed without allow-scripts, so a link click would
+// otherwise navigate the iframe itself and render the remote site inside the
+// viewer. The frame is same-origin, so the parent can listen on its document
+// and hand external links to a confirmation dialog instead.
+function guardIframeLinks(e: Event) {
+  const doc = (e.target as HTMLIFrameElement).contentDocument
+  doc?.addEventListener('click', onIframeClick)
+}
+
+function onIframeClick(e: MouseEvent) {
+  const anchor = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null
+  if (!anchor) return
+  // mailto:/tel: are handed to the OS and never navigate the frame.
+  if (anchor.protocol !== 'http:' && anchor.protocol !== 'https:') return
+  e.preventDefault()
+  pendingLink.value = anchor.href
+  linkDialog.value?.showModal()
+}
+
+function openPendingLink() {
+  window.open(pendingLink.value, '_blank', 'noopener,noreferrer')
+  linkDialog.value?.close()
 }
 
 async function toggleStar() {
@@ -125,7 +152,7 @@ async function toggleStar() {
 
     <div v-if="tab === 'html'" class="border rounded-lg overflow-hidden bg-white">
       <iframe v-if="parts?.has_html" :src="htmlSrc" sandbox="allow-same-origin"
-        class="w-full h-[70vh]" referrerpolicy="no-referrer"></iframe>
+        class="w-full h-[70vh]" referrerpolicy="no-referrer" @load="guardIframeLinks"></iframe>
       <p v-else class="p-6 text-muted-foreground">{{ t('viewer.no_html') }}</p>
     </div>
 
@@ -150,6 +177,23 @@ async function toggleStar() {
       </ul>
       <p v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</p>
     </Card>
+
+    <dialog ref="linkDialog"
+      class="w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+      <div class="space-y-3 p-5">
+        <h2 class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
+        <p class="text-sm text-muted-foreground">{{ t('viewer.external_link.body') }}</p>
+        <p class="rounded-sm bg-accent p-2 font-mono text-xs break-all">{{ pendingLink }}</p>
+        <div class="flex justify-end gap-2">
+          <Button variant="ghost" size="sm" @click="linkDialog?.close()">
+            {{ t('viewer.external_link.cancel') }}
+          </Button>
+          <Button size="sm" @click="openPendingLink">
+            {{ t('viewer.external_link.open') }}
+          </Button>
+        </div>
+      </div>
+    </dialog>
   </div>
 
   <p v-else class="text-muted-foreground">{{ t('viewer.loading') }}</p>

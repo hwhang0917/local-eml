@@ -56,7 +56,13 @@
     "no_text": "No plain-text part.",
     "no_attachments": "No attachments.",
     "download": "Download",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "external_link": {
+      "title": "Leaving Local Eml",
+      "body": "This link goes to an external site and will open in a new tab.",
+      "cancel": "Cancel",
+      "open": "Open link"
+    }
   },
   "import": {
     "drop": "Drop .eml files, a directory, or a .zip here",

@@ -56,7 +56,13 @@
     "no_text": "텍스트 본문이 없습니다.",
     "no_attachments": "첨부파일이 없습니다.",
     "download": "다운로드",
-    "loading": "불러오는 중…"
+    "loading": "불러오는 중…",
+    "external_link": {
+      "title": "외부 사이트로 이동",
+      "body": "이 링크는 외부 사이트로 연결되며 새 탭에서 열립니다.",
+      "cancel": "취소",
+      "open": "링크 열기"
+    }
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip을 여기에 드롭하세요",
