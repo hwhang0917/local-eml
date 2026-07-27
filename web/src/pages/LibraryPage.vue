@@ -236,10 +236,15 @@ const pageInfo = computed(() => {
 
     <Card class="overflow-hidden">
       <table class="w-full text-sm">
+        <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr>
-            <th class="text-left px-3 py-2 w-10"></th>
-            <th class="text-left px-3 py-2 w-10"></th>
+            <th scope="col" class="text-left px-3 py-2 w-10">
+              <span class="sr-only">{{ t('library.col.starred') }}</span>
+            </th>
+            <th scope="col" class="text-left px-3 py-2 w-10">
+              <span class="sr-only">{{ t('library.col.attachments') }}</span>
+            </th>
             <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
             <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
             <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
@@ -281,12 +286,18 @@ const pageInfo = computed(() => {
               </button>
             </td>
             <td class="px-3 py-2 text-muted-foreground">
-              <span v-if="e.has_attachments" :title="t('library.has_attachments')">📎</span>
+              <span v-if="e.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
             </td>
             <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">{{ formatDate(e.sent_at) }}</td>
             <td class="px-3 py-2 whitespace-nowrap" :title="e.from">{{ senderName(e.from) }}</td>
             <td class="px-3 py-2 truncate">
-              {{ e.subject || t('library.no_subject') }}
+              <RouterLink
+                :to="{ name: 'viewer', params: { sha: e.sha256 } }"
+                class="rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                @click.stop
+              >
+                {{ e.subject || t('library.no_subject') }}
+              </RouterLink>
               <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
             </td>
             <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
@@ -314,14 +325,27 @@ export const Th = defineComponent({
     return () => {
       const active = props.sort === props.col
       const arrow = active ? (props.order === 'asc' ? ' ↑' : ' ↓') : ''
+      // A bare <th onClick> is invisible to keyboards and screen readers. The
+      // standard sortable-header pattern is a real button inside the th, with
+      // aria-sort carrying the state the arrow shows visually.
       return h(
         'th',
         {
-          class: ['px-3 py-2 cursor-pointer select-none hover:text-foreground',
+          scope: 'col',
+          'aria-sort': active ? (props.order === 'asc' ? 'ascending' : 'descending') : 'none',
+          class: ['px-3 py-2 select-none',
             props.align === 'right' ? 'text-right' : 'text-left'],
-          onClick: () => emit('sort', props.col),
         },
-        props.label + arrow,
+        h(
+          'button',
+          {
+            type: 'button',
+            class: ['uppercase cursor-pointer hover:text-foreground rounded-xs',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'],
+            onClick: () => emit('sort', props.col),
+          },
+          [props.label, h('span', { 'aria-hidden': 'true' }, arrow)],
+        ),
       )
     }
   },

@@ -44,11 +44,14 @@
     "import_some": "지금 가져올까요?",
     "no_subject": "(제목 없음)",
     "has_attachments": "첨부 있음",
+    "table_caption": "이메일 라이브러리. 제목을 선택하면 메일이 열립니다.",
     "col": {
       "date": "날짜",
       "from": "보낸 사람",
       "subject": "제목",
-      "size": "크기"
+      "size": "크기",
+      "starred": "별표",
+      "attachments": "첨부파일"
     },
     "prev": "이전",
     "next": "다음",

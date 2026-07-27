@@ -44,11 +44,14 @@
     "import_some": "Import some?",
     "no_subject": "(no subject)",
     "has_attachments": "Has attachments",
+    "table_caption": "Email library. Select a subject to open the message.",
     "col": {
       "date": "Date",
       "from": "From",
       "subject": "Subject",
-      "size": "Size"
+      "size": "Size",
+      "starred": "Starred",
+      "attachments": "Attachments"
     },
     "prev": "Prev",
     "next": "Next",
