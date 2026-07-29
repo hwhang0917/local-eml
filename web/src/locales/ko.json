@@ -91,6 +91,7 @@
     "date_apply": "적용",
     "zoom_out": "기간 넓게 보기",
     "pagination": "페이지 이동",
+    "columns": "표시할 열",
     "category": "분류",
     "category_any": "모든 분류",
     "category_none": "분류 없음",

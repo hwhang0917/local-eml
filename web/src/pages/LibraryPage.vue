@@ -2,7 +2,15 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { RotateCcw, Star } from 'lucide-vue-next'
+import { Check, Columns3, RotateCcw, Star } from 'lucide-vue-next'
+import {
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItemIndicator,
+  DropdownMenuPortal,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from 'reka-ui'
 import { api, type Email } from '@/lib/api'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
@@ -34,6 +42,20 @@ const total = ref(0)
 const loading = ref(false)
 
 const storedPageSize = useStorage<PageSize>('library-page-size', DEFAULT_PAGE_SIZE)
+
+// Subject is not hideable: it's the row's identity and its link to the viewer.
+const HIDEABLE_COLS = ['starred', 'attachments', 'category', 'date', 'from', 'size'] as const
+type HideableCol = (typeof HIDEABLE_COLS)[number]
+const hiddenCols = useStorage<HideableCol[]>('library-hidden-columns', [])
+function colShown(c: HideableCol) {
+  return !hiddenCols.value.includes(c)
+}
+function toggleCol(c: HideableCol) {
+  hiddenCols.value = colShown(c) ? [...hiddenCols.value, c] : hiddenCols.value.filter((x) => x !== c)
+}
+// Counted from the whitelist, not hiddenCols.length, so a stale storage entry
+// can't skew the colspan.
+const colCount = computed(() => 1 + HIDEABLE_COLS.filter(colShown).length)
 
 function str(v: unknown, def = ''): string {
   return typeof v === 'string' ? v : def
@@ -311,6 +333,41 @@ const pageInfo = computed(() => {
         <span class="ml-1.5">{{ t('library.reset') }}</span>
       </Button>
       <div class="ml-auto flex items-center gap-3">
+        <DropdownMenuRoot>
+          <DropdownMenuTrigger
+            :title="t('library.columns')"
+            :aria-label="t('library.columns')"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-hairline bg-pearl
+              text-muted-foreground hover:text-foreground
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Columns3 class="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuContent
+              :side-offset="6"
+              align="end"
+              class="z-50 min-w-44 rounded-lg border border-hairline bg-background p-1 shadow-lg"
+            >
+              <DropdownMenuCheckboxItem
+                v-for="c in HIDEABLE_COLS"
+                :key="c"
+                :model-value="colShown(c)"
+                class="flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none
+                  data-[highlighted]:bg-accent"
+                @update:model-value="toggleCol(c)"
+                @select.prevent
+              >
+                <span class="inline-flex h-4 w-4 items-center justify-center">
+                  <DropdownMenuItemIndicator>
+                    <Check class="h-4 w-4" />
+                  </DropdownMenuItemIndicator>
+                </span>
+                <span>{{ t(`library.col.${c}`) }}</span>
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenuPortal>
+        </DropdownMenuRoot>
         <label class="flex items-center gap-2 text-sm text-muted-foreground">
           <span>{{ t('library.per_page') }}</span>
           <Select :model-value="String(limit)" @update:model-value="(v) => setPageSize(v)">
@@ -339,27 +396,27 @@ const pageInfo = computed(() => {
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr>
-            <th scope="col" class="text-left px-3 py-2 w-10">
+            <th v-if="colShown('starred')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.starred') }}</span>
             </th>
-            <th scope="col" class="text-left px-3 py-2 w-10">
+            <th v-if="colShown('attachments')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.attachments') }}</span>
             </th>
-            <th scope="col" class="text-left px-3 py-2 w-10">
+            <th v-if="colShown('category')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.category') }}</span>
             </th>
-            <Th :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
-            <Th :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
+            <Th v-if="colShown('date')" :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
+            <Th v-if="colShown('from')" :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
             <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
-            <Th :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
+            <Th v-if="colShown('size')" :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading && items.length === 0">
-            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
+            <td :colspan="colCount" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
           </tr>
           <tr v-else-if="items.length === 0">
-            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">
+            <td :colspan="colCount" class="px-3 py-6 text-center text-muted-foreground">
               <template v-if="starredOnly">{{ t('library.no_starred') }}</template>
               <template v-else>
                 {{ t('library.no_emails') }}
@@ -375,7 +432,7 @@ const pageInfo = computed(() => {
             @auxclick="openEmailAux(e.sha256, $event)"
             @mousedown.middle.prevent
           >
-            <td class="px-3 py-2">
+            <td v-if="colShown('starred')" class="px-3 py-2">
               <button
                 type="button"
                 :title="e.starred ? t('library.unstar') : t('library.star')"
@@ -388,10 +445,10 @@ const pageInfo = computed(() => {
                 <Star class="h-4 w-4" :fill="e.starred ? 'currentColor' : 'none'" />
               </button>
             </td>
-            <td class="px-3 py-2 text-muted-foreground">
+            <td v-if="colShown('attachments')" class="px-3 py-2 text-muted-foreground">
               <span v-if="e.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
             </td>
-            <td class="px-3 py-2">
+            <td v-if="colShown('category')" class="px-3 py-2">
               <CategoryMenu
                 :model-value="e.category_id ? String(e.category_id) : 'none'"
                 :options="assignOptions"
@@ -415,13 +472,13 @@ const pageInfo = computed(() => {
                 </template>
               </CategoryMenu>
             </td>
-            <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">
+            <td v-if="colShown('date')" class="px-3 py-2 whitespace-nowrap text-muted-foreground">
               <time
                 :datetime="e.sent_at || undefined"
                 :title="dateFormat === 'relative' ? formatDateAbsolute(e.sent_at) : undefined"
               >{{ formatDate(e.sent_at) }}</time>
             </td>
-            <td class="px-3 py-2 whitespace-nowrap" :title="e.from">
+            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap" :title="e.from">
               <Highlight :text="senderName(e.from)" :query="q" />
             </td>
             <td class="px-3 py-2 truncate">
@@ -435,7 +492,7 @@ const pageInfo = computed(() => {
               </RouterLink>
               <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
             </td>
-            <td class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
+            <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
           </tr>
         </tbody>
       </table>
