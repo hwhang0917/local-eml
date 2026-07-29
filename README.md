@@ -7,6 +7,12 @@
 
 A private, local viewer for `.eml` files. Drop a folder, a `.zip`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
 
+## What it is — and what it isn't
+
+**It is** a local archive for your email. Pull old messages out of an overflowing mailbox, keep them as plain `.eml` files on your own disk, and search and read them any time — freeing up space in your mail account without losing anything.
+
+**It isn't** a full email client like Thunderbird or Outlook. You can't compose, send, or reply, and it never modifies your mailbox — IMAP access is strictly read-only, only for fetching copies. Keep your regular client for day-to-day mail; use Local Eml for the mail you want to keep but not carry.
+
 ## Install
 
 **Linux / macOS**
