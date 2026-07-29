@@ -30,6 +30,10 @@
       "title": "Export your library",
       "body": "Download everything as a single .zip, or upload to an S3 bucket. Re-running an export skips what's already there."
     },
+    "stats": {
+      "title": "Library stats",
+      "body": "See your archive in numbers: emails per year, top senders, total size, and more."
+    },
     "settings": {
       "title": "Make it yours",
       "body": "Switch between Korean and English, change date display, and manage saved IMAP and S3 profiles."
@@ -53,6 +57,10 @@
     "categories": {
       "title": "Sort with categories",
       "body": "Give mail a coloured label, then filter to it here. Create and rename categories under Settings → Categories; each email can carry one."
+    },
+    "shortcuts": {
+      "title": "Keyboard shortcuts",
+      "body": "Browse without the mouse: j/k move through the list, Enter opens, / jumps to search, and ←/→ step between emails in the viewer. Press ? anytime for the full list."
     }
   },
   "library": {

@@ -20,10 +20,12 @@ export function useTour() {
       prevBtnText: t('tour.prev'),
       doneBtnText: t('tour.done'),
       // Nav first, left to right, then the library controls in the order they
-      // sit in the filter bar, then how to get the tour back.
-      steps: ['library', 'import', 'export', 'settings', 'search', 'starred', 'dates', 'categories', 'help'].map(
+      // sit in the filter bar, then how to get the tour back. 'shortcuts' has
+      // no element on purpose: keyboard keys live nowhere on screen, so
+      // driver.js shows it as a centered popover.
+      steps: ['library', 'import', 'export', 'stats', 'settings', 'search', 'starred', 'dates', 'categories', 'shortcuts', 'help'].map(
         (key) => ({
-          element: `[data-tour="${key}"]`,
+          ...(key === 'shortcuts' ? {} : { element: `[data-tour="${key}"]` }),
           popover: { title: t(`tour.${key}.title`), description: t(`tour.${key}.body`) },
         }),
       ),
