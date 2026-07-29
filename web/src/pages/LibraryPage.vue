@@ -10,8 +10,13 @@ import {
   DropdownMenuPortal,
   DropdownMenuRoot,
   DropdownMenuTrigger,
+  TooltipContent,
+  TooltipPortal,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
 } from 'reka-ui'
-import { api, type Email } from '@/lib/api'
+import { api, type Email, type PartInfo } from '@/lib/api'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
@@ -280,6 +285,19 @@ async function setCategory(e: Email, value: string) {
   }
 }
 
+// Attachment names aren't in the list response (the DB only stores a boolean),
+// so the 📎 tooltip fetches the parts manifest on first hover and caches it.
+const attachParts = ref(new Map<string, PartInfo[]>())
+async function loadAttachments(sha: string) {
+  if (attachParts.value.has(sha)) return
+  try {
+    const p = await api.getParts(sha)
+    attachParts.value.set(sha, p.attachments)
+  } catch {
+    // leave the cache empty; the tooltip keeps its loading text
+  }
+}
+
 const pageInfo = computed(() => {
   if (total.value === 0) return t('library.page_count_zero')
   const end = Math.min(offset.value + items.value.length, total.value)
@@ -446,7 +464,35 @@ const pageInfo = computed(() => {
               </button>
             </td>
             <td v-if="colShown('attachments')" class="px-3 py-2 text-muted-foreground">
-              <span v-if="e.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
+              <TooltipProvider v-if="e.has_attachments" :delay-duration="200">
+                <TooltipRoot @update:open="(o: boolean) => o && loadAttachments(e.sha256)">
+                  <TooltipTrigger as-child>
+                    <span role="img" :aria-label="t('library.has_attachments')" class="cursor-default">📎</span>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      side="bottom"
+                      :side-offset="4"
+                      class="z-50 max-w-72 rounded-lg border border-hairline bg-background p-2 text-xs shadow-lg"
+                    >
+                      <template v-if="attachParts.has(e.sha256)">
+                        <ul v-if="attachParts.get(e.sha256)!.length" class="space-y-1">
+                          <li
+                            v-for="a in attachParts.get(e.sha256)"
+                            :key="a.index"
+                            class="flex items-center gap-2"
+                          >
+                            <span class="truncate">{{ a.filename || `attachment-${a.index}` }}</span>
+                            <span class="shrink-0 text-muted-foreground">{{ formatBytes(a.size) }}</span>
+                          </li>
+                        </ul>
+                        <span v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</span>
+                      </template>
+                      <span v-else class="text-muted-foreground">{{ t('library.loading') }}</span>
+                    </TooltipContent>
+                  </TooltipPortal>
+                </TooltipRoot>
+              </TooltipProvider>
             </td>
             <td v-if="colShown('category')" class="px-3 py-2">
               <CategoryMenu
@@ -490,7 +536,7 @@ const pageInfo = computed(() => {
                 <Highlight v-if="e.subject" :text="e.subject" :query="q" />
                 <template v-else>{{ t('library.no_subject') }}</template>
               </RouterLink>
-              <span class="ml-2 text-xs text-muted-foreground">{{ shortSHA(e.sha256) }}</span>
+              <span class="ml-2 text-xs text-muted-foreground/60" :title="e.sha256">({{ shortSHA(e.sha256) }})</span>
             </td>
             <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
           </tr>

@@ -2,11 +2,11 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { FileWarning, Star } from 'lucide-vue-next'
+import { CircleHelp, FileWarning, Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
 import { APP_NAME } from '@/lib/app'
-import { formatBytes, formatDateAbsolute } from '@/lib/format'
+import { formatBytes, formatDateAbsolute, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
@@ -190,7 +190,17 @@ async function toggleStar() {
 
     <Card class="p-5">
       <div class="mb-3 flex items-start gap-3">
-        <h1 class="text-xl font-semibold flex-1 min-w-0">{{ email.subject || t('library.no_subject') }}</h1>
+        <h1 class="text-xl font-semibold flex-1 min-w-0">
+          {{ email.subject || t('library.no_subject') }}
+          <span class="ml-1 whitespace-nowrap text-xs font-normal text-muted-foreground/60" :title="email.sha256">({{ shortSHA(email.sha256) }})</span>
+          <span
+            :title="t('viewer.sha_help')"
+            :aria-label="t('viewer.sha_help')"
+            class="inline-flex align-middle text-muted-foreground/60"
+          >
+            <CircleHelp class="h-3.5 w-3.5" />
+          </span>
+        </h1>
         <CategoryMenu
           v-if="!email.blob_missing"
           :model-value="email.category_id ? String(email.category_id) : 'none'"

@@ -112,6 +112,7 @@
       "raw": "Raw"
     },
     "load_remote": "Load remote images",
+    "sha_help": "The SHA-256 fingerprint of this message's .eml file. It uniquely identifies the message and is the file's name on disk.",
     "no_html": "No HTML part in this message.",
     "no_text": "No plain-text part.",
     "no_attachments": "No attachments.",
