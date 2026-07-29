@@ -10,7 +10,8 @@
     "import": "가져오기",
     "export": "내보내기",
     "settings": "설정",
-    "viewer": "이메일"
+    "viewer": "이메일",
+    "stats": "통계"
   },
   "tour": {
     "replay": "사용 안내 다시 보기",
@@ -287,5 +288,17 @@
       "purple": "보라",
       "grey": "회색"
     }
+  },
+  "stats": {
+    "title": "라이브러리 통계",
+    "total": "메일 수",
+    "total_size": "전체 용량",
+    "starred": "중요 표시",
+    "with_attachments": "첨부파일 있음",
+    "per_year": "연도별 메일 수",
+    "undated": "날짜가 없는 메일 {count}건은 여기에 표시되지 않습니다.",
+    "top_senders": "자주 받은 보낸사람",
+    "per_category": "카테고리별",
+    "empty": "아직 메일이 없습니다. 메일을 가져오면 통계가 표시됩니다."
   }
 }

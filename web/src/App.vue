@@ -29,6 +29,7 @@ const nav = computed(() => [
   { to: '/', label: t('nav.library'), tour: 'library' },
   { to: '/import', label: t('nav.import'), tour: 'import' },
   { to: '/export', label: t('nav.export'), tour: 'export' },
+  { to: '/stats', label: t('nav.stats'), tour: 'stats' },
   { to: '/settings', label: t('nav.settings'), tour: 'settings' },
 ])
 

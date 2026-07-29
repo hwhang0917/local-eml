@@ -10,7 +10,8 @@
     "import": "Import",
     "export": "Export",
     "settings": "Settings",
-    "viewer": "Viewer"
+    "viewer": "Viewer",
+    "stats": "Stats"
   },
   "tour": {
     "replay": "Show the guided tour",
@@ -287,5 +288,17 @@
       "purple": "Purple",
       "grey": "Grey"
     }
+  },
+  "stats": {
+    "title": "Library stats",
+    "total": "Emails",
+    "total_size": "Total size",
+    "starred": "Starred",
+    "with_attachments": "With attachments",
+    "per_year": "Emails per year",
+    "undated": "{count} emails have no date and are not shown here.",
+    "top_senders": "Top senders",
+    "per_category": "By category",
+    "empty": "No emails yet — import some to see your stats."
   }
 }

@@ -5,6 +5,7 @@ const routes = [
   { path: '/email/:sha', name: 'viewer', component: () => import('@/pages/ViewerPage.vue'), props: true, meta: { titleKey: 'nav.viewer' } },
   { path: '/import', name: 'import', component: () => import('@/pages/ImportPage.vue'), meta: { titleKey: 'nav.import' } },
   { path: '/export', name: 'export', component: () => import('@/pages/ExportPage.vue'), meta: { titleKey: 'nav.export' } },
+  { path: '/stats', name: 'stats', component: () => import('@/pages/StatsPage.vue'), meta: { titleKey: 'nav.stats' } },
   {
     path: '/settings',
     component: () => import('@/pages/settings/SettingsLayout.vue'),

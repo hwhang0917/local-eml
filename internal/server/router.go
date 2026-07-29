@@ -65,6 +65,8 @@ func (s *Server) Router() http.Handler {
 		api.Post("/s3/profiles", s.handleSaveS3Profile)
 		api.Delete("/s3/profiles/{id}", s.handleDeleteS3Profile)
 
+		api.Get("/stats", s.handleStats)
+
 		api.Get("/categories", s.handleListCategories)
 		api.Put("/categories/{id}", s.handleRenameCategory)
 

@@ -129,6 +129,17 @@ export interface S3Profile {
   access_key_id?: string
 }
 
+export interface Stats {
+  total_count: number
+  total_bytes: number
+  starred_count: number
+  attachment_count: number
+  undated_count: number
+  per_year: { year: string; count: number }[]
+  top_senders: { from: string; count: number }[]
+  per_category: { category_id: number; count: number }[]
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -164,6 +175,10 @@ export const api = {
       const text = await res.text().catch(() => '')
       throw new Error(`${res.status} ${res.statusText}: ${text}`)
     }
+  },
+
+  getStats() {
+    return fetch(`${BASE}/api/stats`).then(jsonOrThrow<Stats>)
   },
 
   listCategories() {
