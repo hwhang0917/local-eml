@@ -138,7 +138,10 @@
       "body": "This .eml file is on disk but has no database entry, so it won't appear in the library or in search results. Add it now?",
       "confirm": "Add to database",
       "decline": "Not now"
-    }
+    },
+    "prev": "Previous email",
+    "next": "Next email",
+    "position": "{index} of {total}"
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, or an .mbox here",
@@ -300,5 +303,16 @@
     "top_senders": "Top senders",
     "per_category": "By category",
     "empty": "No emails yet — import some to see your stats."
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "nav": "Move through the list",
+    "open": "Open the selected email",
+    "star": "Star / unstar the selected email",
+    "search": "Focus the search box",
+    "prev_next": "Previous / next email in the viewer",
+    "escape": "Leave the search box",
+    "help": "Show this help",
+    "close": "Close"
   }
 }

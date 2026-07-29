@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { CircleHelp, FileWarning, Star } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, CircleHelp, FileWarning, Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
+import { useListContext, type Neighbors } from '@/composables/useListContext'
+import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { APP_NAME } from '@/lib/app'
 import { formatBytes, formatDateAbsolute, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
@@ -79,6 +81,34 @@ function goBack() {
   if (window.history.length > 1) router.back()
   else router.push('/')
 }
+
+// Prev/next inside the list the user came from. The context lives in
+// sessionStorage; with none (direct link) the nav simply doesn't render.
+const listCtx = useListContext()
+const nav = ref<Neighbors | null>(null)
+watch(() => props.sha, async (sha) => {
+  nav.value = null
+  try {
+    nav.value = await listCtx.neighbors(sha)
+  } catch {
+    // list endpoint unreachable — leave the nav hidden
+  }
+}, { immediate: true })
+
+function goSibling(target: Email | null, delta: number) {
+  if (!target) return
+  listCtx.shift(delta)
+  // replace, so Back still returns to the library in one step
+  router.replace({ name: 'viewer', params: { sha: target.sha256 } })
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (hasModifier(e) || isTypingTarget(e) || !nav.value) return
+  if (e.key === 'ArrowLeft') goSibling(nav.value.prev, -1)
+  else if (e.key === 'ArrowRight') goSibling(nav.value.next, 1)
+}
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 // The message iframe is sandboxed without allow-scripts, so a link click would
 // otherwise navigate the iframe itself and render the remote site inside the
@@ -180,13 +210,40 @@ async function toggleStar() {
   <div v-if="error" class="text-destructive">{{ error }}</div>
 
   <div v-else-if="email" class="space-y-4">
-    <button
-      type="button"
-      @click="goBack"
-      class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
-    >
-      {{ t('viewer.back') }}
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        @click="goBack"
+        class="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+      >
+        {{ t('viewer.back') }}
+      </button>
+      <div v-if="nav" class="ml-auto flex items-center gap-1 text-sm text-muted-foreground">
+        <span class="mr-1 tabular-nums">{{ t('viewer.position', { index: nav.index + 1, total: nav.total }) }}</span>
+        <button
+          type="button"
+          :disabled="!nav.prev"
+          :title="t('viewer.prev')"
+          :aria-label="t('viewer.prev')"
+          class="inline-flex h-7 w-7 items-center justify-center rounded-sm hover:bg-accent hover:text-foreground
+            disabled:pointer-events-none disabled:opacity-40"
+          @click="goSibling(nav.prev, -1)"
+        >
+          <ChevronLeft class="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          :disabled="!nav.next"
+          :title="t('viewer.next')"
+          :aria-label="t('viewer.next')"
+          class="inline-flex h-7 w-7 items-center justify-center rounded-sm hover:bg-accent hover:text-foreground
+            disabled:pointer-events-none disabled:opacity-40"
+          @click="goSibling(nav.next, 1)"
+        >
+          <ChevronRight class="h-4 w-4" />
+        </button>
+      </div>
+    </div>
 
     <Card class="p-5">
       <div class="mb-3 flex items-start gap-3">

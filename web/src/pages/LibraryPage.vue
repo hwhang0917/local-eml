@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { Check, Columns3, RotateCcw, Star, X } from 'lucide-vue-next'
@@ -21,6 +21,8 @@ import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, sh
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
 import { useCategories } from '@/composables/useCategories'
+import { useListContext } from '@/composables/useListContext'
+import { hasModifier, isTypingTarget } from '@/lib/keys'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -139,7 +141,89 @@ const tour = useTour()
 onMounted(() => {
   load()
   tour.startIfFirstVisit()
+  window.addEventListener('keydown', onKeydown)
 })
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+
+// j/k moves real focus across the subject links: screen readers announce the
+// row, Enter opens natively, and the focus-visible ring is the cursor.
+const rowLinks = ref<HTMLElement[]>([])
+onBeforeUpdate(() => {
+  rowLinks.value = []
+})
+function setRowLink(el: unknown, i: number) {
+  const node = (el as { $el?: HTMLElement } | null)?.$el ?? (el as HTMLElement | null)
+  if (node) rowLinks.value[i] = node
+}
+const searchEl = ref<InstanceType<typeof Input> | null>(null)
+
+function focusedRow(): number {
+  return rowLinks.value.findIndex((el) => el === document.activeElement)
+}
+
+function focusRow(i: number) {
+  const el = rowLinks.value[i]
+  if (!el) return
+  el.focus()
+  el.scrollIntoView({ block: 'nearest' })
+}
+
+function onKeydown(e: KeyboardEvent) {
+  if (hasModifier(e)) return
+  if (e.key === 'Escape') {
+    const target = e.target as HTMLElement | null
+    if (target && isTypingTarget(e)) {
+      if (target === searchInputEl()) searchInput.value = ''
+      target.blur()
+    }
+    return
+  }
+  if (isTypingTarget(e)) return
+  switch (e.key) {
+    case 'j':
+    case 'k': {
+      if (items.value.length === 0) return
+      e.preventDefault()
+      const cur = focusedRow()
+      const next = e.key === 'j'
+        ? Math.min(cur + 1, items.value.length - 1)
+        : Math.max(cur - 1, 0)
+      focusRow(next)
+      break
+    }
+    case 's': {
+      const cur = focusedRow()
+      if (cur >= 0) toggleStar(items.value[cur])
+      break
+    }
+    case '/':
+      e.preventDefault()
+      searchInputEl()?.focus()
+      break
+  }
+}
+
+function searchInputEl(): HTMLInputElement | null {
+  const el = (searchEl.value as { $el?: HTMLElement } | null)?.$el
+  return el instanceof HTMLInputElement ? el : (el?.querySelector('input') ?? null)
+}
+
+const listCtx = useListContext()
+function rememberPosition(rowIndex: number) {
+  listCtx.set({
+    params: {
+      q: q.value || undefined,
+      starred: starredOnly.value || undefined,
+      category: category.value || undefined,
+      from: from.value || undefined,
+      to: to.value || undefined,
+      sort: sort.value,
+      order: order.value,
+    },
+    index: offset.value + rowIndex,
+    total: total.value,
+  })
+}
 
 function setSort(col: SortCol) {
   if (sort.value === col) pushQuery({ sort: col, order: order.value === 'asc' ? 'desc' : 'asc', offset: undefined })
@@ -310,6 +394,7 @@ const pageInfo = computed(() => {
     <div class="flex items-center flex-wrap gap-3 mb-4">
       <div class="relative w-full max-w-md" data-tour="search">
         <Input
+          ref="searchEl"
           v-model="searchInput"
           type="search"
           :placeholder="t('library.search_placeholder')"
@@ -462,11 +547,11 @@ const pageInfo = computed(() => {
             </td>
           </tr>
           <tr
-            v-for="e in items"
+            v-for="(e, i) in items"
             :key="e.sha256"
             class="border-t hover:bg-accent/50 cursor-pointer"
-            @click="openEmail(e.sha256, $event)"
-            @auxclick="openEmailAux(e.sha256, $event)"
+            @click="rememberPosition(i); openEmail(e.sha256, $event)"
+            @auxclick="rememberPosition(i); openEmailAux(e.sha256, $event)"
             @mousedown.middle.prevent
           >
             <td v-if="colShown('starred')" class="px-3 py-2">
@@ -547,9 +632,10 @@ const pageInfo = computed(() => {
             </td>
             <td class="px-3 py-2 truncate">
               <RouterLink
+                :ref="(el) => setRowLink(el, i)"
                 :to="{ name: 'viewer', params: { sha: e.sha256 } }"
                 class="rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                @click.stop
+                @click.stop="rememberPosition(i)"
               >
                 <Highlight v-if="e.subject" :text="e.subject" :query="q" />
                 <template v-else>{{ t('library.no_subject') }}</template>

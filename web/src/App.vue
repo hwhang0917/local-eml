@@ -8,6 +8,7 @@ import 'vue-sonner/style.css'
 import { APP_NAME } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
+import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -102,5 +103,6 @@ watchEffect(() => {
     </main>
   </div>
 
+  <ShortcutsHelp />
   <Toaster position="bottom-right" rich-colors close-button />
 </template>
