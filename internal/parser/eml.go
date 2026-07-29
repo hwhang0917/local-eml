@@ -33,10 +33,12 @@ func Parse(r io.Reader) (*Parsed, error) {
 		return nil, err
 	}
 	p := &Parsed{
-		Subject:         env.GetHeader("Subject"),
-		From:            env.GetHeader("From"),
-		MessageID:       env.GetHeader("Message-ID"),
-		AttachmentCount: len(env.Attachments) + len(env.Inlines),
+		Subject:   env.GetHeader("Subject"),
+		From:      env.GetHeader("From"),
+		MessageID: env.GetHeader("Message-ID"),
+		// Inlines are cid: images embedded in the HTML body (logos, signatures) —
+		// counting them made nearly every marketing email claim an attachment.
+		AttachmentCount: len(env.Attachments),
 		HTMLAvailable:   env.HTML != "",
 	}
 	p.To = splitAddrs(env.GetHeader("To"))

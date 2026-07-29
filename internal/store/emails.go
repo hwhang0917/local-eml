@@ -175,6 +175,43 @@ func (s *Store) AllExportEntries(ctx context.Context) ([]ExportEntry, error) {
 	return out, rows.Err()
 }
 
+// EmailAttachmentRow is the minimal projection the attachment-count backfill
+// needs to decide whether a row must be re-parsed and rewritten.
+type EmailAttachmentRow struct {
+	ID              int64
+	SHA256          string
+	AttachmentCount int
+}
+
+func (s *Store) ListEmailAttachmentCounts(ctx context.Context) ([]EmailAttachmentRow, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT id, sha256, COALESCE(attachment_count, 0) FROM emails`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []EmailAttachmentRow{}
+	for rows.Next() {
+		var r EmailAttachmentRow
+		if err := rows.Scan(&r.ID, &r.SHA256, &r.AttachmentCount); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetEmailAttachmentCount(ctx context.Context, id int64, count int) error {
+	flag := 0
+	if count > 0 {
+		flag = 1
+	}
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE emails SET has_attachments = ?, attachment_count = ? WHERE id = ?`,
+		flag, count, id)
+	return err
+}
+
 func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) error {
 	flag := 0
 	if starred {

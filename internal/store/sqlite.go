@@ -228,6 +228,20 @@ func (s *Store) backfillChosung(ctx context.Context) error {
 	return nil
 }
 
+// UserVersion reads SQLite's PRAGMA user_version, used as a marker for one-time
+// data repairs that need more than SQL (e.g. re-parsing blobs).
+func (s *Store) UserVersion(ctx context.Context) (int, error) {
+	var v int
+	err := s.DB.QueryRowContext(ctx, "PRAGMA user_version").Scan(&v)
+	return v, err
+}
+
+func (s *Store) SetUserVersion(ctx context.Context, v int) error {
+	// PRAGMA does not support parameter binding.
+	_, err := s.DB.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version = %d", v))
+	return err
+}
+
 func (s *Store) ensureColumn(ctx context.Context, table, column, ddl string) error {
 	rows, err := s.DB.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
 	if err != nil {
