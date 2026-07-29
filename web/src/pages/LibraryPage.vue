@@ -344,7 +344,6 @@ const pageInfo = computed(() => {
       <CategoryMenu
         :model-value="category || 'any'"
         :options="filterOptions"
-        :label="t('library.category')"
         @select="setCategoryFilter"
       >
         <template #trigger>
@@ -518,7 +517,6 @@ const pageInfo = computed(() => {
               <CategoryMenu
                 :model-value="e.category_id ? String(e.category_id) : 'none'"
                 :options="assignOptions"
-                :label="t('library.set_category')"
                 @select="(v) => setCategory(e, v)"
               >
                 <template #trigger>
@@ -556,7 +554,9 @@ const pageInfo = computed(() => {
                 <Highlight v-if="e.subject" :text="e.subject" :query="q" />
                 <template v-else>{{ t('library.no_subject') }}</template>
               </RouterLink>
-              <span class="ml-2 text-xs text-muted-foreground/60" :title="e.sha256">({{ shortSHA(e.sha256) }})</span>
+              <!-- Full-strength muted token: the /60 variant computed to 2.4:1
+                   contrast and failed WCAG AA in Lighthouse. -->
+              <span class="ml-2 text-xs text-muted-foreground" :title="e.sha256">({{ shortSHA(e.sha256) }})</span>
             </td>
             <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
           </tr>

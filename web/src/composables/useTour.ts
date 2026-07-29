@@ -1,15 +1,19 @@
 import { useStorage } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
-import { driver } from 'driver.js'
-import 'driver.js/dist/driver.css'
 
 const seen = useStorage('tour-seen', false)
 
 export function useTour() {
   const { t } = useI18n()
 
-  function start() {
+  // driver.js is ~50 KiB that most sessions never run, so it loads on demand
+  // the first time a tour actually starts.
+  async function start() {
     seen.value = true
+    const [{ driver }] = await Promise.all([
+      import('driver.js'),
+      import('driver.js/dist/driver.css'),
+    ])
     driver({
       showProgress: true,
       nextBtnText: t('tour.next'),
@@ -27,7 +31,7 @@ export function useTour() {
   }
 
   function startIfFirstVisit() {
-    if (!seen.value) start()
+    if (!seen.value) void start()
   }
 
   return { start, startIfFirstVisit }

@@ -216,9 +216,10 @@ function clear() {
 
 <template>
   <PopoverRoot v-model:open="open">
+    <!-- No aria-label: the visible label text is the accessible name, so the
+         two can't drift apart (Lighthouse label-content-name-mismatch). -->
     <PopoverTrigger
       data-tour="dates"
-      :aria-label="t('library.date_range')"
       :class="[
         'inline-flex h-8 items-center gap-2 rounded-sm border border-hairline bg-pearl px-3 text-sm',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',

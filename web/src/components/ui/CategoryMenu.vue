@@ -11,7 +11,7 @@ import CategoryDot from '@/components/ui/CategoryDot.vue'
 
 export type CategoryOption = { value: string; label: string; color?: string }
 
-defineProps<{ modelValue: string; options: CategoryOption[]; label?: string }>()
+defineProps<{ modelValue: string; options: CategoryOption[] }>()
 const emit = defineEmits<{ select: [string] }>()
 </script>
 
@@ -26,7 +26,10 @@ const emit = defineEmits<{ select: [string] }>()
 -->
 <template>
   <DropdownMenuRoot>
-    <DropdownMenuTrigger :aria-label="label" as-child>
+    <!-- The slot owns the accessible name: triggers with visible text use it
+         directly, icon-only triggers set their own aria-label. A label here
+         would override the visible text and mismatch it for screen readers. -->
+    <DropdownMenuTrigger as-child>
       <slot name="trigger" />
     </DropdownMenuTrigger>
     <DropdownMenuPortal>

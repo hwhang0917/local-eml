@@ -194,7 +194,7 @@ async function toggleStar() {
           {{ email.subject || t('library.no_subject') }}
           <!-- One inline-flex wrapper so the icon centres on the hash text
                rather than the h1's much taller line box. -->
-          <span class="ml-1.5 inline-flex items-center gap-1.5 align-middle whitespace-nowrap text-xs font-normal text-muted-foreground/60">
+          <span class="ml-1.5 inline-flex items-center gap-1.5 align-middle whitespace-nowrap text-xs font-normal text-muted-foreground">
             <span :title="email.sha256">({{ shortSHA(email.sha256) }})</span>
             <span
               :title="t('viewer.sha_help')"
@@ -209,13 +209,11 @@ async function toggleStar() {
           v-if="!email.blob_missing"
           :model-value="email.category_id ? String(email.category_id) : 'none'"
           :options="assignOptions"
-          :label="t('library.set_category')"
         @select="setCategory"
         >
           <template #trigger>
             <button
               type="button"
-              :aria-label="t('library.set_category')"
               class="inline-flex h-8 shrink-0 items-center gap-2 rounded-sm px-2 text-sm hover:bg-accent"
             >
               <CategoryDot :color="currentCategory?.color" />

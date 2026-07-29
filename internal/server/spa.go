@@ -29,8 +29,17 @@ func spaHandler() http.Handler {
 			serveIndex(w, sub)
 			return
 		}
-		if strings.HasPrefix(clean, "assets/") {
+		switch {
+		case strings.HasPrefix(clean, "assets/"):
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+		case clean == "index.html":
+			// Must revalidate, or a cached shell keeps loading old hashed assets
+			// after an upgrade.
+			w.Header().Set("Cache-Control", "no-cache")
+		default:
+			// Root-level statics (favicon etc.) aren't content-hashed, so cache
+			// briefly rather than immutably.
+			w.Header().Set("Cache-Control", "public, max-age=86400")
 		}
 		fileServer.ServeHTTP(w, r)
 	})
