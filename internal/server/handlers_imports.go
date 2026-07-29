@@ -73,6 +73,8 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 	switch kind {
 	case "zip":
 		src = importer.NewZipSource(paths[0])
+	case "mbox":
+		src = importer.NewMboxSource(paths[0])
 	case "file":
 		src = importer.NewLocalSource(sourceName, paths, names, false)
 	default: // "dir"
@@ -250,6 +252,8 @@ func detectKind(files []*multipart.FileHeader) string {
 	switch {
 	case len(files) == 1 && strings.HasSuffix(strings.ToLower(files[0].Filename), ".zip"):
 		return "zip"
+	case len(files) == 1 && strings.HasSuffix(strings.ToLower(files[0].Filename), ".mbox"):
+		return "mbox"
 	case len(files) == 1:
 		return "file"
 	default:

@@ -24,7 +24,7 @@
     },
     "import": {
       "title": "Import your mail",
-      "body": "Drop .eml files, folders, or .zip archives here — or pull straight from an S3 bucket or IMAP mailbox. Duplicates are skipped automatically."
+      "body": "Drop .eml files, folders, .zip archives, or .mbox files (Google Takeout) here — or pull straight from an S3 bucket or IMAP mailbox. Duplicates are skipped automatically."
     },
     "export": {
       "title": "Export your library",
@@ -141,7 +141,7 @@
     }
   },
   "import": {
-    "drop": "Drop .eml files, a directory, or a .zip here",
+    "drop": "Drop .eml files, a directory, a .zip, or an .mbox here",
     "dedup_note": "Duplicates are detected by SHA-256 and skipped.",
     "choose_files": "Choose files…",
     "choose_folder": "Choose folder…",
