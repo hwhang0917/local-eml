@@ -489,9 +489,11 @@ const pageInfo = computed(() => {
           :aria-pressed="groupThreads"
           :title="t('library.group_threads')"
           :aria-label="t('library.group_threads')"
-          :class="['inline-flex h-8 w-8 items-center justify-center rounded-sm border border-hairline bg-pearl',
+          :class="['inline-flex h-8 w-8 items-center justify-center rounded-sm border',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-            groupThreads ? 'text-foreground' : 'text-muted-foreground hover:text-foreground']"
+            groupThreads
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-hairline bg-pearl text-muted-foreground hover:text-foreground']"
           @click="toggleGroupThreads"
         >
           <MessagesSquare class="h-4 w-4" />
