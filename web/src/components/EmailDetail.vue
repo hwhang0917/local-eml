@@ -86,9 +86,14 @@ watch(() => email.value?.subject, (subject) => {
   document.title = subject ? `${subject} — ${APP_NAME}` : APP_NAME
 })
 
+// The button promises "back to library", so that is where it must go. history
+// back is only taken when the previous entry actually is the library — it
+// restores the filters and scroll position — otherwise (direct link, arrived
+// from import/settings) we navigate there outright.
 function goBack() {
-  if (window.history.length > 1) router.back()
-  else router.push('/')
+  const prev = router.options.history.state.back
+  if (typeof prev === 'string' && router.resolve(prev).name === 'library') router.back()
+  else router.push({ name: 'library' })
 }
 
 // Prev/next inside the list the user came from. The context lives in
