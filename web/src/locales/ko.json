@@ -106,7 +106,9 @@
     "category_any": "모든 분류",
     "category_none": "분류 없음",
     "set_category": "분류 지정",
-    "no_category_matches": "이 분류에 해당하는 메일이 없습니다."
+    "no_category_matches": "이 분류에 해당하는 메일이 없습니다.",
+    "group_threads": "대화별로 묶기",
+    "expand_thread": "이 대화에 메일 {count}건"
   },
   "viewer": {
     "back": "← 라이브러리로 돌아가기",

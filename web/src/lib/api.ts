@@ -9,6 +9,8 @@ export interface Email {
   message_id: string
   /** Conversation key; absent when the message has no Message-ID at all. */
   thread_id?: string
+  /** Only in grouped listings: number of messages in this row's conversation. */
+  thread_count?: number
   sent_at: string
   received_at: string
   size_bytes: number
@@ -160,7 +162,7 @@ async function okOrThrow(res: Response): Promise<void> {
 }
 
 export const api = {
-  listEmails(params: { q?: string; starred?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number } = {}) {
+  listEmails(params: { q?: string; starred?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number; group?: 'thread' } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === '' || v === false) continue

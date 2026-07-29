@@ -25,14 +25,15 @@ import (
 func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	opts := store.ListOptions{
-		Query:       q.Get("q"),
-		StarredOnly: q.Get("starred") == "1",
-		Sort:        q.Get("sort"),
-		Order:       q.Get("order"),
-		Limit:       intParam(q.Get("limit"), 50),
-		Offset:      intParam(q.Get("offset"), 0),
-		From:        dayBound(q.Get("from"), false),
-		To:          dayBound(q.Get("to"), true),
+		Query:        q.Get("q"),
+		StarredOnly:  q.Get("starred") == "1",
+		Sort:         q.Get("sort"),
+		Order:        q.Get("order"),
+		Limit:        intParam(q.Get("limit"), 50),
+		Offset:       intParam(q.Get("offset"), 0),
+		From:         dayBound(q.Get("from"), false),
+		To:           dayBound(q.Get("to"), true),
+		GroupThreads: q.Get("group") == "thread",
 	}
 	// "none" selects uncategorized mail; a bare id selects that category.
 	// Anything else falls through to "any", matching how dayBound treats junk —

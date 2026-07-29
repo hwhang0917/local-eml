@@ -2,7 +2,7 @@
 import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Check, Columns3, RotateCcw, Star, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, MessagesSquare, RotateCcw, Star, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -116,6 +116,7 @@ function pushQuery(patch: Record<string, string | undefined>) {
 
 async function load() {
   loading.value = true
+  expandedThreads.value.clear()
   try {
     const r = await api.listEmails({
       q: q.value || undefined,
@@ -127,11 +128,38 @@ async function load() {
       order: order.value,
       limit: limit.value,
       offset: offset.value,
+      group: groupThreads.value ? 'thread' : undefined,
     })
     items.value = r.items
     total.value = r.total
   } finally {
     loading.value = false
+  }
+}
+
+// Grouped mode collapses each conversation to its newest message; expanding a
+// row fetches the rest through the same endpoint the viewer's card uses.
+const groupThreads = useStorage('library-group-threads', true)
+const expandedThreads = ref(new Map<string, Email[]>())
+
+function toggleGroupThreads() {
+  groupThreads.value = !groupThreads.value
+  if (offset.value > 0) pushQuery({ offset: undefined })
+  else load()
+}
+
+async function toggleThread(e: Email) {
+  const m = expandedThreads.value
+  if (m.has(e.sha256)) {
+    m.delete(e.sha256)
+    return
+  }
+  m.set(e.sha256, [])
+  try {
+    const r = await api.getThread(e.sha256)
+    m.set(e.sha256, r.items.filter((x) => x.sha256 !== e.sha256))
+  } catch {
+    m.delete(e.sha256)
   }
 }
 
@@ -219,6 +247,7 @@ function rememberPosition(rowIndex: number) {
       to: to.value || undefined,
       sort: sort.value,
       order: order.value,
+      group: groupThreads.value ? 'thread' : undefined,
     },
     index: offset.value + rowIndex,
     total: total.value,
@@ -455,6 +484,18 @@ const pageInfo = computed(() => {
         <span class="ml-1.5">{{ t('library.reset') }}</span>
       </Button>
       <div class="ml-auto flex items-center gap-3">
+        <button
+          type="button"
+          :aria-pressed="groupThreads"
+          :title="t('library.group_threads')"
+          :aria-label="t('library.group_threads')"
+          :class="['inline-flex h-8 w-8 items-center justify-center rounded-sm border border-hairline bg-pearl',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            groupThreads ? 'text-foreground' : 'text-muted-foreground hover:text-foreground']"
+          @click="toggleGroupThreads"
+        >
+          <MessagesSquare class="h-4 w-4" />
+        </button>
         <DropdownMenuRoot>
           <DropdownMenuTrigger
             :title="t('library.columns')"
@@ -546,9 +587,8 @@ const pageInfo = computed(() => {
               </template>
             </td>
           </tr>
+          <template v-for="(e, i) in items" :key="e.sha256">
           <tr
-            v-for="(e, i) in items"
-            :key="e.sha256"
             class="border-t hover:bg-accent/50 cursor-pointer"
             @click="rememberPosition(i); openEmail(e.sha256, $event)"
             @auxclick="rememberPosition(i); openEmailAux(e.sha256, $event)"
@@ -631,6 +671,21 @@ const pageInfo = computed(() => {
               <Highlight :text="senderName(e.from)" :query="q" />
             </td>
             <td class="px-3 py-2 truncate">
+              <button
+                v-if="(e.thread_count ?? 0) > 1"
+                type="button"
+                :aria-expanded="expandedThreads.has(e.sha256)"
+                :aria-label="t('library.expand_thread', { count: e.thread_count })"
+                :title="t('library.expand_thread', { count: e.thread_count })"
+                class="mr-1.5 inline-flex items-center gap-0.5 rounded-sm border border-hairline bg-pearl px-1 py-0.5
+                  align-middle text-xs tabular-nums text-muted-foreground hover:text-foreground
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                @click.stop="toggleThread(e)"
+                @auxclick.stop
+              >
+                <component :is="expandedThreads.has(e.sha256) ? ChevronDown : ChevronRight" class="h-3 w-3" />
+                {{ e.thread_count }}
+              </button>
               <RouterLink
                 :ref="(el) => setRowLink(el, i)"
                 :to="{ name: 'viewer', params: { sha: e.sha256 } }"
@@ -646,6 +701,40 @@ const pageInfo = computed(() => {
             </td>
             <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
           </tr>
+          <tr
+            v-for="m in expandedThreads.get(e.sha256) ?? []"
+            :key="m.sha256"
+            class="border-t bg-muted/20 hover:bg-accent/50 cursor-pointer"
+            @click="openEmail(m.sha256, $event)"
+            @auxclick="openEmailAux(m.sha256, $event)"
+            @mousedown.middle.prevent
+          >
+            <td v-if="colShown('starred')" class="px-3 py-2"></td>
+            <td v-if="colShown('attachments')" class="px-3 py-2 text-muted-foreground">
+              <span v-if="m.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
+            </td>
+            <td v-if="colShown('category')" class="px-3 py-2"></td>
+            <td v-if="colShown('date')" class="px-3 py-2 whitespace-nowrap text-muted-foreground">
+              <time :datetime="m.sent_at || undefined">{{ formatDate(m.sent_at) }}</time>
+            </td>
+            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap text-muted-foreground" :title="m.from">
+              {{ senderName(m.from) }}
+            </td>
+            <td class="px-3 py-2 truncate">
+              <span class="inline-flex max-w-full items-center gap-1.5 pl-5">
+                <CornerDownRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <RouterLink
+                  :to="{ name: 'viewer', params: { sha: m.sha256 } }"
+                  class="truncate rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  @click.stop
+                >
+                  {{ m.subject || t('library.no_subject') }}
+                </RouterLink>
+              </span>
+            </td>
+            <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(m.size_bytes) }}</td>
+          </tr>
+          </template>
         </tbody>
       </table>
     </Card>

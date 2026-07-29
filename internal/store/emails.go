@@ -26,6 +26,9 @@ type Email struct {
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
 	Starred         bool      `json:"starred"`
+	// ThreadCount is only populated by grouped listings: how many messages the
+	// row's conversation holds (1 for a singleton).
+	ThreadCount int `json:"thread_count,omitempty"`
 	// Nil when uncategorized. A pointer so the JSON omits the field entirely
 	// rather than shipping a 0 the SPA would have to special-case.
 	CategoryID *int64 `json:"category_id,omitempty"`
@@ -300,6 +303,10 @@ type ListOptions struct {
 	// when both are set, since "no category" and "this category" can't both hold.
 	CategoryID    *int64
 	Uncategorized bool
+	// GroupThreads collapses each conversation to its newest matching message,
+	// with ThreadCount carrying the group size. Filters apply to members before
+	// grouping, so a search shows every conversation containing a match.
+	GroupThreads bool
 }
 
 func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
@@ -353,15 +360,34 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 		where = "WHERE " + strings.Join(conds, " AND ")
 	}
 
+	// The COALESCE is aliased so the grouped query's outer SELECT can re-list
+	// these columns against the subquery.
+	const cols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+		message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
+		has_attachments, attachment_count, imported_at, starred, category_id`
+	// Rows without a thread key group with themselves, so singletons still list.
+	const gkey = `COALESCE(thread_id, 'solo:' || id)`
+
+	countQ := "SELECT COUNT(*) FROM emails " + where
+	listQ := `SELECT ` + cols + ` FROM emails ` + where +
+		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
+	if opts.GroupThreads {
+		countQ = "SELECT COUNT(DISTINCT " + gkey + ") FROM emails " + where
+		listQ = `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+			message_id, thread_id, sent_at, received_at, size_bytes,
+			has_attachments, attachment_count, imported_at, starred, category_id, cnt FROM (
+			SELECT ` + cols + `,
+				COUNT(*) OVER (PARTITION BY ` + gkey + `) AS cnt,
+				ROW_NUMBER() OVER (PARTITION BY ` + gkey + ` ORDER BY sent_at DESC, id DESC) AS rn
+			FROM emails ` + where + `
+		) WHERE rn = 1 ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
+	}
+
 	var total int
-	if err := s.DB.QueryRowContext(ctx, "SELECT COUNT(*) FROM emails "+where, args...).Scan(&total); err != nil {
+	if err := s.DB.QueryRowContext(ctx, countQ, args...).Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
-	listQ := `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-		message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-		has_attachments, attachment_count, imported_at, starred, category_id FROM emails ` + where +
-		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
 	args = append(args, opts.Limit, opts.Offset)
 	rows, err := s.DB.QueryContext(ctx, listQ, args...)
 	if err != nil {
@@ -371,16 +397,33 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 
 	out := []Email{}
 	for rows.Next() {
-		e, err := scanEmail(rows)
+		var cnt int
+		var sc rowScanner = rows
+		if opts.GroupThreads {
+			sc = extraScanner{rows: rows, extra: []any{&cnt}}
+		}
+		e, err := scanEmail(sc)
 		if err != nil {
 			return nil, 0, err
 		}
+		e.ThreadCount = cnt
 		out = append(out, *e)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, err
 	}
 	return out, total, nil
+}
+
+// extraScanner appends fixed destinations to every Scan, so scanEmail's column
+// list can be reused by queries that select trailing extras.
+type extraScanner struct {
+	rows  *sql.Rows
+	extra []any
+}
+
+func (s extraScanner) Scan(dest ...any) error {
+	return s.rows.Scan(append(dest, s.extra...)...)
 }
 
 type rowScanner interface {

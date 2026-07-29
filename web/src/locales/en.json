@@ -106,7 +106,9 @@
     "category_any": "Any category",
     "category_none": "No category",
     "set_category": "Set category",
-    "no_category_matches": "No emails in this category."
+    "no_category_matches": "No emails in this category.",
+    "group_threads": "Group by conversation",
+    "expand_thread": "{count} messages in this conversation"
   },
   "viewer": {
     "back": "← Back to library",
