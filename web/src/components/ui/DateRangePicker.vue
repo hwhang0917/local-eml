@@ -337,10 +337,13 @@ function clear() {
                 </RangeCalendarGridRow>
               </RangeCalendarGridHead>
               <RangeCalendarGridBody>
+                <!-- Same justify-between as the weekday header row: both rows
+                     hold seven 2rem cells, so any other distribution drifts
+                     the date columns away from their labels. -->
                 <RangeCalendarGridRow
                   v-for="(weekDates, index) in month.rows"
                   :key="`weekDate-${index}`"
-                  class="flex w-full"
+                  class="flex w-full justify-between"
                 >
                   <RangeCalendarCell
                     v-for="weekDate in weekDates"
