@@ -2,7 +2,7 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Check, Columns3, RotateCcw, Star } from 'lucide-vue-next'
+import { Check, Columns3, RotateCcw, Star, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -308,7 +308,20 @@ const pageInfo = computed(() => {
 <template>
   <section class="flex-1 min-w-0">
     <div class="flex items-center flex-wrap gap-3 mb-4">
-      <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="max-w-md" data-tour="search" />
+      <div class="relative w-full max-w-md" data-tour="search">
+        <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="w-full pr-8" />
+        <button
+          v-if="searchInput"
+          type="button"
+          :aria-label="t('library.clear_search')"
+          :title="t('library.clear_search')"
+          class="absolute right-2 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm
+            text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          @click="searchInput = ''"
+        >
+          <X class="h-4 w-4" />
+        </button>
+      </div>
       <Button
         variant="outline"
         size="sm"

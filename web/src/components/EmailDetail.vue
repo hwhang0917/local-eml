@@ -192,13 +192,17 @@ async function toggleStar() {
       <div class="mb-3 flex items-start gap-3">
         <h1 class="text-xl font-semibold flex-1 min-w-0">
           {{ email.subject || t('library.no_subject') }}
-          <span class="ml-1 whitespace-nowrap text-xs font-normal text-muted-foreground/60" :title="email.sha256">({{ shortSHA(email.sha256) }})</span>
-          <span
-            :title="t('viewer.sha_help')"
-            :aria-label="t('viewer.sha_help')"
-            class="inline-flex align-middle text-muted-foreground/60"
-          >
-            <CircleHelp class="h-3.5 w-3.5" />
+          <!-- One inline-flex wrapper so the icon centres on the hash text
+               rather than the h1's much taller line box. -->
+          <span class="ml-1.5 inline-flex items-center gap-1.5 align-middle whitespace-nowrap text-xs font-normal text-muted-foreground/60">
+            <span :title="email.sha256">({{ shortSHA(email.sha256) }})</span>
+            <span
+              :title="t('viewer.sha_help')"
+              :aria-label="t('viewer.sha_help')"
+              class="inline-flex"
+            >
+              <CircleHelp class="h-3.5 w-3.5" />
+            </span>
           </span>
         </h1>
         <CategoryMenu
