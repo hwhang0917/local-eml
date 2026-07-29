@@ -56,6 +56,7 @@
   },
   "library": {
     "search_placeholder": "제목·발신자·본문 검색…",
+    "clear_search": "검색어 지우기",
     "loading": "불러오는 중…",
     "no_emails": "이메일이 없습니다.",
     "import_some": "지금 가져올까요?",
@@ -152,6 +153,7 @@
     "confirm_summary_one": "파일 1개 · {total}",
     "confirm_summary_many": "파일 {count}개 · {total}",
     "confirm": "가져오기 시작",
+    "busy": "가져오는 중…",
     "cancel": "취소",
     "completed_fallback": "완료",
     "failed_fallback": "실패",
@@ -224,6 +226,7 @@
     "s3_confirm_hint": "모든 로컬 이메일을 지정한 프리픽스 아래로 업로드하며, 기존 키는 건너뜁니다.",
     "confirm_title": "내보낼 준비 완료",
     "start": "내보내기 시작",
+    "busy": "내보내는 중…",
     "queued": "대기 중",
     "export_label": "내보내기 {id}",
     "completed_fallback": "완료",

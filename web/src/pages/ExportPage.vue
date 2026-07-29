@@ -11,7 +11,7 @@ import Button from '@/components/ui/Button.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const { t } = useI18n()
-const { runs, startS3Export, cancelRun } = useImports()
+const { runs, exportActive, startS3Export, cancelRun } = useImports()
 
 const NEW_PROFILE = '__new__'
 
@@ -264,7 +264,7 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
           </div>
           <div class="flex gap-2 shrink-0">
             <Button variant="outline" @click="cancelS3">{{ t('import.cancel') }}</Button>
-            <Button @click="confirmS3">{{ t('export.start') }}</Button>
+            <Button :disabled="exportActive" @click="confirmS3">{{ exportActive ? t('export.busy') : t('export.start') }}</Button>
           </div>
         </div>
         <dl class="text-sm space-y-2">

@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { toast } from 'vue-sonner'
 import { api, type ImportEvent, type S3ImportConfig, type IMAPImportConfig } from '@/lib/api'
 import { i18n } from '@/i18n'
@@ -26,6 +26,12 @@ export interface ImportRun {
 }
 
 const runs = ref<ImportRun[]>([])
+
+// Module scope like runs itself: leaving the page and coming back mid-job must
+// still show the start buttons as busy. The '-export' suffix is the same
+// discriminator notify() uses to pick a toast namespace.
+const importActive = computed(() => runs.value.some((r) => !r.done && !r.kind.endsWith('-export')))
+const exportActive = computed(() => runs.value.some((r) => !r.done && r.kind.endsWith('-export')))
 
 async function hydrateFromDB(run: ImportRun) {
   try {
@@ -185,5 +191,8 @@ export function useImports() {
     followProgress(run)
   }
 
-  return { runs, startImport, startS3Import, startImapImport, startS3Export, cancelRun }
+  return {
+    runs, importActive, exportActive,
+    startImport, startS3Import, startImapImport, startS3Export, cancelRun,
+  }
 }

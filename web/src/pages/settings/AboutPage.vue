@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import { Github, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
 import { APP_VERSION } from '@/version'
 import { api, type UpdateStatus } from '@/lib/api'
+import { useResync } from '@/composables/useResync'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -44,32 +45,24 @@ async function installUpdate() {
 
 onMounted(() => refreshUpdate(false))
 
-const resyncing = ref(false)
+// Shared state: the rescan keeps running (and the button stays disabled) when
+// the user leaves this page and comes back mid-job.
+const { running: resyncing, start: startResync } = useResync()
 
-// Starts the rescan job, then polls it to completion so the toast can carry
-// the processed/duplicate/error summary the import pages already show.
 async function resyncLibrary() {
-  resyncing.value = true
   try {
-    const { import_id } = await api.resync()
-    for (;;) {
-      await new Promise((r) => setTimeout(r, 1000))
-      const st = await api.importStatus(import_id)
-      if (st.status !== 'done' && st.status !== 'error') continue
-      const summary = t('import.toast_summary', {
-        processed: st.processed, dup: st.duplicates, err: st.errors,
-      })
-      if (st.status === 'done' && st.errors === 0) {
-        toast.success(t('settings.resync_done'), { description: summary })
-      } else {
-        toast.error(t('settings.resync_error'), { description: summary })
-      }
-      return
+    const st = await startResync()
+    if (!st) return // already running elsewhere
+    const summary = t('import.toast_summary', {
+      processed: st.processed, dup: st.duplicates, err: st.errors,
+    })
+    if (st.status === 'done' && st.errors === 0) {
+      toast.success(t('settings.resync_done'), { description: summary })
+    } else {
+      toast.error(t('settings.resync_error'), { description: summary })
     }
   } catch (e) {
     toast.error(t('settings.resync_error'), { description: String(e) })
-  } finally {
-    resyncing.value = false
   }
 }
 

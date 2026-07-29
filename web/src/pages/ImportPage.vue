@@ -14,7 +14,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 const NEW_PROFILE = '__new__'
 
 const { t } = useI18n()
-const { runs, startImport, startS3Import, startImapImport, cancelRun } = useImports()
+const { runs, importActive, startImport, startS3Import, startImapImport, cancelRun } = useImports()
 
 const importRuns = computed(() => runs.value.filter((r) => !r.kind.endsWith('-export')))
 
@@ -454,7 +454,7 @@ function formatRelativeSync(ts: number): string {
           </div>
           <div class="flex gap-2 shrink-0">
             <Button variant="outline" @click="clearStaged">{{ t('import.cancel') }}</Button>
-            <Button @click="confirmUpload">{{ t('import.confirm') }}</Button>
+            <Button :disabled="importActive" @click="confirmUpload">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
           </div>
         </div>
         <ul class="text-xs font-mono space-y-1 max-h-56 overflow-auto border border-hairline rounded-sm p-3 bg-muted/30">
@@ -549,7 +549,7 @@ function formatRelativeSync(ts: number): string {
           </div>
           <div class="flex gap-2 shrink-0">
             <Button variant="outline" @click="cancelS3">{{ t('import.cancel') }}</Button>
-            <Button @click="confirmS3">{{ t('import.confirm') }}</Button>
+            <Button :disabled="importActive" @click="confirmS3">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
           </div>
         </div>
         <dl class="text-sm space-y-2">
@@ -681,7 +681,7 @@ function formatRelativeSync(ts: number): string {
           </div>
           <div class="flex gap-2 shrink-0">
             <Button variant="outline" @click="cancelImap">{{ t('import.cancel') }}</Button>
-            <Button @click="confirmImap">{{ t('import.confirm') }}</Button>
+            <Button :disabled="importActive" @click="confirmImap">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
           </div>
         </div>
         <dl class="text-sm space-y-2">
