@@ -168,10 +168,10 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
 <template>
   <div class="space-y-6">
     <div class="inline-flex gap-1 p-1 rounded-lg bg-muted">
-      <button :class="modeBtnClass('zip')" @click="mode = 'zip'">
+      <button :class="modeBtnClass('zip')" :aria-pressed="mode === 'zip'" @click="mode = 'zip'">
         {{ t('export.mode_zip') }}
       </button>
-      <button :class="modeBtnClass('s3')" @click="mode = 's3'">
+      <button :class="modeBtnClass('s3')" :aria-pressed="mode === 's3'" @click="mode = 's3'">
         {{ t('export.mode_s3') }}
       </button>
     </div>
@@ -315,7 +315,14 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
           </span>
         </div>
 
-        <div class="h-1.5 bg-muted rounded overflow-hidden">
+        <div
+          class="h-1.5 bg-muted rounded overflow-hidden"
+          role="progressbar"
+          :aria-label="t('export.export_label', { id: run.id.slice(0, 8) })"
+          :aria-valuemin="0"
+          :aria-valuemax="run.total || undefined"
+          :aria-valuenow="run.total ? run.processed : undefined"
+        >
           <div
             class="h-full bg-primary transition-all"
             :class="{ 'animate-pulse': !run.done && run.total === 0 }"

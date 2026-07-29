@@ -408,13 +408,13 @@ function formatRelativeSync(ts: number): string {
 <template>
   <div class="space-y-6">
     <div class="inline-flex gap-1 p-1 rounded-lg bg-muted">
-      <button :class="providerBtnClass('local')" @click="provider = 'local'">
+      <button :class="providerBtnClass('local')" :aria-pressed="provider === 'local'" @click="provider = 'local'">
         {{ t('import.provider_local') }}
       </button>
-      <button :class="providerBtnClass('s3')" @click="provider = 's3'">
+      <button :class="providerBtnClass('s3')" :aria-pressed="provider === 's3'" @click="provider = 's3'">
         {{ t('import.provider_s3') }}
       </button>
-      <button :class="providerBtnClass('imap')" @click="provider = 'imap'">
+      <button :class="providerBtnClass('imap')" :aria-pressed="provider === 'imap'" @click="provider = 'imap'">
         {{ t('import.provider_imap') }}
       </button>
     </div>
@@ -732,7 +732,14 @@ function formatRelativeSync(ts: number): string {
           </span>
         </div>
 
-        <div class="h-1.5 bg-muted rounded overflow-hidden">
+        <div
+          class="h-1.5 bg-muted rounded overflow-hidden"
+          role="progressbar"
+          :aria-label="t('import.import_label', { id: run.id.slice(0, 8) })"
+          :aria-valuemin="0"
+          :aria-valuemax="run.total || undefined"
+          :aria-valuenow="run.total ? run.processed : undefined"
+        >
           <div
             class="h-full bg-primary transition-all"
             :class="{ 'animate-pulse': !run.done && run.total === 0 }"

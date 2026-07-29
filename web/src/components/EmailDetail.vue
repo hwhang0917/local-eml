@@ -267,8 +267,9 @@ async function toggleStar() {
       </div>
     </Card>
 
-    <div v-else class="flex items-center gap-1 border-b">
-      <button v-for="tb in tabs" :key="tb.key" type="button" @click="tab = tb.key"
+    <div v-else class="flex items-center gap-1 border-b" role="tablist">
+      <button v-for="tb in tabs" :key="tb.key" type="button" role="tab"
+        :aria-selected="tab === tb.key" @click="tab = tb.key"
         :class="['px-3 py-2 text-sm border-b-2 -mb-px',
           tab === tb.key ? 'border-foreground' : 'border-transparent text-muted-foreground hover:text-foreground']">
         {{ tb.label }}
@@ -280,22 +281,22 @@ async function toggleStar() {
       </div>
     </div>
 
-    <div v-if="!email.blob_missing && tab === 'html'" class="border rounded-lg overflow-hidden bg-white">
+    <div v-if="!email.blob_missing && tab === 'html'" role="tabpanel" class="border rounded-lg overflow-hidden bg-white">
       <iframe v-if="parts?.has_html" :src="htmlSrc" sandbox="allow-same-origin"
         class="w-full h-[70vh]" referrerpolicy="no-referrer" @load="guardIframeLinks"></iframe>
       <p v-else class="p-6 text-muted-foreground">{{ t('viewer.no_html') }}</p>
     </div>
 
-    <Card v-else-if="tab === 'text'" class="p-4">
+    <Card v-else-if="tab === 'text'" role="tabpanel" class="p-4">
       <pre v-if="parts?.has_text" class="whitespace-pre-wrap font-mono text-sm">{{ textBody }}</pre>
       <p v-else class="text-muted-foreground">{{ t('viewer.no_text') }}</p>
     </Card>
 
-    <Card v-else-if="tab === 'raw'" class="p-4">
+    <Card v-else-if="tab === 'raw'" role="tabpanel" class="p-4">
       <pre class="whitespace-pre-wrap font-mono text-xs max-h-[70vh] overflow-auto">{{ rawBody }}</pre>
     </Card>
 
-    <Card v-else-if="tab === 'attachments'" class="p-4">
+    <Card v-else-if="tab === 'attachments'" role="tabpanel" class="p-4">
       <ul v-if="parts && parts.attachments.length" class="divide-y">
         <li v-for="a in parts.attachments" :key="a.index" class="py-2 flex items-center gap-3">
           <span class="font-medium flex-1">{{ a.filename || `attachment-${a.index}` }}</span>
@@ -308,10 +309,10 @@ async function toggleStar() {
       <p v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</p>
     </Card>
 
-    <dialog ref="indexDialog"
+    <dialog ref="indexDialog" aria-labelledby="index-dialog-title"
       class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
       <div class="space-y-3 p-5">
-        <h2 class="font-semibold">{{ t('viewer.not_indexed.title') }}</h2>
+        <h2 id="index-dialog-title" class="font-semibold">{{ t('viewer.not_indexed.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('viewer.not_indexed.body') }}</p>
         <div class="flex justify-end gap-2">
           <Button variant="ghost" size="sm" :disabled="repairing" @click="indexDialog?.close()">
@@ -324,10 +325,10 @@ async function toggleStar() {
       </div>
     </dialog>
 
-    <dialog ref="linkDialog"
+    <dialog ref="linkDialog" aria-labelledby="link-dialog-title"
       class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
       <div class="space-y-3 p-5">
-        <h2 class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
+        <h2 id="link-dialog-title" class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('viewer.external_link.body') }}</p>
         <p class="rounded-sm bg-accent p-2 font-mono text-xs break-all">{{ pendingLink }}</p>
         <div class="flex justify-end gap-2">

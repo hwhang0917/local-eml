@@ -309,7 +309,13 @@ const pageInfo = computed(() => {
   <section class="flex-1 min-w-0">
     <div class="flex items-center flex-wrap gap-3 mb-4">
       <div class="relative w-full max-w-md" data-tour="search">
-        <Input v-model="searchInput" :placeholder="t('library.search_placeholder')" class="w-full pr-8" />
+        <Input
+          v-model="searchInput"
+          type="search"
+          :placeholder="t('library.search_placeholder')"
+          :aria-label="t('library.search_placeholder')"
+          class="w-full pr-8 [&::-webkit-search-cancel-button]:appearance-none"
+        />
         <button
           v-if="searchInput"
           type="button"
@@ -326,6 +332,7 @@ const pageInfo = computed(() => {
         variant="outline"
         size="sm"
         data-tour="starred"
+        :aria-pressed="starredOnly"
         :title="starredOnly ? t('library.show_all') : t('library.show_starred')"
         :class="starredOnly ? 'text-amber-500 border-amber-500' : ''"
         @click="toggleStarredFilter"
@@ -422,7 +429,7 @@ const pageInfo = computed(() => {
       </div>
     </div>
 
-    <Card class="overflow-hidden">
+    <Card class="overflow-hidden" :aria-busy="loading">
       <table class="w-full text-sm">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
