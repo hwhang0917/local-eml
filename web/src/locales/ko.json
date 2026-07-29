@@ -141,7 +141,8 @@
     },
     "prev": "이전 메일",
     "next": "다음 메일",
-    "position": "{total}개 중 {index}번째"
+    "position": "{total}개 중 {index}번째",
+    "conversation": "대화 ({count}건)"
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip·.mbox를 여기에 드롭하세요",

@@ -127,13 +127,19 @@ func runServe(args []string) int {
 	}
 	srv.StartIMAPSyncer(ctx, syncInterval())
 
-	// One-time repair of attachment flags that counted inline images; runs in
-	// the background so a large library doesn't delay startup.
+	// One-time data repairs (attachment counts, thread ids), each gated on
+	// PRAGMA user_version; run in the background so a large library doesn't
+	// delay startup.
 	go func() {
 		if n, err := imp.BackfillAttachmentCounts(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			slog.Warn("attachment count backfill", "err", err)
 		} else if n > 0 {
 			slog.Info("attachment count backfill done", "updated", n)
+		}
+		if n, err := imp.BackfillThreadIDs(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Warn("thread id backfill", "err", err)
+		} else if n > 0 {
+			slog.Info("thread id backfill done", "updated", n)
 		}
 	}()
 

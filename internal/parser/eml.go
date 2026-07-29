@@ -17,6 +17,7 @@ type Parsed struct {
 	To              []string
 	Cc              []string
 	MessageID       string
+	ThreadID        string
 	Date            time.Time
 	BodyText        string
 	HTMLAvailable   bool
@@ -41,6 +42,7 @@ func Parse(r io.Reader) (*Parsed, error) {
 		AttachmentCount: len(env.Attachments),
 		HTMLAvailable:   env.HTML != "",
 	}
+	p.ThreadID = threadID(env.GetHeader("References"), env.GetHeader("In-Reply-To"), p.MessageID)
 	p.To = splitAddrs(env.GetHeader("To"))
 	p.Cc = splitAddrs(env.GetHeader("Cc"))
 	if dh := env.GetHeader("Date"); dh != "" {
@@ -50,6 +52,20 @@ func Parse(r io.Reader) (*Parsed, error) {
 	}
 	p.BodyText = strings.TrimSpace(extractBodyText(env))
 	return p, nil
+}
+
+// threadID returns the conversation key: the first Message-ID in References
+// (by RFC 5322 convention the thread root), else In-Reply-To, else the
+// message's own Message-ID. Empty when none of the three exist — such a
+// message can never be grouped. Angle brackets are stripped so every member
+// derives the same key regardless of which header it came from.
+func threadID(refs, inReplyTo, msgID string) string {
+	for _, h := range []string{refs, inReplyTo, msgID} {
+		if f := strings.Fields(h); len(f) > 0 {
+			return strings.Trim(f[0], "<>")
+		}
+	}
+	return ""
 }
 
 func extractBodyText(env *enmime.Envelope) string {

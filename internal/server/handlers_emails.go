@@ -55,6 +55,31 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// handleEmailThread lists the conversation the message belongs to, oldest
+// first. A message with no thread id is a conversation of one.
+func (s *Server) handleEmailThread(w http.ResponseWriter, r *http.Request) {
+	sha := chi.URLParam(r, "sha")
+	if !validSHA(sha) {
+		http.Error(w, "invalid sha", http.StatusBadRequest)
+		return
+	}
+	e, err := s.Store.GetEmailBySHA(r.Context(), sha)
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	if e.ThreadID == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"items": []store.Email{*e}})
+		return
+	}
+	items, err := s.Store.ListThread(r.Context(), e.ThreadID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
 // emailResponse reports the two ways the database and the blob store can drift
 // apart, so the viewer can offer a repair instead of a bare 404.
 type emailResponse struct {

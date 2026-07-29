@@ -168,6 +168,14 @@ func (s *Store) migrate(ctx context.Context) error {
 		 WHERE category_id IS NOT NULL`); err != nil {
 		return err
 	}
+	if err := s.ensureColumn(ctx, "emails", "thread_id", "TEXT"); err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_thread ON emails(thread_id)
+		 WHERE thread_id IS NOT NULL`); err != nil {
+		return err
+	}
 	if err := s.seedCategories(ctx); err != nil {
 		return err
 	}

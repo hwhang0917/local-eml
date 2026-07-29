@@ -82,3 +82,19 @@ func TestSplitAddrs(t *testing.T) {
 		t.Errorf("got[1] = %q", got[1])
 	}
 }
+
+func TestThreadID(t *testing.T) {
+	cases := []struct {
+		refs, inReplyTo, msgID, want string
+	}{
+		{"<root@x> <mid@x>", "<mid@x>", "<leaf@x>", "root@x"},
+		{"", "<root@x>", "<leaf@x>", "root@x"},
+		{"", "", "<solo@x>", "solo@x"},
+		{"", "", "", ""},
+	}
+	for _, c := range cases {
+		if got := threadID(c.refs, c.inReplyTo, c.msgID); got != c.want {
+			t.Errorf("threadID(%q, %q, %q) = %q, want %q", c.refs, c.inReplyTo, c.msgID, got, c.want)
+		}
+	}
+}

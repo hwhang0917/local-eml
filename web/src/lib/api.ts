@@ -7,6 +7,8 @@ export interface Email {
   to: string[]
   cc: string[]
   message_id: string
+  /** Conversation key; absent when the message has no Message-ID at all. */
+  thread_id?: string
   sent_at: string
   received_at: string
   size_bytes: number
@@ -203,6 +205,10 @@ export const api = {
 
   getEmail(sha: string) {
     return fetch(`${BASE}/api/emails/${sha}`).then(jsonOrThrow<Email>)
+  },
+
+  getThread(sha: string) {
+    return fetch(`${BASE}/api/emails/${sha}/thread`).then(jsonOrThrow<{ items: Email[] }>)
   },
 
   deleteEmail(sha: string) {

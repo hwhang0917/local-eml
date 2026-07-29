@@ -18,6 +18,7 @@ type Email struct {
 	ToAddrs         []string  `json:"to"`
 	CcAddrs         []string  `json:"cc"`
 	MessageID       string    `json:"message_id"`
+	ThreadID        string    `json:"thread_id,omitempty"`
 	SentAt          time.Time `json:"sent_at"`
 	ReceivedAt      time.Time `json:"received_at"`
 	SizeBytes       int64     `json:"size_bytes"`
@@ -61,12 +62,12 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 	chosung := ToChosung(e.Subject + " " + e.FromAddr)
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO emails (id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-			message_id, sent_at, received_at, size_bytes, has_attachments,
+			message_id, thread_id, sent_at, received_at, size_bytes, has_attachments,
 			attachment_count, imported_at, chosung_text)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		id, e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
-		e.MessageID, unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt), e.SizeBytes,
-		hasAtt, e.AttachmentCount, time.Now().Unix(), chosung,
+		e.MessageID, nullIfEmpty(e.ThreadID), unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt),
+		e.SizeBytes, hasAtt, e.AttachmentCount, time.Now().Unix(), chosung,
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -144,10 +145,32 @@ func (s *Store) EmailExists(ctx context.Context, sha string) (bool, error) {
 func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 	row := s.DB.QueryRowContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-			message_id, sent_at, received_at, size_bytes, has_attachments,
-			attachment_count, imported_at, starred, category_id
+			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
+			has_attachments, attachment_count, imported_at, starred, category_id
 		FROM emails WHERE sha256 = ?`, sha)
 	return scanEmail(row)
+}
+
+// ListThread returns every email sharing threadID, oldest first.
+func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error) {
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
+			has_attachments, attachment_count, imported_at, starred, category_id
+		FROM emails WHERE thread_id = ? ORDER BY sent_at ASC, id ASC`, threadID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Email{}
+	for rows.Next() {
+		e, err := scanEmail(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *e)
+	}
+	return out, rows.Err()
 }
 
 var ErrEmailNotFound = errors.New("email not found")
@@ -209,6 +232,36 @@ func (s *Store) SetEmailAttachmentCount(ctx context.Context, id int64, count int
 	_, err := s.DB.ExecContext(ctx,
 		`UPDATE emails SET has_attachments = ?, attachment_count = ? WHERE id = ?`,
 		flag, count, id)
+	return err
+}
+
+// ThreadBackfillRow is the minimal projection the thread-id backfill needs.
+type ThreadBackfillRow struct {
+	ID     int64
+	SHA256 string
+}
+
+func (s *Store) ListEmailsMissingThreadID(ctx context.Context) ([]ThreadBackfillRow, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT id, sha256 FROM emails WHERE thread_id IS NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ThreadBackfillRow{}
+	for rows.Next() {
+		var r ThreadBackfillRow
+		if err := rows.Scan(&r.ID, &r.SHA256); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetEmailThreadID(ctx context.Context, id int64, threadID string) error {
+	_, err := s.DB.ExecContext(ctx,
+		`UPDATE emails SET thread_id = ? WHERE id = ?`, nullIfEmpty(threadID), id)
 	return err
 }
 
@@ -306,8 +359,8 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	}
 
 	listQ := `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-		message_id, sent_at, received_at, size_bytes, has_attachments,
-		attachment_count, imported_at, starred, category_id FROM emails ` + where +
+		message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
+		has_attachments, attachment_count, imported_at, starred, category_id FROM emails ` + where +
 		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
 	args = append(args, opts.Limit, opts.Offset)
 	rows, err := s.DB.QueryContext(ctx, listQ, args...)
@@ -341,7 +394,7 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	var hasAtt, starred int
 	var categoryID sql.NullInt64
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
-		&to, &cc, &e.MessageID, &sentAt, &recvAt, &e.SizeBytes,
+		&to, &cc, &e.MessageID, &e.ThreadID, &sentAt, &recvAt, &e.SizeBytes,
 		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID)
 	if err != nil {
 		return nil, err
@@ -375,6 +428,15 @@ func unixOrZero(t time.Time) int64 {
 		return 0
 	}
 	return t.Unix()
+}
+
+// nullIfEmpty keeps "no thread" as NULL so the partial index stays small and
+// the backfill's IS NULL filter means "never derived", not "derived as none".
+func nullIfEmpty(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 func stringsOrEmpty(s []string) []string {

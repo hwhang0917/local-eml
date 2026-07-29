@@ -92,6 +92,7 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 			ToAddrs:         parsed.To,
 			CcAddrs:         parsed.Cc,
 			MessageID:       parsed.MessageID,
+			ThreadID:        parsed.ThreadID,
 			SentAt:          parsed.Date,
 			ReceivedAt:      time.Now(),
 			SizeBytes:       info.Size(),

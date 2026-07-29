@@ -43,6 +43,7 @@ func (s *Server) Router() http.Handler {
 		api.Get("/imports/{id}/events", s.handleImportEvents)
 		api.Get("/emails", s.handleListEmails)
 		api.Get("/emails/{sha}", s.handleGetEmail)
+		api.Get("/emails/{sha}/thread", s.handleEmailThread)
 		api.Get("/emails/{sha}/raw", s.handleEmailRaw)
 		api.Get("/emails/{sha}/parts", s.handleEmailParts)
 		api.Get("/emails/{sha}/text", s.handleEmailText)

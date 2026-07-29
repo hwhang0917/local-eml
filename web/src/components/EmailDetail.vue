@@ -8,7 +8,7 @@ import { useCategories } from '@/composables/useCategories'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { APP_NAME } from '@/lib/app'
-import { formatBytes, formatDateAbsolute, shortSHA } from '@/lib/format'
+import { formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
@@ -20,6 +20,7 @@ const router = useRouter()
 
 const email = ref<Email | null>(null)
 const parts = ref<PartsManifest | null>(null)
+const thread = ref<Email[]>([])
 const tab = ref<'html' | 'text' | 'raw' | 'attachments'>('html')
 const textBody = ref('')
 const rawBody = ref('')
@@ -42,9 +43,17 @@ async function load() {
   error.value = ''
   textBody.value = ''
   rawBody.value = ''
+  thread.value = []
   try {
     const e = await api.getEmail(props.sha)
     email.value = e
+    if (e.thread_id) {
+      // Not awaited: the conversation card appearing late beats the whole
+      // viewer waiting on it.
+      api.getThread(props.sha)
+        .then((r) => { thread.value = r.items })
+        .catch(() => { thread.value = [] })
+    }
     // With no file on disk every body endpoint 404s, so stop here and let the
     // template offer to clear the dangling row.
     if (e.blob_missing) {
@@ -298,6 +307,26 @@ async function toggleStar() {
         <dt class="text-muted-foreground">{{ t('viewer.date') }}</dt><dd>{{ formatDateAbsolute(email.sent_at) }}</dd>
         <dt class="text-muted-foreground">{{ t('viewer.size') }}</dt><dd>{{ formatBytes(email.size_bytes) }}</dd>
       </dl>
+    </Card>
+
+    <Card v-if="thread.length > 1" class="p-4">
+      <h2 class="text-sm font-semibold">{{ t('viewer.conversation', { count: thread.length }) }}</h2>
+      <ol class="mt-2 space-y-0.5 text-sm">
+        <li v-for="m in thread" :key="m.sha256">
+          <RouterLink
+            :to="{ name: 'viewer', params: { sha: m.sha256 } }"
+            :aria-current="m.sha256 === email.sha256 ? 'page' : undefined"
+            :class="['flex items-baseline gap-3 rounded-sm px-2 py-1 hover:bg-accent/60',
+              m.sha256 === email.sha256 ? 'bg-accent' : '']"
+          >
+            <span class="w-28 shrink-0 truncate" :title="m.from">{{ senderName(m.from) || m.from }}</span>
+            <span class="min-w-0 flex-1 truncate" :class="m.sha256 === email.sha256 ? '' : 'text-muted-foreground'">
+              {{ m.subject || t('library.no_subject') }}
+            </span>
+            <span class="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{{ formatDate(m.sent_at) }}</span>
+          </RouterLink>
+        </li>
+      </ol>
     </Card>
 
     <Card v-if="email.blob_missing" class="p-6">

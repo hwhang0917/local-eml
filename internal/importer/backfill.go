@@ -48,3 +48,41 @@ func (im *Importer) BackfillAttachmentCounts(ctx context.Context) (int, error) {
 	}
 	return updated, im.Store.SetUserVersion(ctx, attachmentCountVersion)
 }
+
+// threadIDVersion marks the one-time derivation of thread_id for rows imported
+// before conversations existed.
+const threadIDVersion = 2
+
+// BackfillThreadIDs re-parses blobs for rows that have no thread_id yet and
+// writes the derived key. Same contract as BackfillAttachmentCounts: runs once
+// per database via PRAGMA user_version, safe to interrupt.
+func (im *Importer) BackfillThreadIDs(ctx context.Context) (int, error) {
+	v, err := im.Store.UserVersion(ctx)
+	if err != nil || v >= threadIDVersion {
+		return 0, err
+	}
+	rows, err := im.Store.ListEmailsMissingThreadID(ctx)
+	if err != nil {
+		return 0, err
+	}
+	updated := 0
+	for _, r := range rows {
+		if err := ctx.Err(); err != nil {
+			return updated, err
+		}
+		f, err := os.Open(im.Paths.BlobFor(r.SHA256))
+		if err != nil {
+			continue // missing blob: the drift-repair flow owns that case
+		}
+		parsed, err := parser.Parse(f)
+		f.Close()
+		if err != nil || parsed.ThreadID == "" {
+			continue // unparseable, or nothing to derive a thread from
+		}
+		if err := im.Store.SetEmailThreadID(ctx, r.ID, parsed.ThreadID); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, im.Store.SetUserVersion(ctx, threadIDVersion)
+}
