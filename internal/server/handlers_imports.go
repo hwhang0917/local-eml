@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -127,6 +128,53 @@ func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func
 			fn()
 		}
 	}
+}
+
+// handleResync re-imports every .eml already in the blob directory. Rows the
+// database knows are skipped as duplicates by their hash; files without a row
+// get parsed and indexed. Running it as a normal import job means progress,
+// cancellation and the job list all come for free.
+func (s *Server) handleResync(w http.ResponseWriter, r *http.Request) {
+	dir := s.Importer.Paths.EML
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		http.Error(w, "read blob dir: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var paths, names []string
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(strings.ToLower(e.Name()), ".eml") {
+			continue
+		}
+		paths = append(paths, filepath.Join(dir, e.Name()))
+		names = append(names, e.Name())
+	}
+
+	importID := newImportID()
+	if err := s.Store.CreateImport(r.Context(), store.Import{
+		ID:         importID,
+		SourceKind: "resync",
+		SourceName: dir,
+		Status:     "queued",
+	}); err != nil {
+		http.Error(w, "create import: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	src := importer.NewLocalSource("library resync", paths, names, true)
+
+	slog.Info("resync requested",
+		slog.String("import_id", importID),
+		slog.Int("files", len(paths)),
+	)
+	// Cleanup must be a no-op: unlike uploads, these paths are the blobs.
+	go s.runJob(importID, "resync", src, func() {})
+
+	writeJSON(w, http.StatusAccepted, map[string]any{
+		"import_id": importID,
+		"kind":      "resync",
+		"total":     len(paths),
+	})
 }
 
 func (s *Server) handleImportStatus(w http.ResponseWriter, r *http.Request) {

@@ -246,6 +246,11 @@ export const api = {
     return jsonOrThrow(res)
   },
 
+  async resync(): Promise<{ import_id: string; kind: string; total: number }> {
+    const res = await fetch(`${BASE}/api/imports/resync`, { method: 'POST' })
+    return jsonOrThrow(res)
+  },
+
   importStatus(id: string) {
     return fetch(`${BASE}/api/imports/${id}`).then(jsonOrThrow<ImportStatus>)
   },

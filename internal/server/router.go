@@ -38,6 +38,7 @@ func (s *Server) Router() http.Handler {
 		api.Post("/imports", s.handleImportUpload)
 		api.Post("/imports/s3", s.handleImportS3)
 		api.Post("/imports/imap", s.handleImportImap)
+		api.Post("/imports/resync", s.handleResync)
 		api.Get("/imports/{id}", s.handleImportStatus)
 		api.Get("/imports/{id}/events", s.handleImportEvents)
 		api.Get("/emails", s.handleListEmails)

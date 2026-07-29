@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Github, RefreshCw, Download, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { Github, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
 import { APP_VERSION } from '@/version'
 import { api, type UpdateStatus } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
@@ -44,6 +44,35 @@ async function installUpdate() {
 
 onMounted(() => refreshUpdate(false))
 
+const resyncing = ref(false)
+
+// Starts the rescan job, then polls it to completion so the toast can carry
+// the processed/duplicate/error summary the import pages already show.
+async function resyncLibrary() {
+  resyncing.value = true
+  try {
+    const { import_id } = await api.resync()
+    for (;;) {
+      await new Promise((r) => setTimeout(r, 1000))
+      const st = await api.importStatus(import_id)
+      if (st.status !== 'done' && st.status !== 'error') continue
+      const summary = t('import.toast_summary', {
+        processed: st.processed, dup: st.duplicates, err: st.errors,
+      })
+      if (st.status === 'done' && st.errors === 0) {
+        toast.success(t('settings.resync_done'), { description: summary })
+      } else {
+        toast.error(t('settings.resync_error'), { description: summary })
+      }
+      return
+    }
+  } catch (e) {
+    toast.error(t('settings.resync_error'), { description: String(e) })
+  } finally {
+    resyncing.value = false
+  }
+}
+
 const latestLabel = computed(() => {
   const u = update.value
   if (!u) return ''
@@ -75,6 +104,19 @@ const latestLabel = computed(() => {
         <Github class="h-4 w-4" />
         {{ t('settings.github') }}
       </a>
+    </div>
+
+    <hr class="border-border" />
+
+    <div class="space-y-2">
+      <div class="flex items-center gap-3">
+        <h3 class="text-sm font-medium">{{ t('settings.resync_section') }}</h3>
+        <Button size="sm" variant="outline" :disabled="resyncing" @click="resyncLibrary">
+          <FolderSync class="h-3.5 w-3.5" :class="resyncing ? 'animate-spin' : ''" />
+          <span class="ml-1.5">{{ resyncing ? t('settings.resync_running') : t('settings.resync') }}</span>
+        </Button>
+      </div>
+      <p class="text-xs text-muted-foreground">{{ t('settings.resync_help') }}</p>
     </div>
 
     <hr class="border-border" />
