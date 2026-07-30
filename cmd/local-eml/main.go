@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -44,6 +45,22 @@ func syncInterval() time.Duration {
 		}
 		return d
 	}
+}
+
+// resolveSyncInterval prefers the interval saved from the UI over the env var:
+// a knob the user can see and change must not be silently trumped by one they
+// can't.
+func resolveSyncInterval(ctx context.Context, st *store.Store) time.Duration {
+	v, err := st.GetSetting(ctx, server.SyncIntervalSettingKey)
+	if err != nil || v == "" {
+		return syncInterval()
+	}
+	secs, err := strconv.Atoi(v)
+	if err != nil || secs < 0 {
+		slog.Warn("bad stored sync interval, using default", slog.String("value", v))
+		return syncInterval()
+	}
+	return time.Duration(secs) * time.Second
 }
 
 func main() {
@@ -125,7 +142,7 @@ func runServe(args []string) int {
 		Version:            version,
 		RunningInteractive: service.Interactive(),
 	}
-	srv.StartIMAPSyncer(ctx, syncInterval())
+	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
 
 	// One-time data repairs (attachment counts, thread ids), each gated on
 	// PRAGMA user_version; run in the background so a large library doesn't

@@ -141,6 +141,13 @@ CREATE TABLE IF NOT EXISTS s3_profiles (
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+-- User-tunable knobs the UI can change at runtime (e.g. the IMAP poll
+-- interval), as opposed to env vars, which need a restart.
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `
 
 func (s *Store) migrate(ctx context.Context) error {

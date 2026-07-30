@@ -285,8 +285,51 @@ async function loadImapProfiles() {
   }
 }
 
+// --- IMAP background poll interval ---
+// Seeded with the server default so the help text never renders blank; the
+// fetch corrects it right after mount.
+const syncIntervalSeconds = ref<number>(600)
+const syncIntervalChoices = computed(() => [
+  { value: 0, label: t('import.sync_interval_off') },
+  { value: 300, label: t('import.sync_interval_minutes', { n: 5 }) },
+  { value: 600, label: t('import.sync_interval_minutes', { n: 10 }) },
+  { value: 1800, label: t('import.sync_interval_minutes', { n: 30 }) },
+  { value: 3600, label: t('import.sync_interval_hours', { n: 1 }, 1) },
+])
+const syncIntervalLabel = computed(() => {
+  const s = syncIntervalSeconds.value
+  const found = syncIntervalChoices.value.find((c) => c.value === s)
+  if (found) return found.label
+  // Interval set via env var to something off-menu — still state it exactly.
+  return s % 3600 === 0
+    ? t('import.sync_interval_hours', { n: s / 3600 }, s / 3600)
+    : t('import.sync_interval_minutes', { n: Math.round(s / 60) })
+})
+
+async function loadSyncInterval() {
+  try {
+    syncIntervalSeconds.value = (await api.getIMAPSyncInterval()).seconds
+  } catch {
+    // control simply shows nothing selected; saving still surfaces its error
+  }
+}
+
+async function setSyncInterval(v: string | undefined) {
+  if (v == null) return
+  const seconds = Number(v)
+  const prev = syncIntervalSeconds.value
+  syncIntervalSeconds.value = seconds
+  try {
+    await api.setIMAPSyncInterval(seconds)
+  } catch (e) {
+    syncIntervalSeconds.value = prev
+    toast.error(t('import.sync_interval_error'), { description: String(e) })
+  }
+}
+
 onMounted(() => {
   loadImapProfiles()
+  loadSyncInterval()
   loadS3Profiles()
 })
 
@@ -618,10 +661,28 @@ function formatRelativeSync(ts: number): string {
             <span class="text-sm">
               <span class="font-medium">{{ t('import.imap_sync_label') }}</span>
               <span class="block text-xs text-muted-foreground mt-0.5">
-                {{ t('import.imap_sync_help') }}
+                {{ syncIntervalSeconds === 0
+                  ? t('import.imap_sync_help_off')
+                  : t('import.imap_sync_help', { interval: syncIntervalLabel }) }}
               </span>
             </span>
           </label>
+          <div class="flex items-center gap-2 pl-6">
+            <span class="text-xs text-muted-foreground">{{ t('import.sync_interval_label') }}</span>
+            <Select
+              :model-value="String(syncIntervalSeconds)"
+              @update:model-value="(v) => setSyncInterval(v as string)"
+            >
+              <SelectTrigger class="h-8 w-40 text-xs">
+                <SelectValue>{{ syncIntervalLabel }}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="c in syncIntervalChoices" :key="c.value" :value="String(c.value)">
+                  {{ c.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div
             v-if="activeImapProfile && activeImapProfile.sync_enabled"
             class="flex items-center gap-3 text-xs text-muted-foreground pl-6"

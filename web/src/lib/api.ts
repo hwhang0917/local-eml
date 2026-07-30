@@ -310,6 +310,22 @@ export const api = {
     }
   },
 
+  getIMAPSyncInterval() {
+    return fetch(`${BASE}/api/imap/sync-interval`).then(jsonOrThrow<{ seconds: number }>)
+  },
+
+  async setIMAPSyncInterval(seconds: number): Promise<void> {
+    const res = await fetch(`${BASE}/api/imap/sync-interval`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seconds }),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+  },
+
   async syncIMAPProfile(id: number): Promise<void> {
     const res = await fetch(`${BASE}/api/imap/profiles/${id}/sync`, { method: 'POST' })
     if (!res.ok) {

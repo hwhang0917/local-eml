@@ -2,6 +2,8 @@ package server
 
 import (
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -24,6 +26,10 @@ type Server struct {
 	// rather than by a service manager. Self-update needs the service manager
 	// to bring us back up after we exit, so it is gated on this flag.
 	RunningInteractive bool
+
+	// Background IMAP poll state; see StartIMAPSyncer / SetIMAPSyncInterval.
+	syncIntervalNs atomic.Int64
+	syncIntervalCh chan time.Duration
 }
 
 func (s *Server) Router() http.Handler {
@@ -61,6 +67,8 @@ func (s *Server) Router() http.Handler {
 		api.Post("/imap/profiles", s.handleSaveIMAPProfile)
 		api.Delete("/imap/profiles/{id}", s.handleDeleteIMAPProfile)
 		api.Post("/imap/profiles/{id}/sync", s.handleSyncIMAPProfile)
+		api.Get("/imap/sync-interval", s.handleGetSyncInterval)
+		api.Put("/imap/sync-interval", s.handlePutSyncInterval)
 
 		api.Get("/s3/profiles", s.handleListS3Profiles)
 		api.Post("/s3/profiles", s.handleSaveS3Profile)

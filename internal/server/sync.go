@@ -149,31 +149,64 @@ func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 
 // StartIMAPSyncer launches a goroutine that polls every sync-enabled IMAP
 // profile on the given interval. It returns immediately; the goroutine exits
-// when ctx is cancelled. Pass a duration <= 0 to disable polling entirely.
+// when ctx is cancelled. A duration <= 0 starts the syncer paused — the
+// goroutine still runs so SetIMAPSyncInterval can wake it later.
 func (s *Server) StartIMAPSyncer(ctx context.Context, interval time.Duration) {
-	if interval <= 0 {
-		slog.Info("imap syncer disabled (interval <= 0)")
-		return
-	}
+	s.syncIntervalNs.Store(int64(interval))
+	s.syncIntervalCh = make(chan time.Duration, 1)
 	go func() {
-		slog.Info("imap syncer started", slog.Duration("interval", interval))
-		// Run once shortly after startup so existing-but-stale state catches up.
-		select {
-		case <-time.After(5 * time.Second):
-			s.RunDueIMAPSyncs(ctx)
-		case <-ctx.Done():
-			return
+		if interval > 0 {
+			slog.Info("imap syncer started", slog.Duration("interval", interval))
+		} else {
+			slog.Info("imap syncer paused (interval off)")
 		}
-		t := time.NewTicker(interval)
-		defer t.Stop()
+		// First fire lands shortly after startup so existing-but-stale state
+		// catches up without waiting a whole interval.
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
+		if interval <= 0 {
+			timer.Stop()
+		}
 		for {
 			select {
 			case <-ctx.Done():
 				slog.Info("imap syncer stopping")
 				return
-			case <-t.C:
+			case d := <-s.syncIntervalCh:
+				interval = d
+				timer.Stop()
+				if d > 0 {
+					slog.Info("imap sync interval changed", slog.Duration("interval", d))
+					timer.Reset(d)
+				} else {
+					slog.Info("imap syncer paused")
+				}
+			case <-timer.C:
 				s.RunDueIMAPSyncs(ctx)
+				if interval > 0 {
+					timer.Reset(interval)
+				}
 			}
 		}
 	}()
+}
+
+// IMAPSyncInterval reports the currently effective poll interval (0 = paused).
+func (s *Server) IMAPSyncInterval() time.Duration {
+	return time.Duration(s.syncIntervalNs.Load())
+}
+
+// SetIMAPSyncInterval reschedules the background poll; d <= 0 pauses it. Safe
+// to call whether or not the syncer goroutine was started (tests).
+func (s *Server) SetIMAPSyncInterval(d time.Duration) {
+	s.syncIntervalNs.Store(int64(d))
+	if s.syncIntervalCh == nil {
+		return
+	}
+	// Buffered(1) mailbox: drop any stale pending update, then leave d in it.
+	select {
+	case <-s.syncIntervalCh:
+	default:
+	}
+	s.syncIntervalCh <- d
 }
