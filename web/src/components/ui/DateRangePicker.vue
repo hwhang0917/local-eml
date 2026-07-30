@@ -20,6 +20,7 @@ import {
   RangeCalendarHeader,
   RangeCalendarRoot,
 } from 'reka-ui'
+import { weekStartsOn } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 
 const props = defineProps<{ from: string; to: string }>()
@@ -242,6 +243,7 @@ function clear() {
           v-model="range"
           v-model:placeholder="placeholder"
           :locale="locale"
+          :week-starts-on="weekStartsOn"
           :number-of-months="1"
           :min-value="FIRST_EMAIL"
           :max-value="maxDate"

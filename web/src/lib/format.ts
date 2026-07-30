@@ -11,6 +11,10 @@ export function formatBytes(n: number): string {
 export type DateFormat = 'absolute' | 'relative'
 export const dateFormat = useStorage<DateFormat>('settings-date-format', 'absolute')
 
+/** First day of the week in the date-range calendar: 0 = Sunday, 1 = Monday. */
+export type WeekStart = 0 | 1
+export const weekStartsOn = useStorage<WeekStart>('settings-week-start', 0)
+
 export function formatDate(iso: string | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
