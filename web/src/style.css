@@ -95,7 +95,8 @@
 
 @layer base {
   * { @apply border-border; }
-  html { background: var(--canvas-parchment); }
+  /* stable gutter keeps the layout from shifting when short pages lose the scrollbar */
+  html { background: var(--canvas-parchment); scrollbar-gutter: stable; }
   body {
     background: var(--canvas-parchment);
     color: var(--foreground);
