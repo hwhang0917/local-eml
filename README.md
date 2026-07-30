@@ -33,7 +33,7 @@ The installer downloads the latest release, verifies it, and registers Local Eml
 
 - **Import** emails from `.eml` files, folders, `.zip` archives, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
 - **Search** by sender, subject, or body. Korean and other CJK languages work out of the box, and typing only Hangul initial consonants (e.g. `ㅎㄱ` to find `한국`) does **초성검색** across the whole library.
-- **Receive new mail** automatically from any saved IMAP profile (opt-in per profile). Local Eml fetches only what's new since the last sync; default cadence is every 10 minutes.
+- **Receive new mail** automatically from any saved IMAP profile (opt-in per profile). Local Eml fetches only what's new since the last sync; every 10 minutes by default, adjustable on the Import page.
 - **Read safely** — HTML messages render in a sandboxed iframe with remote images blocked by default.
 - **Star** messages you want to revisit and filter to just starred.
 - **Export** your library as a single `.zip` or upload it to an S3 bucket. Existing keys in the destination are skipped, so re-running is safe.
@@ -66,7 +66,7 @@ LOCAL_EML_BENCH_N=100000 go test ./internal/store -bench ListEmails -benchtime 5
 
 - **AWS S3 secret key, session token** — never persisted. You re-enter them per import / export.
 - **IMAP password** — by default, never persisted; you re-enter it per import.
-  - If you turn on **"Receive new mail in the background"** on a saved IMAP profile, Local Eml needs to log in unattended. The password is then encrypted with AES-256-GCM and stored in the database; the encryption key lives in a separate file at `~/.local-eml/keys/secret.key` (mode `0600`). A leaked or backed-up database alone does not expose the password — the attacker also needs the keyfile. Turning the toggle off removes the stored password on the next save.
+  - If you turn on **"Receive new mail in the background"** on a saved IMAP profile, Local Eml needs to log in unattended. The password is then encrypted with AES-256-GCM and stored in the database; the encryption key lives in a separate file at `~/.local-eml/keys/secret.key` (mode `0600`). A leaked or backed-up database alone does not expose the password — the attacker also needs the keyfile. Turning the toggle off removes the stored password and sync state on the next save.
 - **Other profile fields** (host, bucket, region, username, access-key-id, etc.) — saved in plain SQLite, since they're not secrets.
 
 ## Uninstall
