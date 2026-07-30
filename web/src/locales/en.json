@@ -152,7 +152,8 @@
     "prev": "Previous email",
     "next": "Next email",
     "position": "{index} of {total}",
-    "conversation": "Conversation ({count})"
+    "conversation": "Conversation ({count})",
+    "toggle_details": "Show or hide details"
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, or an .mbox here",

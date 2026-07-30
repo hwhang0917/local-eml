@@ -2,7 +2,8 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { ChevronLeft, ChevronRight, CircleHelp, FileWarning, Star } from 'lucide-vue-next'
+import { useStorage } from '@vueuse/core'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Star } from 'lucide-vue-next'
 import { api, type Email, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
@@ -26,6 +27,10 @@ const textBody = ref('')
 const rawBody = ref('')
 const showRemote = ref(false)
 const error = ref('')
+// Fold state survives navigation — collapsing the metadata once should keep
+// the reading space maximised across the whole session.
+const showMeta = useStorage('viewer-show-meta', true)
+const showThread = useStorage('viewer-show-thread', true)
 const pendingLink = ref('')
 const linkDialog = ref<HTMLDialogElement | null>(null)
 
@@ -227,7 +232,9 @@ async function toggleStar() {
   <div v-if="error" class="text-destructive">{{ error }}</div>
 
   <div v-else-if="email" class="space-y-4">
-    <div class="flex items-center gap-2">
+    <!-- min-h-7 matches the nav buttons, so the row keeps its height when the
+         prev/next nav hides (direct links, thread jumps outside the list ctx). -->
+    <div class="flex min-h-7 items-center gap-2">
       <button
         type="button"
         @click="goBack"
@@ -263,7 +270,7 @@ async function toggleStar() {
     </div>
 
     <Card class="p-5">
-      <div class="mb-3 flex items-start gap-3">
+      <div :class="['flex items-start gap-3', showMeta ? 'mb-3' : '']">
         <h1 class="text-xl font-semibold flex-1 min-w-0">
           {{ email.subject || t('library.no_subject') }}
           <!-- One inline-flex wrapper so the icon centres on the hash text
@@ -307,8 +314,19 @@ async function toggleStar() {
         >
           <Star class="h-5 w-5" :fill="email.starred ? 'currentColor' : 'none'" />
         </button>
+        <button
+          type="button"
+          :title="t('viewer.toggle_details')"
+          :aria-label="t('viewer.toggle_details')"
+          :aria-expanded="showMeta"
+          class="inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0
+            text-muted-foreground hover:text-foreground"
+          @click="showMeta = !showMeta"
+        >
+          <ChevronDown :class="['h-4 w-4 transition-transform', showMeta ? '' : '-rotate-90']" />
+        </button>
       </div>
-      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+      <dl v-show="showMeta" class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
         <dt class="text-muted-foreground">{{ t('viewer.from') }}</dt><dd>{{ email.from }}</dd>
         <dt class="text-muted-foreground">{{ t('viewer.to') }}</dt><dd>{{ email.to.join(', ') }}</dd>
         <dt v-if="email.cc.length" class="text-muted-foreground">{{ t('viewer.cc') }}</dt><dd v-if="email.cc.length">{{ email.cc.join(', ') }}</dd>
@@ -318,8 +336,18 @@ async function toggleStar() {
     </Card>
 
     <Card v-if="thread.length > 1" class="p-4">
-      <h2 class="text-sm font-semibold">{{ t('viewer.conversation', { count: thread.length }) }}</h2>
-      <ol class="mt-2 space-y-0.5 text-sm">
+      <h2 class="text-sm font-semibold">
+        <button
+          type="button"
+          :aria-expanded="showThread"
+          class="inline-flex items-center gap-1.5 rounded-sm hover:text-foreground"
+          @click="showThread = !showThread"
+        >
+          <ChevronDown :class="['h-4 w-4 transition-transform', showThread ? '' : '-rotate-90']" />
+          {{ t('viewer.conversation', { count: thread.length }) }}
+        </button>
+      </h2>
+      <ol v-show="showThread" class="mt-2 space-y-0.5 text-sm">
         <li v-for="m in thread" :key="m.sha256">
           <RouterLink
             :to="{ name: 'viewer', params: { sha: m.sha256 } }"
