@@ -43,13 +43,15 @@ async function load() {
   error.value = ''
   textBody.value = ''
   rawBody.value = ''
-  thread.value = []
   try {
     const e = await api.getEmail(props.sha)
     email.value = e
-    if (e.thread_id) {
-      // Not awaited: the conversation card appearing late beats the whole
-      // viewer waiting on it.
+    if (!e.thread_id) {
+      thread.value = []
+    } else if (!thread.value.some((m) => m.sha256 === e.sha256)) {
+      // Moving within the already-loaded conversation keeps the card as-is —
+      // clearing and refetching made it unmount and pop back, jolting the page.
+      // Not awaited: the card appearing late beats the whole viewer waiting.
       api.getThread(props.sha)
         .then((r) => { thread.value = r.items })
         .catch(() => { thread.value = [] })
@@ -101,11 +103,12 @@ function goBack() {
 const listCtx = useListContext()
 const nav = ref<Neighbors | null>(null)
 watch(() => props.sha, async (sha) => {
-  nav.value = null
+  // Keep the stale nav visible while the new one loads — nulling it made the
+  // prev/next controls blink out on every navigation.
   try {
     nav.value = await listCtx.neighbors(sha)
   } catch {
-    // list endpoint unreachable — leave the nav hidden
+    nav.value = null
   }
 }, { immediate: true })
 
