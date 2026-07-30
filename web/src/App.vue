@@ -3,6 +3,7 @@ import { computed, nextTick, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { CircleHelp } from 'lucide-vue-next'
+import { ConfigProvider } from 'reka-ui'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
 import { APP_NAME } from '@/lib/app'
@@ -47,6 +48,10 @@ watchEffect(() => {
 </script>
 
 <template>
+  <!-- scroll-body off: reka-ui pads the body to replace the vanishing scrollbar
+       when a dropdown locks scroll, but scrollbar-gutter already reserves that
+       space — the extra padding was itself the layout shift. -->
+  <ConfigProvider :scroll-body="false">
   <div class="min-h-screen flex flex-col">
     <div class="sticky top-0 z-50 shadow-sm">
       <div
@@ -105,4 +110,5 @@ watchEffect(() => {
 
   <ShortcutsHelp />
   <Toaster position="bottom-right" rich-colors close-button />
+  </ConfigProvider>
 </template>
