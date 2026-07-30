@@ -32,6 +32,11 @@ Content-Type: text/html
 Content-Disposition: attachment; filename="page.html"
 
 <script>alert(1)</script>
+--B
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="=?UTF-8?B?67aA7ISc67Cw7LmYLnBkZg==?="
+
+%PDF-1.4 fake
 --B--
 `
 
@@ -76,6 +81,17 @@ func TestAttachmentInlineOnlyForSafeTypes(t *testing.T) {
 	rec = get("/api/emails/" + sha + "/attachments/1?inline=1")
 	if d := rec.Header().Get("Content-Disposition"); !strings.HasPrefix(d, "attachment") {
 		t.Errorf("html disposition = %q, want attachment despite inline=1", d)
+	}
+
+	// Non-ASCII filenames (부서배치.pdf) must go out RFC 2231-encoded, not as
+	// raw UTF-8 header bytes that browsers decode as Latin-1 mojibake.
+	rec = get("/api/emails/" + sha + "/attachments/2?inline=1")
+	d := rec.Header().Get("Content-Disposition")
+	if !strings.Contains(d, "filename*=utf-8''%EB%B6%80%EC%84%9C%EB%B0%B0%EC%B9%98.pdf") {
+		t.Errorf("korean filename not RFC 2231 encoded: %q", d)
+	}
+	if !strings.HasPrefix(d, "inline") {
+		t.Errorf("pdf disposition = %q, want inline", d)
 	}
 }
 

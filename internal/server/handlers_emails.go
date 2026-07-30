@@ -404,8 +404,11 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 		}
 	}
+	// FormatMediaType RFC 2231-encodes non-ASCII names (filename*=utf-8''…);
+	// writing raw UTF-8 into the header made browsers save Korean filenames
+	// as Latin-1 mojibake.
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf(`%s; filename="%s"`, disposition, safeFilename(filename)))
+		mime.FormatMediaType(disposition, map[string]string{"filename": filename}))
 	_, _ = w.Write(p.Content)
 }
 
@@ -474,11 +477,6 @@ func findPartByCID(env *enmime.Envelope, cid string) *enmime.Part {
 		return p
 	}
 	return nil
-}
-
-func safeFilename(s string) string {
-	r := strings.NewReplacer("\"", "", "\n", "", "\r", "", "\\", "")
-	return r.Replace(s)
 }
 
 func intParam(s string, def int) int {
