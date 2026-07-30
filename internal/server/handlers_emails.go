@@ -390,9 +390,33 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", p.ContentType)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	disposition := "attachment"
+	// Inline rendering is opt-in and only for types a browser can display but
+	// never execute in our origin. Anything else (HTML, SVG with scripts, …)
+	// stays a download no matter what the query says.
+	if r.URL.Query().Get("inline") == "1" && inlineSafe(p.ContentType) {
+		disposition = "inline"
+		// Same lockdown as the cid endpoint. PDFs skip the sandbox directive —
+		// it disables Chrome's PDF viewer, which is the whole point of inline.
+		if strings.HasPrefix(strings.ToLower(p.ContentType), "application/pdf") {
+			w.Header().Set("Content-Security-Policy", "default-src 'none'")
+		} else {
+			w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+		}
+	}
 	w.Header().Set("Content-Disposition",
-		fmt.Sprintf(`attachment; filename="%s"`, safeFilename(filename)))
+		fmt.Sprintf(`%s; filename="%s"`, disposition, safeFilename(filename)))
 	_, _ = w.Write(p.Content)
+}
+
+func inlineSafe(contentType string) bool {
+	ct := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
+	if strings.HasPrefix(ct, "image/") {
+		// SVG executes scripts when navigated to directly — never inline it.
+		return !strings.Contains(ct, "svg")
+	}
+	return strings.HasPrefix(ct, "audio/") || strings.HasPrefix(ct, "video/") ||
+		ct == "application/pdf" || ct == "text/plain"
 }
 
 type envErr struct {

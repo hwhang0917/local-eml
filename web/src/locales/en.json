@@ -129,6 +129,8 @@
     "no_text": "No plain-text part.",
     "no_attachments": "No attachments.",
     "download": "Download",
+    "preview": "Preview",
+    "preview_hide": "Hide preview",
     "loading": "Loading…",
     "external_link": {
       "title": "Leaving Local Eml",

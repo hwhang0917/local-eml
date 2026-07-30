@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
 import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Star } from 'lucide-vue-next'
-import { api, type Email, type PartsManifest } from '@/lib/api'
+import { api, type Email, type PartInfo, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
@@ -33,6 +33,9 @@ const showMeta = useStorage('viewer-show-meta', true)
 const showThread = useStorage('viewer-show-thread', true)
 const pendingLink = ref('')
 const linkDialog = ref<HTMLDialogElement | null>(null)
+// declared before load(), which the immediate sha watcher runs during setup
+const previewIdx = ref<number | null>(null)
+const previewText = ref('')
 
 const htmlSrc = computed(() =>
   email.value ? api.htmlURL(email.value.sha256, showRemote.value, locale.value) : '')
@@ -48,6 +51,7 @@ async function load() {
   error.value = ''
   textBody.value = ''
   rawBody.value = ''
+  previewIdx.value = null
   try {
     const e = await api.getEmail(props.sha)
     email.value = e
@@ -213,6 +217,38 @@ async function setCategory(value: string) {
     await api.setCategory(email.value.sha256, next)
   } catch {
     if (email.value) email.value.category_id = prev
+  }
+}
+
+// --- attachment inline preview ---
+type PreviewKind = 'image' | 'pdf' | 'audio' | 'video' | 'text'
+function previewKind(a: PartInfo): PreviewKind | null {
+  const ct = (a.content_type ?? '').toLowerCase().split(';')[0].trim()
+  const ext = (a.filename ?? '').toLowerCase().split('.').pop() ?? ''
+  if (ct.startsWith('image/')) return ct.includes('svg') ? null : 'image'
+  // Browsers ignore Content-Disposition on subresources, so extension-guessed
+  // images render even when the sender said application/octet-stream.
+  if (ct === 'application/octet-stream' && ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext)) return 'image'
+  if (ct === 'application/pdf') return 'pdf'
+  if (ct.startsWith('audio/')) return 'audio'
+  if (ct.startsWith('video/')) return 'video'
+  if (ct === 'text/plain' && a.size <= 512 * 1024) return 'text'
+  return null
+}
+
+function inlineURL(index: number) {
+  return `${api.attachmentURL(email.value!.sha256, index)}?inline=1`
+}
+
+async function togglePreview(a: PartInfo) {
+  if (previewIdx.value === a.index) {
+    previewIdx.value = null
+    return
+  }
+  previewIdx.value = a.index
+  if (previewKind(a) === 'text') {
+    previewText.value = ''
+    previewText.value = await fetch(inlineURL(a.index)).then((r) => r.text()).catch(() => '')
   }
 }
 
@@ -418,12 +454,34 @@ async function toggleStar() {
 
     <Card v-else-if="tab === 'attachments'" role="tabpanel" class="p-4">
       <ul v-if="parts && parts.attachments.length" class="divide-y">
-        <li v-for="a in parts.attachments" :key="a.index" class="py-2 flex items-center gap-3">
-          <span class="font-medium flex-1">{{ a.filename || `attachment-${a.index}` }}</span>
-          <span class="text-xs text-muted-foreground">{{ a.content_type }}</span>
-          <span class="text-xs text-muted-foreground">{{ formatBytes(a.size) }}</span>
-          <a :href="api.attachmentURL(email.sha256, a.index)" target="_blank"
-            class="text-sm underline">{{ t('viewer.download') }}</a>
+        <li v-for="a in parts.attachments" :key="a.index" class="py-2">
+          <div class="flex items-center gap-3">
+            <span class="font-medium flex-1">{{ a.filename || `attachment-${a.index}` }}</span>
+            <span class="text-xs text-muted-foreground">{{ a.content_type }}</span>
+            <span class="text-xs text-muted-foreground">{{ formatBytes(a.size) }}</span>
+            <button
+              v-if="previewKind(a)"
+              type="button"
+              :aria-expanded="previewIdx === a.index"
+              class="text-sm underline"
+              @click="togglePreview(a)"
+            >
+              {{ previewIdx === a.index ? t('viewer.preview_hide') : t('viewer.preview') }}
+            </button>
+            <a :href="api.attachmentURL(email.sha256, a.index)" target="_blank"
+              class="text-sm underline">{{ t('viewer.download') }}</a>
+          </div>
+          <div v-if="previewIdx === a.index" class="mt-3">
+            <img v-if="previewKind(a) === 'image'" :src="inlineURL(a.index)" :alt="a.filename"
+              class="max-h-[70vh] max-w-full rounded-md border" />
+            <iframe v-else-if="previewKind(a) === 'pdf'" :src="inlineURL(a.index)" :title="a.filename"
+              class="h-[70vh] w-full rounded-md border"></iframe>
+            <audio v-else-if="previewKind(a) === 'audio'" controls :src="inlineURL(a.index)" class="w-full"></audio>
+            <video v-else-if="previewKind(a) === 'video'" controls :src="inlineURL(a.index)"
+              class="max-h-[70vh] w-full rounded-md border bg-black"></video>
+            <pre v-else-if="previewKind(a) === 'text'"
+              class="max-h-[50vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs">{{ previewText }}</pre>
+          </div>
         </li>
       </ul>
       <p v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</p>
