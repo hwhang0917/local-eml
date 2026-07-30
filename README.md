@@ -42,6 +42,26 @@ The installer downloads the latest release, verifies it, and registers Local Eml
 
 Your data lives in `~/.local-eml/` (or `%USERPROFILE%\.local-eml\` on Windows). Local Eml only listens on `127.0.0.1` — nothing is exposed to your network. A red banner shows up at the top of the page if the background service stops responding.
 
+## Performance
+
+How does it hold up as the library grows? Benchmarked with synthetic catalogs on a mid-range laptop (12th-gen i5, WSL2), timing one 50-row page of the library API including its total count:
+
+| Operation | 10k emails | 100k emails |
+|---|---|---|
+| Browse / paginate | < 1 ms | < 1 ms |
+| Search, typical term | < 1 ms | ~2 ms |
+| Search, term matching nearly every email | ~20 ms | ~200 ms |
+| 초성 search | ~5 ms | ~50 ms |
+| Conversation-grouped list | ~85 ms | ~0.9 s |
+| Grouped list + search | ~100 ms | ~1 s |
+
+Browsing and full-text search (SQLite FTS5) stay effectively instant well past 100k messages. The conversation-grouped view is the one thing that grows with catalog size — if pages feel slow on a very large library, turn the grouping toggle off. Reproduce with:
+
+```bash
+go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
+LOCAL_EML_BENCH_N=100000 go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
+```
+
 ## Where credentials go
 
 - **AWS S3 secret key, session token** — never persisted. You re-enter them per import / export.

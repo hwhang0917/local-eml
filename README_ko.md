@@ -42,6 +42,26 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 데이터는 `~/.local-eml/` (Windows에서는 `%USERPROFILE%\.local-eml\`)에 저장됩니다. Local Eml은 `127.0.0.1` 루프백에만 응답하며, 네트워크에 노출되지 않습니다. 백그라운드 서비스가 응답하지 않으면 화면 상단에 빨간 안내 바가 표시됩니다.
 
+## 성능
+
+라이브러리가 커져도 괜찮을까요? 중급 노트북(12세대 i5, WSL2)에서 합성 카탈로그로 벤치마크한 결과입니다. 라이브러리 API의 50건짜리 한 페이지(전체 건수 집계 포함) 기준:
+
+| 작업 | 메일 1만 건 | 메일 10만 건 |
+|---|---|---|
+| 목록 탐색 / 페이지 이동 | 1 ms 미만 | 1 ms 미만 |
+| 검색 (일반적인 검색어) | 1 ms 미만 | 약 2 ms |
+| 검색 (거의 모든 메일에 등장하는 단어) | 약 20 ms | 약 200 ms |
+| 초성검색 | 약 5 ms | 약 50 ms |
+| 대화별로 묶은 목록 | 약 85 ms | 약 0.9초 |
+| 대화별 묶기 + 검색 | 약 100 ms | 약 1초 |
+
+목록 탐색과 전문 검색(SQLite FTS5)은 10만 건을 훌쩍 넘어도 사실상 즉시 응답합니다. 카탈로그 크기에 따라 느려지는 것은 대화별로 묶은 목록뿐이므로, 아주 큰 라이브러리에서 페이지가 느리게 느껴지면 묶기 토글을 끄면 됩니다. 직접 재현하려면:
+
+```bash
+go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
+LOCAL_EML_BENCH_N=100000 go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
+```
+
 ## 자격 증명은 어디에 저장되나요?
 
 - **AWS S3 시크릿 키, 세션 토큰**: 저장되지 않습니다. 가져오기 / 내보내기 때마다 다시 입력합니다.
