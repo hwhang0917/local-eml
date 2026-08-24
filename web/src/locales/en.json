@@ -315,7 +315,8 @@
       "blue": "Blue",
       "purple": "Purple",
       "grey": "Grey"
-    }
+    },
+    "license": "License"
   },
   "stats": {
     "title": "Library stats",

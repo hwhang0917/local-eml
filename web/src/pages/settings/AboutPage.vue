@@ -83,6 +83,15 @@ const latestLabel = computed(() => {
       <dd>v{{ APP_VERSION }}</dd>
       <dt class="text-muted-foreground">{{ t('settings.server') }}</dt>
       <dd><code>{{ origin }}</code></dd>
+      <dt class="text-muted-foreground">{{ t('settings.license') }}</dt>
+      <dd>
+        <a
+          :href="`${REPO_URL}/blob/main/LICENSE`"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-primary hover:underline"
+        >GNU General Public License v3.0</a>
+      </dd>
     </dl>
     <p class="text-xs text-muted-foreground">
       {{ t('settings.data_location', { path: '~/.local-eml/' }) }}
