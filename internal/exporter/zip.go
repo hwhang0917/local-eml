@@ -19,6 +19,14 @@ func (e *Exporter) WriteZip(ctx context.Context, w io.Writer) (written, skipped 
 		return 0, 0, fmt.Errorf("list emails: %w", err)
 	}
 
+	// Snapshot before the zip writer touches w: a failure here still aborts
+	// cleanly, whereas mid-stream we could only truncate the download.
+	dbPath, cleanup, err := e.snapshotDB(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer cleanup()
+
 	zw := zip.NewWriter(w)
 	defer func() {
 		if cerr := zw.Close(); cerr != nil && err == nil {
@@ -29,6 +37,10 @@ func (e *Exporter) WriteZip(ctx context.Context, w io.Writer) (written, skipped 
 	log := slog.Default().With(slog.Int("count", len(entries)))
 	log.Info("zip export started")
 	start := time.Now()
+
+	if err := writeOne(zw, dbPath, dbObjectName); err != nil {
+		return 0, 0, fmt.Errorf("write db snapshot: %w", err)
+	}
 
 	for _, em := range entries {
 		if err := ctx.Err(); err != nil {

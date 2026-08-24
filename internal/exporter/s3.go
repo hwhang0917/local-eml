@@ -127,6 +127,13 @@ func (j *S3Job) Run(ctx context.Context) {
 		j.publish(importer.Event{Type: "error", Phase: "Cancelled",
 			Message: "cancelled", Processed: uploaded + duplicates + errs, Total: total})
 	} else {
+		j.publish(importer.Event{Type: "step", Phase: "Uploading database snapshot"})
+		if err := j.uploadDB(ctx, client); err != nil {
+			errs++
+			_ = j.Exporter.Store.RecordImportError(ctx, j.ID, j.Cfg.Prefix+dbObjectName, err.Error())
+			_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 0, 0, 1)
+			log.Warn("db snapshot upload failed", slog.String("err", err.Error()))
+		}
 		j.publish(importer.Event{Type: "step", Phase: "Finalizing"})
 		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, "done", true)
 		j.publish(importer.Event{Type: "done", Processed: total, Total: total})
@@ -148,6 +155,30 @@ func (j *S3Job) uploadOne(ctx context.Context, client s3UploadAPI, em store.Expo
 		Key:         aws.String(key),
 		Body:        f,
 		ContentType: aws.String("message/rfc822"),
+	})
+	return err
+}
+
+// uploadDB puts a fresh snapshot of the metadata database at
+// "<prefix>local-eml.db". Unlike the content-addressed emails it changes
+// between runs, so it is re-uploaded every export — the dedup indexer only
+// looks at .eml keys and never sees it.
+func (j *S3Job) uploadDB(ctx context.Context, client s3UploadAPI) error {
+	p, cleanup, err := j.Exporter.snapshotDB(ctx)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
+	f, err := os.Open(p)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(j.Cfg.Bucket),
+		Key:         aws.String(j.Cfg.Prefix + dbObjectName),
+		Body:        f,
+		ContentType: aws.String("application/vnd.sqlite3"),
 	})
 	return err
 }

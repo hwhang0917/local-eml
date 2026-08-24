@@ -44,6 +44,14 @@ func (s *Store) Close() error {
 	return s.DB.Close()
 }
 
+// SnapshotTo writes a consistent point-in-time copy of the database to path
+// via VACUUM INTO, which is safe against a live WAL-mode database (a plain
+// file copy is not). The target must not already exist.
+func (s *Store) SnapshotTo(ctx context.Context, path string) error {
+	_, err := s.DB.ExecContext(ctx, "VACUUM INTO ?", path)
+	return err
+}
+
 const schemaSQL = `
 -- Finder's model: a fixed set of colours, one row each, seeded in migrate and
 -- never created or deleted — only renamed. Colour is therefore the identity and

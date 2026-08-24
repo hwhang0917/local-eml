@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 
@@ -123,6 +124,24 @@ func runWithFake(t *testing.T, exp *Exporter, importID, prefix string, fake *fak
 	return fake.put, imp.Duplicates, imp.Errors
 }
 
+// emlKeys strips the trailing db-snapshot upload so email-focused assertions
+// stay readable.
+func emlKeys(t *testing.T, keys []string, prefix string) []string {
+	t.Helper()
+	wantDB := prefix + dbObjectName
+	if len(keys) == 0 || keys[len(keys)-1] != wantDB {
+		t.Fatalf("uploads=%v, want final key %q (db snapshot)", keys, wantDB)
+	}
+	var out []string
+	for _, k := range keys[:len(keys)-1] {
+		if !strings.HasSuffix(k, ".eml") {
+			t.Fatalf("unexpected non-eml upload %q", k)
+		}
+		out = append(out, k)
+	}
+	return out
+}
+
 func entry(shaSuffix, filename string) store.EmailRow {
 	sha := "0000000000000000000000000000000000000000000000000000000000000000"
 	sha = sha[:len(sha)-len(shaSuffix)] + shaSuffix
@@ -143,6 +162,7 @@ func TestS3Export_FreshBucket_UploadsSHANamedKeys(t *testing.T) {
 	fake := newFakeS3()
 
 	uploaded, dups, errs := runWithFake(t, exp, id, "out/", fake)
+	uploaded = emlKeys(t, uploaded, "out/")
 
 	if errs != 0 {
 		t.Fatalf("errors=%d, want 0", errs)
@@ -167,6 +187,7 @@ func TestS3Export_ReExport_SkipsByContentAddressedKey(t *testing.T) {
 	fake := newFakeS3(existing)
 
 	uploaded, dups, errs := runWithFake(t, exp, id, prefix, fake)
+	uploaded = emlKeys(t, uploaded, prefix)
 
 	if errs != 0 {
 		t.Fatalf("errors=%d, want 0", errs)
@@ -190,6 +211,7 @@ func TestS3Export_LegacyBuggyKey_RecognizedAsDuplicate(t *testing.T) {
 	fake := newFakeS3(legacy)
 
 	uploaded, dups, errs := runWithFake(t, exp, id, prefix, fake)
+	uploaded = emlKeys(t, uploaded, prefix)
 
 	if errs != 0 {
 		t.Fatalf("errors=%d, want 0", errs)
@@ -213,6 +235,7 @@ func TestS3Export_DifferentPrefixDoesNotDedup(t *testing.T) {
 	fake := newFakeS3(existing)
 
 	uploaded, _, _ := runWithFake(t, exp, id, "out/", fake)
+	uploaded = emlKeys(t, uploaded, "out/")
 
 	if len(uploaded) != 1 {
 		t.Fatalf("uploaded=%v, want 1 (different prefix should not dedup)", uploaded)
