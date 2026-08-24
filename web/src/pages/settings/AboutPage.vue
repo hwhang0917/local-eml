@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Github, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
 import { APP_VERSION } from '@/version'
+import { REPO_URL } from '@/lib/app'
 import { api, type UpdateStatus } from '@/lib/api'
 import { useResync } from '@/composables/useResync'
 import Card from '@/components/ui/Card.vue'
@@ -11,7 +12,6 @@ import Button from '@/components/ui/Button.vue'
 
 const { t } = useI18n()
 const origin = window.location.origin
-const REPO_URL = 'https://github.com/hwhang0917/local-eml'
 
 const update = ref<UpdateStatus | null>(null)
 const checking = ref(false)
