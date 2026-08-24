@@ -257,24 +257,15 @@
     "failed_fallback": "Failed",
     "toast_done_title": "Export complete",
     "toast_error_title": "Export finished with errors",
-    "toast_summary": "{processed} processed · {dup} duplicates · {err} errors",
-    "mode_restore": "Restore from backup",
-    "restore_title": "Restore metadata from a backup",
-    "restore_hint": "Upload an export .zip (or the local-eml.db inside it) to bring back stars, categories, settings and connection profiles. Import your .eml files first — the restore only applies metadata to emails already in the library, and never deletes anything.",
-    "restore_password_note": "IMAP passwords cannot be restored: they are encrypted with a key that never leaves the original machine, so they are dropped from backups. Restored IMAP profiles come back with sync off — re-enter the password to re-enable it.",
-    "restore_confirm": "Apply metadata from this backup? Stars, category assignments and settings in the backup overwrite current values.",
-    "restore_start": "Restore",
-    "restore_busy": "Restoring…",
-    "restore_done_title": "Restore complete",
-    "restore_error": "Restore failed",
-    "restore_summary": "{emails} emails updated · {categories} categories · {settings} settings · {profiles} profiles added"
+    "toast_summary": "{processed} processed · {dup} duplicates · {err} errors"
   },
   "settings": {
     "section": {
       "about": "About",
       "locale": "Locale",
       "attributions": "Attributions",
-      "categories": "Categories"
+      "categories": "Categories",
+      "restore": "Restore from backup"
     },
     "version": "Version",
     "server": "Server",
@@ -348,5 +339,16 @@
     "escape": "Leave the search box",
     "help": "Show this help",
     "close": "Close"
+  },
+  "restore": {
+    "title": "Restore metadata from a backup",
+    "hint": "Upload an export .zip (or the local-eml.db inside it) to bring back stars, categories, settings and connection profiles. Import your .eml files first — the restore only applies metadata to emails already in the library, and never deletes anything.",
+    "password_note": "IMAP passwords cannot be restored: they are encrypted with a key that never leaves the original machine, so they are dropped from backups. Restored IMAP profiles come back with sync off — re-enter the password to re-enable it.",
+    "confirm": "Apply metadata from this backup? Stars, category assignments and settings in the backup overwrite current values.",
+    "start": "Restore",
+    "busy": "Restoring…",
+    "done_title": "Restore complete",
+    "error": "Restore failed",
+    "summary": "{emails} emails updated · {categories} categories · {settings} settings · {profiles} profiles added"
   }
 }

@@ -5,7 +5,7 @@ import { toast } from 'vue-sonner'
 import { cn } from '@/lib/utils'
 import { useImports } from '@/composables/useImports'
 import { api } from '@/lib/api'
-import type { RestoreSummary, S3ImportConfig, S3Profile } from '@/lib/api'
+import type { S3ImportConfig, S3Profile } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -15,7 +15,7 @@ const { runs, exportActive, startS3Export, cancelRun } = useImports()
 
 const NEW_PROFILE = '__new__'
 
-type Mode = 'zip' | 's3' | 'restore'
+type Mode = 'zip' | 's3'
 const mode = ref<Mode>('zip')
 
 function modeBtnClass(m: Mode) {
@@ -33,31 +33,6 @@ const inputClass =
 // --- ZIP ---
 function downloadZip() {
   window.location.assign(api.exportZipURL())
-}
-
-// --- Restore ---
-const restoreFile = ref<File | null>(null)
-const restoreBusy = ref(false)
-const restoreResult = ref<RestoreSummary | null>(null)
-
-function onRestoreFileChange(e: Event) {
-  restoreFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
-  restoreResult.value = null
-}
-
-async function runRestore() {
-  const f = restoreFile.value
-  if (!f || restoreBusy.value) return
-  if (!window.confirm(t('export.restore_confirm'))) return
-  restoreBusy.value = true
-  try {
-    restoreResult.value = await api.restoreBackup(f)
-    toast.success(t('export.restore_done_title'))
-  } catch (e) {
-    toast.error(t('export.restore_error'), { description: String(e) })
-  } finally {
-    restoreBusy.value = false
-  }
 }
 
 // --- S3 ---
@@ -199,9 +174,6 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
       <button :class="modeBtnClass('s3')" :aria-pressed="mode === 's3'" @click="mode = 's3'">
         {{ t('export.mode_s3') }}
       </button>
-      <button :class="modeBtnClass('restore')" :aria-pressed="mode === 'restore'" @click="mode = 'restore'">
-        {{ t('export.mode_restore') }}
-      </button>
     </div>
 
     <!-- ZIP -->
@@ -213,44 +185,6 @@ const exportRuns = computed(() => runs.value.filter((r) => r.kind.endsWith('-exp
         </div>
         <div class="flex justify-end">
           <Button @click="downloadZip">{{ t('export.zip_download') }}</Button>
-        </div>
-      </Card>
-    </template>
-
-    <!-- Restore -->
-    <template v-else-if="mode === 'restore'">
-      <Card class="p-6 space-y-4">
-        <div>
-          <h3 class="text-lg font-semibold mb-1">{{ t('export.restore_title') }}</h3>
-          <p class="text-sm text-muted-foreground">{{ t('export.restore_hint') }}</p>
-        </div>
-
-        <input
-          type="file"
-          accept=".db,.zip"
-          :class="inputClass"
-          class="cursor-pointer"
-          @change="onRestoreFileChange"
-        />
-
-        <p class="text-sm text-muted-foreground">{{ t('export.restore_password_note') }}</p>
-
-        <div v-if="restoreResult" class="text-sm rounded-md border border-border p-3 space-y-1">
-          <p class="font-medium">{{ t('export.restore_done_title') }}</p>
-          <p class="text-muted-foreground">
-            {{ t('export.restore_summary', {
-              emails: restoreResult.emails,
-              categories: restoreResult.categories,
-              settings: restoreResult.settings,
-              profiles: restoreResult.imap_profiles + restoreResult.s3_profiles,
-            }) }}
-          </p>
-        </div>
-
-        <div class="flex justify-end">
-          <Button :disabled="!restoreFile || restoreBusy" @click="runRestore">
-            {{ restoreBusy ? t('export.restore_busy') : t('export.restore_start') }}
-          </Button>
         </div>
       </Card>
     </template>
