@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 내 PC에서 `.eml` 파일을 보관하고 읽는 개인용 뷰어입니다. 폴더나 `.zip`을 끌어다 놓아도 되고 S3나 IMAP 메일함에서 가져올 수도 있습니다. 모든 데이터는 내 PC를 벗어나지 않습니다.
 
@@ -84,3 +85,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstal
 ## 직접 빌드하기
 
 빌드·실행·기여 방법은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) 를 참고하세요. 사용된 오픈소스 라이브러리는 앱 내 **설정 → 오픈소스 라이선스** 에서 확인할 수 있습니다.
+
+## 라이선스
+
+[GNU General Public License v3.0](LICENSE)

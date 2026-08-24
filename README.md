@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 A private, local viewer for `.eml` files. Drop a folder, a `.zip`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
 
@@ -84,3 +85,7 @@ Add `--purge` (or `-Purge` on Windows) to also delete the data folder. Without i
 ## Building from source
 
 See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) if you want to build, run, or contribute. Library attributions are listed in-app under **Settings → Attributions**.
+
+## License
+
+[GNU General Public License v3.0](LICENSE)
