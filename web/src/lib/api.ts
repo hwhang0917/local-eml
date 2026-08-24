@@ -193,11 +193,6 @@ export const api = {
     return fetch(`${BASE}/api/stats`).then(jsonOrThrow<Stats>)
   },
 
-  /** Per-local-day email counts for one month; keys are YYYY-MM-DD. */
-  getCalendar(month: string) {
-    return fetch(`${BASE}/api/stats/calendar?month=${month}`).then(jsonOrThrow<Record<string, number>>)
-  },
-
   listCategories() {
     return fetch(`${BASE}/api/categories`).then(jsonOrThrow<Category[]>)
   },

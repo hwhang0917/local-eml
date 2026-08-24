@@ -11,8 +11,7 @@
     "export": "Export",
     "settings": "Settings",
     "viewer": "Viewer",
-    "stats": "Stats",
-    "calendar": "Calendar"
+    "stats": "Stats"
   },
   "tour": {
     "replay": "Show the guided tour",
@@ -349,13 +348,5 @@
     "escape": "Leave the search box",
     "help": "Show this help",
     "close": "Close"
-  },
-  "calendar": {
-    "title": "Calendar",
-    "today": "Today",
-    "select_day": "Select a day to see its emails.",
-    "empty_day": "No emails on this day.",
-    "day_count": "{count} emails",
-    "loading": "Loading…"
   }
 }

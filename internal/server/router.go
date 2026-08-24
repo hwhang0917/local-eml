@@ -79,8 +79,6 @@ func (s *Server) Router() http.Handler {
 		api.Get("/categories", s.handleListCategories)
 		api.Put("/categories/{id}", s.handleRenameCategory)
 
-		api.Get("/stats/calendar", s.handleStatsCalendar)
-
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
 		api.Post("/restore", s.handleRestore)

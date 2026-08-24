@@ -6,7 +6,6 @@ const routes = [
   { path: '/import', name: 'import', component: () => import('@/pages/ImportPage.vue'), meta: { titleKey: 'nav.import' } },
   { path: '/export', name: 'export', component: () => import('@/pages/ExportPage.vue'), meta: { titleKey: 'nav.export' } },
   { path: '/stats', name: 'stats', component: () => import('@/pages/StatsPage.vue'), meta: { titleKey: 'nav.stats' } },
-  { path: '/calendar', name: 'calendar', component: () => import('@/pages/CalendarPage.vue'), meta: { titleKey: 'nav.calendar' } },
   {
     path: '/settings',
     component: () => import('@/pages/settings/SettingsLayout.vue'),
