@@ -1,6 +1,9 @@
 package store
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type YearCount struct {
 	Year  string `json:"year"`
@@ -99,4 +102,28 @@ func (s *Store) Stats(ctx context.Context) (*Stats, error) {
 		st.PerCategory = append(st.PerCategory, cc)
 	}
 	return st, rows.Err()
+}
+
+// CountEmailsByDay buckets sent_at into local calendar days between from and
+// to (unix seconds, inclusive), keyed YYYY-MM-DD. Bucketing happens in Go via
+// time.Local — not sqlite's 'localtime', which need not agree with Go's zone —
+// so counts always match dayBound-filtered list queries. Unlike PerYear's UTC
+// buckets, a calendar cell must equal what clicking it lists. A month is a few
+// thousand ints at most.
+func (s *Store) CountEmailsByDay(ctx context.Context, from, to int64) (map[string]int, error) {
+	out := map[string]int{}
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT sent_at FROM emails WHERE sent_at != 0 AND sent_at BETWEEN ? AND ?`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var v int64
+		if err := rows.Scan(&v); err != nil {
+			return nil, err
+		}
+		out[time.Unix(v, 0).In(time.Local).Format(time.DateOnly)]++
+	}
+	return out, rows.Err()
 }

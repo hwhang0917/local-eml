@@ -32,6 +32,7 @@ const nav = computed(() => [
   { to: '/import', label: t('nav.import'), tour: 'import' },
   { to: '/export', label: t('nav.export'), tour: 'export' },
   { to: '/stats', label: t('nav.stats'), tour: 'stats' },
+  { to: '/calendar', label: t('nav.calendar'), tour: 'calendar' },
   { to: '/settings', label: t('nav.settings'), tour: 'settings' },
 ])
 

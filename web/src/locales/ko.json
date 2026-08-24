@@ -11,7 +11,8 @@
     "export": "내보내기",
     "settings": "설정",
     "viewer": "이메일",
-    "stats": "통계"
+    "stats": "통계",
+    "calendar": "캘린더"
   },
   "tour": {
     "replay": "사용 안내 다시 보기",
@@ -348,5 +349,13 @@
     "escape": "검색창에서 빠져나가기",
     "help": "이 도움말 보기",
     "close": "닫기"
+  },
+  "calendar": {
+    "title": "캘린더",
+    "today": "오늘",
+    "select_day": "날짜를 선택하면 그날의 메일이 표시됩니다.",
+    "empty_day": "이 날짜에는 메일이 없습니다.",
+    "day_count": "메일 {count}건",
+    "loading": "불러오는 중…"
   }
 }
