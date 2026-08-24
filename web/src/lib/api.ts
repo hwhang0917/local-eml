@@ -144,6 +144,14 @@ export interface Stats {
   per_category: { category_id: number; count: number }[]
 }
 
+export interface RestoreSummary {
+  emails: number
+  categories: number
+  settings: number
+  imap_profiles: number
+  s3_profiles: number
+}
+
 const BASE = ''
 
 async function jsonOrThrow<T>(res: Response): Promise<T> {
@@ -356,6 +364,13 @@ export const api = {
   },
 
   exportZipURL: () => `${BASE}/api/exports/zip`,
+
+  async restoreBackup(file: File): Promise<RestoreSummary> {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${BASE}/api/restore`, { method: 'POST', body: form })
+    return jsonOrThrow<RestoreSummary>(res)
+  },
 
   async exportS3(cfg: S3ImportConfig): Promise<{ export_id: string; kind: string }> {
     const res = await fetch(`${BASE}/api/exports/s3`, {

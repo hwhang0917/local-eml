@@ -81,6 +81,7 @@ func (s *Server) Router() http.Handler {
 
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
+		api.Post("/restore", s.handleRestore)
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
 

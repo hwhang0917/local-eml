@@ -47,8 +47,22 @@ func (s *Store) Close() error {
 // SnapshotTo writes a consistent point-in-time copy of the database to path
 // via VACUUM INTO, which is safe against a live WAL-mode database (a plain
 // file copy is not). The target must not already exist.
+//
+// Encrypted IMAP passwords are scrubbed from the copy: the AES key never
+// leaves this machine, so on any other install the ciphertext is unrecoverable
+// noise — exporting it is pure liability. Sync flags are cleared with them so
+// a restored profile doesn't try to sync without credentials.
 func (s *Store) SnapshotTo(ctx context.Context, path string) error {
-	_, err := s.DB.ExecContext(ctx, "VACUUM INTO ?", path)
+	if _, err := s.DB.ExecContext(ctx, "VACUUM INTO ?", path); err != nil {
+		return err
+	}
+	snap, err := sql.Open("sqlite", path)
+	if err != nil {
+		return err
+	}
+	defer snap.Close()
+	_, err = snap.ExecContext(ctx,
+		`UPDATE imap_profiles SET encrypted_password = NULL, sync_enabled = 0`)
 	return err
 }
 

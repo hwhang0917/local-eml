@@ -128,7 +128,7 @@ func runWithFake(t *testing.T, exp *Exporter, importID, prefix string, fake *fak
 // stay readable.
 func emlKeys(t *testing.T, keys []string, prefix string) []string {
 	t.Helper()
-	wantDB := prefix + dbObjectName
+	wantDB := prefix + DBObjectName
 	if len(keys) == 0 || keys[len(keys)-1] != wantDB {
 		t.Fatalf("uploads=%v, want final key %q (db snapshot)", keys, wantDB)
 	}

@@ -33,9 +33,9 @@ func TestWriteZip_IncludesDBSnapshotAndEmails(t *testing.T) {
 		names[f.Name] = f
 	}
 
-	db, ok := names[dbObjectName]
+	db, ok := names[DBObjectName]
 	if !ok {
-		t.Fatalf("zip entries %v, want %q included", keysOf(names), dbObjectName)
+		t.Fatalf("zip entries %v, want %q included", keysOf(names), DBObjectName)
 	}
 	rc, err := db.Open()
 	if err != nil {

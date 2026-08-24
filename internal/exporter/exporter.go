@@ -19,12 +19,12 @@ type Exporter struct {
 	Hub   *importer.Hub
 }
 
-// dbObjectName is the archive/bucket entry for the metadata snapshot. The
+// DBObjectName is the archive/bucket entry for the metadata snapshot. The
 // .eml blobs alone lose stars, categories, threads and import history — the
 // SQLite database ties them together, so every export bundles a copy. The
 // IMAP passwords inside are AES-GCM ciphertext; the key never leaves
 // ~/.local-eml/keys, so the snapshot alone leaks no credentials.
-const dbObjectName = "local-eml.db"
+const DBObjectName = "local-eml.db"
 
 // snapshotDB writes a consistent copy of the live database to a temp file and
 // returns its path plus a cleanup func.
@@ -33,7 +33,7 @@ func (e *Exporter) snapshotDB(ctx context.Context) (string, func(), error) {
 	if err != nil {
 		return "", nil, err
 	}
-	p := filepath.Join(dir, dbObjectName)
+	p := filepath.Join(dir, DBObjectName)
 	if err := e.Store.SnapshotTo(ctx, p); err != nil {
 		os.RemoveAll(dir)
 		return "", nil, fmt.Errorf("snapshot db: %w", err)

@@ -130,7 +130,7 @@ func (j *S3Job) Run(ctx context.Context) {
 		j.publish(importer.Event{Type: "step", Phase: "Uploading database snapshot"})
 		if err := j.uploadDB(ctx, client); err != nil {
 			errs++
-			_ = j.Exporter.Store.RecordImportError(ctx, j.ID, j.Cfg.Prefix+dbObjectName, err.Error())
+			_ = j.Exporter.Store.RecordImportError(ctx, j.ID, j.Cfg.Prefix+DBObjectName, err.Error())
 			_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 0, 0, 1)
 			log.Warn("db snapshot upload failed", slog.String("err", err.Error()))
 		}
@@ -176,7 +176,7 @@ func (j *S3Job) uploadDB(ctx context.Context, client s3UploadAPI) error {
 	defer f.Close()
 	_, err = client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(j.Cfg.Bucket),
-		Key:         aws.String(j.Cfg.Prefix + dbObjectName),
+		Key:         aws.String(j.Cfg.Prefix + DBObjectName),
 		Body:        f,
 		ContentType: aws.String("application/vnd.sqlite3"),
 	})

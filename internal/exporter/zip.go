@@ -38,7 +38,7 @@ func (e *Exporter) WriteZip(ctx context.Context, w io.Writer) (written, skipped 
 	log.Info("zip export started")
 	start := time.Now()
 
-	if err := writeOne(zw, dbPath, dbObjectName); err != nil {
+	if err := writeOne(zw, dbPath, DBObjectName); err != nil {
 		return 0, 0, fmt.Errorf("write db snapshot: %w", err)
 	}
 
