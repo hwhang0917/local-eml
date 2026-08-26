@@ -6,11 +6,14 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -25,6 +28,13 @@ import (
 )
 
 var version = "dev"
+
+const defaultPort = 7878
+
+// idleGrace is how long app mode keeps serving with no /healthz pings before
+// exiting. The UI pings every 30s, but browsers throttle background-tab timers
+// to ~1/min, so anything under a couple of minutes would false-positive.
+const idleGrace = 3 * time.Minute
 
 // syncInterval lets ops tune the IMAP background poll without rebuilding.
 // LOCAL_EML_SYNC_INTERVAL: a Go duration (e.g. "5m", "30s") or "off" to disable.
@@ -65,12 +75,14 @@ func resolveSyncInterval(ctx context.Context, st *store.Store) time.Duration {
 
 func main() {
 	if len(os.Args) < 2 {
-		usage()
-		os.Exit(2)
+		// Double-clicked (or bare `local-eml`): behave like an app.
+		os.Exit(runApp())
 	}
 	switch os.Args[1] {
 	case "serve":
 		os.Exit(runServe(os.Args[2:]))
+	case "app":
+		os.Exit(runApp())
 	case "install":
 		os.Exit(runInstall(os.Args[2:]))
 	case "uninstall":
@@ -87,7 +99,8 @@ func main() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "local-eml v%s\n", version)
-	fmt.Fprintln(os.Stderr, "usage: local-eml <command> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: local-eml [command] [flags]")
+	fmt.Fprintln(os.Stderr, "  app                        open in a browser window; server stops when the window closes (default)")
 	fmt.Fprintln(os.Stderr, "  serve [--port 7878]        run the local web server (loopback only)")
 	fmt.Fprintln(os.Stderr, "  install [-y|--yes]         register as a background service (systemd/launchd/svc)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
@@ -96,9 +109,22 @@ func usage() {
 
 func runServe(args []string) int {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
-	port := fs.Int("port", 7878, "TCP port to listen on (loopback only)")
+	port := fs.Int("port", defaultPort, "TCP port to listen on (loopback only)")
 	_ = fs.Parse(args)
+	return serve(*port, false)
+}
 
+// runApp gives the double-click experience: reuse a running server if there is
+// one, else serve on an ephemeral port; either way open a browser window.
+func runApp() int {
+	if probeExisting(defaultPort) {
+		openWindow(fmt.Sprintf("http://127.0.0.1:%d", defaultPort))
+		return 0
+	}
+	return serve(0, true)
+}
+
+func serve(port int, appMode bool) int {
 	// Bootstrap stderr-only logger for very early errors before paths exist.
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
 
@@ -160,28 +186,76 @@ func runServe(args []string) int {
 		}
 	}()
 
-	addr := fmt.Sprintf("127.0.0.1:%d", *port)
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		slog.Error("listen", "err", err)
+		return 1
+	}
+	url := "http://" + ln.Addr().String()
+
+	handler := http.Handler(srv.Router())
 	httpSrv := &http.Server{
-		Addr:              addr,
-		Handler:           srv.Router(),
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	var shutdownOnce sync.Once
+	shutdown := func(reason string) {
+		shutdownOnce.Do(func() {
+			slog.Info("shutting down", "reason", reason)
+			shutCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+			defer c()
+			_ = httpSrv.Shutdown(shutCtx)
+			cancel()
+		})
+	}
+
+	if appMode {
+		lastSeen := &atomic.Int64{}
+		lastSeen.Store(time.Now().UnixNano())
+		httpSrv.Handler = touchHealth(handler, lastSeen)
+		go watchIdle(ctx, lastSeen, shutdown)
+		go openWindow(url)
 	}
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		slog.Info("shutting down")
-		shutCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
-		defer c()
-		_ = httpSrv.Shutdown(shutCtx)
-		cancel()
+		shutdown("signal")
 	}()
 
-	slog.Info("listening", "addr", "http://"+addr)
-	if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		slog.Error("listen", "err", err)
+	slog.Info("listening", "addr", url)
+	if err := httpSrv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("serve", "err", err)
 		return 1
 	}
 	return 0
+}
+
+// touchHealth stamps lastSeen on every /healthz hit. The UI polls it every 30s
+// while a tab is open, so it doubles as an "is anyone still looking" heartbeat.
+func touchHealth(next http.Handler, lastSeen *atomic.Int64) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" {
+			lastSeen.Store(time.Now().UnixNano())
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func watchIdle(ctx context.Context, lastSeen *atomic.Int64, shutdown func(string)) {
+	t := time.NewTicker(30 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if time.Since(time.Unix(0, lastSeen.Load())) > idleGrace {
+				shutdown("no client pings")
+				return
+			}
+		}
+	}
 }
