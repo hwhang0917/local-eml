@@ -30,6 +30,12 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 The installer downloads the latest release, verifies it, and registers Local Eml as a background service so it starts automatically. Open <http://localhost:7878> in your browser.
 
+### Or just double-click it — no install
+
+Not comfortable with terminals? Download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own browser window, and when you close the window it shuts itself down a few minutes later — nothing keeps running in the background.
+
+In this mode new mail is only fetched while the window is open; use the installer above if you want mail synced around the clock.
+
 ## What you can do
 
 - **Import** emails from `.eml` files, folders, `.zip` archives, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
