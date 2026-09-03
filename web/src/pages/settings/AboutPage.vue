@@ -110,7 +110,7 @@ const latestLabel = computed(() => {
         {{ t('settings.github') }}
       </a>
       <a
-        :href="`${REPO_URL}/issues/new`"
+        :href="`${REPO_URL}/issues/new?template=bug_report.yml`"
         target="_blank"
         rel="noopener noreferrer"
         class="inline-flex items-center gap-2 text-sm text-primary hover:underline"
