@@ -23,4 +23,5 @@ export const attributions: Attribution[] = [
   { name: 'enmime', url: 'https://github.com/jhillyerd/enmime', license: 'MIT' },
   { name: 'modernc.org/sqlite', url: 'https://gitlab.com/cznic/sqlite', license: 'BSD-3-Clause' },
   { name: 'bluemonday', url: 'https://github.com/microcosm-cc/bluemonday', license: 'BSD-3-Clause' },
+  { name: 'go-pst', url: 'https://github.com/mooijtech/go-pst', license: 'Apache-2.0' },
 ]

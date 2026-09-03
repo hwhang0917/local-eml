@@ -6,7 +6,7 @@
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-A private, local viewer for `.eml` files. Drop a folder, a `.zip`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
+A private, local viewer for `.eml` files. Drop a folder, a `.zip`, an `.mbox`, a `.pst`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
 
 ## What it is — and what it isn't
 
@@ -38,7 +38,7 @@ In this mode new mail is only fetched while the window is open; use the installe
 
 ## What you can do
 
-- **Import** emails from `.eml` files, folders, `.zip` archives, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
+- **Import** emails from `.eml` files, folders, `.zip` archives, `.mbox` files (Google Takeout, Thunderbird, Apple Mail), Outlook `.pst` files, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
 - **Search** by sender, subject, or body. Korean and other CJK languages work out of the box, and typing only Hangul initial consonants (e.g. `ㅎㄱ` to find `한국`) does **초성검색** across the whole library.
 - **Receive new mail** automatically from any saved IMAP profile (opt-in per profile). Local Eml fetches only what's new since the last sync; every 10 minutes by default, adjustable on the Import page.
 - **Read safely** — HTML messages render in a sandboxed iframe with remote images blocked by default.

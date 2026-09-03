@@ -6,7 +6,7 @@
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-내 PC에서 `.eml` 파일을 보관하고 읽는 개인용 뷰어입니다. 폴더나 `.zip`을 끌어다 놓아도 되고 S3나 IMAP 메일함에서 가져올 수도 있습니다. 모든 데이터는 내 PC를 벗어나지 않습니다.
+내 PC에서 `.eml` 파일을 보관하고 읽는 개인용 뷰어입니다. 폴더, `.zip`, `.mbox`, `.pst`를 끌어다 놓아도 되고 S3나 IMAP 메일함에서 가져올 수도 있습니다. 모든 데이터는 내 PC를 벗어나지 않습니다.
 
 ## 어떤 도구인가요?
 
@@ -38,7 +38,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 ## 주요 기능
 
-- **가져오기**: `.eml` 파일, 폴더, `.zip` 압축 파일, **AWS S3** 버킷, **IMAP** 메일함에서 메일을 가져옵니다. 파일 해시로 중복을 걸러내 같은 메일은 두 번 들어오지 않고 진행 중인 가져오기는 언제든 취소할 수 있습니다.
+- **가져오기**: `.eml` 파일, 폴더, `.zip` 압축 파일, `.mbox` 파일(Google 테이크아웃, Thunderbird, Apple Mail), Outlook `.pst` 파일, **AWS S3** 버킷, **IMAP** 메일함에서 메일을 가져옵니다. 파일 해시로 중복을 걸러내 같은 메일은 두 번 들어오지 않고 진행 중인 가져오기는 언제든 취소할 수 있습니다.
 - **검색**: 보낸 사람, 제목, 본문을 한 번에 검색합니다. 한글을 비롯한 CJK 언어도 잘 검색되고 초성만 입력하는 **초성검색**(예: `ㅎㄱ` → `한국`)도 라이브러리 전체에서 동작합니다.
 - **새 메일 자동 수신**: IMAP 프로필별로 켜 두면 마지막 동기화 이후 도착한 메일만 자동으로 받아옵니다 (기본 10분 간격, 가져오기 화면에서 변경 가능).
 - **안전한 미리보기**: HTML 메일은 격리된 iframe 안에 표시되고 외부 이미지는 기본적으로 차단됩니다.

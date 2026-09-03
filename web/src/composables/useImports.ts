@@ -126,7 +126,8 @@ export function useImports() {
       kind,
       phase: t('import.queued'),
       current: '',
-      total: kind === 'zip' ? 0 : files.length,
+      // Archives report their real total once the server has scanned them.
+      total: kind === 'file' || kind === 'dir' ? files.length : 0,
       processed: 0,
       duplicates: 0,
       errors: 0,

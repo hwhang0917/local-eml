@@ -477,7 +477,7 @@ function formatRelativeSync(ts: number): string {
         <div class="flex justify-center gap-2">
           <Button variant="outline" @click="fileInput?.click()">{{ t('import.choose_files') }}</Button>
           <Button variant="outline" @click="dirInput?.click()">{{ t('import.choose_folder') }}</Button>
-          <input ref="fileInput" type="file" multiple accept=".eml,.zip,.mbox" class="hidden" @change="onFilePicked" />
+          <input ref="fileInput" type="file" multiple accept=".eml,.zip,.mbox,.pst" class="hidden" @change="onFilePicked" />
           <input
             ref="dirInput"
             type="file"
