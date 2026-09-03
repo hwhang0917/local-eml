@@ -1,9 +1,15 @@
 package updater
 
 import (
+	"context"
+	"crypto/sha256"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -74,4 +80,47 @@ func readFile(p string) (string, error) {
 		return "", err
 	}
 	return string(b), nil
+}
+
+func TestDownloadVerifiesChecksum(t *testing.T) {
+	payload := []byte("new binary bytes")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/bin":
+			_, _ = w.Write(payload)
+		case "/SHA256SUMS":
+			sum := sha256.Sum256(payload)
+			fmt.Fprintf(w, "%x  local-eml-linux-amd64\n%x  other\n", sum, sha256.Sum256([]byte("x")))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer srv.Close()
+	ctx := context.Background()
+
+	sums, err := FetchChecksums(ctx, srv.URL+"/SHA256SUMS")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := sums["local-eml-linux-amd64"]
+	if want == "" {
+		t.Fatal("checksum for asset not parsed")
+	}
+
+	dir := t.TempDir()
+	tmp, err := Download(ctx, srv.URL+"/bin", want, dir)
+	if err != nil {
+		t.Fatalf("matching checksum rejected: %v", err)
+	}
+	if _, err := os.Stat(tmp); err != nil {
+		t.Fatalf("verified file missing: %v", err)
+	}
+
+	if _, err := Download(ctx, srv.URL+"/bin", strings.Repeat("0", 64), dir); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
+		t.Fatalf("tampered download must be rejected, got err=%v", err)
+	}
+	left, _ := filepath.Glob(filepath.Join(dir, ".update-*"))
+	if len(left) != 1 {
+		t.Fatalf("rejected download must be deleted; temp files left: %v", left)
+	}
 }
