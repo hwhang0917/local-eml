@@ -69,6 +69,12 @@ jobs:
           name: web-dist
           path: web/dist/
 
+      # Regenerates the committed .syso so the icon's version info matches the
+      # tag (the checked-in copy may lag a bump).
+      - name: Embed Windows resources
+        if: matrix.os == 'windows'
+        run: make icons
+
       - name: Build binary
         env:
           GOOS: ${{ matrix.os }}

@@ -16,7 +16,7 @@ PLATFORMS := \
 	darwin/arm64 \
 	windows/amd64
 
-.PHONY: help install build go-build web-build web-dev run test tidy fmt vet check clean cross sync-version
+.PHONY: help install build go-build web-build web-dev run test tidy fmt vet check clean cross sync-version icons
 
 help:
 	@echo "Targets:"
@@ -26,6 +26,7 @@ help:
 	@echo "  web-build      Build the Vue SPA into web/dist/"
 	@echo "  web-dev        Run Vite dev server (proxies /api to the Go server)"
 	@echo "  sync-version   Propagate VERSION file into web/package.json"
+	@echo "  icons          Regenerate the Windows icon/version resources (cmd/local-eml/rsrc_*.syso)"
 	@echo "  run            Run the server on PORT=$(PORT) (default 7878)"
 	@echo "  test           Run unit tests"
 	@echo "  check          fmt + vet + test"
@@ -50,6 +51,16 @@ sync-version:
 
 go-build:
 	go build $(GOFLAGS) -ldflags '$(LDFLAGS)' -o $(BINARY) $(PKG)
+
+# Windows-only: the Go linker embeds rsrc_windows_*.syso from the package dir
+# (icon, version info, DPI-aware manifest). Other targets ignore them. The
+# generated files are committed so plain `go build` has the icon; rerun this
+# when the icon changes, and release.yml reruns it so the version is current.
+WINRES := go run github.com/tc-hib/go-winres@v0.3.3
+icons:
+	@if [ -z "$(VERSION)" ]; then echo "VERSION file missing or empty" >&2; exit 1; fi
+	$(WINRES) make --in $(PKG)/winres/winres.json --out $(PKG)/rsrc --arch amd64,arm64 \
+		--product-version $(VERSION) --file-version $(VERSION)
 
 web-build:
 	cd web && npm run build
