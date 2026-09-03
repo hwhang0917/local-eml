@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/hwhang0917/local-eml/security/advisories/new
+    about: Privately, please. Don't open a public issue for security problems.
+  - name: Contributing guide
+    url: https://github.com/hwhang0917/local-eml/blob/main/CONTRIBUTING.md
+    about: How to file good reports, send pull requests, or add a language.

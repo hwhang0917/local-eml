@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A few things are deliberate and unlikely to change, so a request that fits them has a much better chance: Local Eml is an **archive, not a mail client** (no composing, sending or replying; IMAP stays read-only), it only listens on `127.0.0.1`, it ships as **one pure-Go binary** (no CGO), and nothing about your mail leaves your machine.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation, not only the solution. What do you do today, and where does it fall short?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other tools, workarounds, or ways this could be done.
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Fit
+      options:
+        - label: This keeps Local Eml an archive (no sending or mailbox modification) and keeps all data on the local machine.
+          required: true
