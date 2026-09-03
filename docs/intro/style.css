@@ -98,7 +98,11 @@ html[lang="ko"] .lead, html[lang="ko"] .sub, html[lang="ko"] .note, html[lang="k
   border: 1px solid var(--hairline); background: var(--pearl); box-shadow: var(--shadow);
 }
 .frame-bar { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--hairline); }
-.frame-bar span { width: 10px; height: 10px; border-radius: 50%; background: var(--hairline); }
+/* macOS traffic lights */
+.frame-bar span { width: 10px; height: 10px; border-radius: 50%; }
+.frame-bar span:nth-child(1) { background: #ff5f57; }
+.frame-bar span:nth-child(2) { background: #febc2e; }
+.frame-bar span:nth-child(3) { background: #28c840; }
 .frame img { display: block; width: 100%; height: auto; }
 
 .section { padding: clamp(56px, 8vw, 104px) 0 0; }
