@@ -146,7 +146,7 @@
     })
     $$('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)))
     $('#hero-img').src = shotSrc('library', prefersDark.matches)
-    $('#hero-img').alt = t['screens.cap.library'].replace(/<[^>]+>/g, '')
+    $('#hero-img').alt = t['screens.cap.library'].replace(/[<>]/g, '')
     $('#dl-os').textContent = t.os[detectOS().key] || ''
     renderShot()
   }
@@ -156,7 +156,7 @@
     $$('#shot-tabs [role=tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.shot === shot)))
     $('#shot-img').src = shotSrc(shot, false)
     $('#shot-caption').innerHTML = t[`screens.cap.${shot}`]
-    $('#shot-img').alt = t[`screens.cap.${shot}`].replace(/<[^>]+>/g, '')
+    $('#shot-img').alt = t[`screens.cap.${shot}`].replace(/[<>]/g, '')
   }
 
   function detectOS() {
