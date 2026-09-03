@@ -23,3 +23,12 @@ func TestTouchHealth(t *testing.T) {
 		t.Fatal("healthz request must stamp lastSeen")
 	}
 }
+
+func TestServeArgs(t *testing.T) {
+	if got := serveArgs(defaultPort); len(got) != 1 || got[0] != "serve" {
+		t.Fatalf("default port must register bare serve, got %v", got)
+	}
+	if got := serveArgs(9000); len(got) != 3 || got[1] != "--port" || got[2] != "9000" {
+		t.Fatalf("custom port must be passed through, got %v", got)
+	}
+}

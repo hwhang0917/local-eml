@@ -31,6 +31,8 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 The installer downloads the latest release, verifies it, and registers Local Eml as a background service so it starts automatically. Open <http://localhost:7878> in your browser.
 
+To use a different port, set `LOCAL_EML_PORT` before running the installer (e.g. `LOCAL_EML_PORT=9000 curl … | sh`, or `$env:LOCAL_EML_PORT=9000` in PowerShell). It stays loopback-only either way.
+
 ### Or just double-click it — no install
 
 Not comfortable with terminals? Download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own browser window, and when you close the window it shuts itself down a few minutes later — nothing keeps running in the background.

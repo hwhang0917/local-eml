@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	"github.com/kardianos/service"
@@ -43,12 +44,21 @@ RestartSec=2
 WantedBy=default.target
 `
 
-func newService() (service.Service, error) {
+// serveArgs is what the service manager runs. The port is baked into the
+// registration; changing it later means uninstall + install.
+func serveArgs(port int) []string {
+	if port == defaultPort {
+		return []string{"serve"}
+	}
+	return []string{"serve", "--port", strconv.Itoa(port)}
+}
+
+func newService(port int) (service.Service, error) {
 	cfg := &service.Config{
 		Name:        "local-eml",
 		DisplayName: "Local Eml",
 		Description: "Local EML viewer (loopback-only HTTP server)",
-		Arguments:   []string{"serve"},
+		Arguments:   serveArgs(port),
 		Option: service.KeyValue{
 			"UserService":   true,
 			"RunAtLoad":     true,
@@ -89,12 +99,17 @@ func describePath() string {
 	}
 }
 
-func parseYesFlag(args []string) (yes bool, rest []string) {
+func parseInstallFlags(args []string) (yes bool, port int) {
 	fs := flag.NewFlagSet("install-flags", flag.ExitOnError)
 	yFlag := fs.Bool("y", false, "skip the confirmation prompt")
 	yesFlag := fs.Bool("yes", false, "skip the confirmation prompt")
+	portFlag := fs.Int("port", defaultPort, "TCP port the service listens on (loopback only)")
 	_ = fs.Parse(args)
-	return *yFlag || *yesFlag, fs.Args()
+	if *portFlag < 1 || *portFlag > 65535 {
+		fmt.Fprintf(os.Stderr, "invalid --port %d: must be 1-65535\n", *portFlag)
+		os.Exit(2)
+	}
+	return *yFlag || *yesFlag, *portFlag
 }
 
 func confirm(prompt string) bool {
@@ -116,8 +131,8 @@ func confirm(prompt string) bool {
 }
 
 func runInstall(args []string) int {
-	yes, _ := parseYesFlag(args)
-	s, err := newService()
+	yes, port := parseInstallFlags(args)
+	s, err := newService(port)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "service config:", err)
 		return 1
@@ -129,7 +144,7 @@ func runInstall(args []string) int {
 	fmt.Println("  Service name: local-eml")
 	fmt.Println("  Binary path: ", exe)
 	fmt.Println("  Service file:", describePath())
-	fmt.Println("  Command:      local-eml serve")
+	fmt.Println("  Command:      local-eml", strings.Join(serveArgs(port), " "))
 	fmt.Println("  Auto-start:   yes (RunAtLoad + KeepAlive)")
 	fmt.Println()
 
@@ -148,13 +163,14 @@ func runInstall(args []string) int {
 		return 1
 	}
 	fmt.Println()
-	fmt.Println("Installed and started. Open http://localhost:7878")
+	fmt.Printf("Installed and started. Open http://localhost:%d\n", port)
 	return 0
 }
 
 func runUninstall(args []string) int {
-	yes, _ := parseYesFlag(args)
-	s, err := newService()
+	yes, _ := parseInstallFlags(args)
+	// Only the service name matters for uninstall; the port is irrelevant.
+	s, err := newService(defaultPort)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "service config:", err)
 		return 1

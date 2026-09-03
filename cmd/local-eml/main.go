@@ -102,7 +102,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "usage: local-eml [command] [flags]")
 	fmt.Fprintln(os.Stderr, "  app                        open in a browser window; server stops when the window closes (default)")
 	fmt.Fprintln(os.Stderr, "  serve [--port 7878]        run the local web server (loopback only)")
-	fmt.Fprintln(os.Stderr, "  install [-y|--yes]         register as a background service (systemd/launchd/svc)")
+	fmt.Fprintln(os.Stderr, "  install [-y|--yes] [--port 7878]")
+	fmt.Fprintln(os.Stderr, "                             register as a background service (systemd/launchd/svc)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
 	fmt.Fprintln(os.Stderr, "  version | -V | --version")
 }

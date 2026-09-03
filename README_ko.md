@@ -31,6 +31,8 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 설치 스크립트가 최신 릴리스를 내려받아 무결성을 확인한 뒤, 부팅 시 자동으로 시작되도록 백그라운드 서비스로 등록합니다. 설치가 끝나면 브라우저에서 <http://localhost:7878> 을 열어 사용하세요.
 
+다른 포트를 쓰려면 설치 전에 `LOCAL_EML_PORT`를 지정하세요 (예: `LOCAL_EML_PORT=9000 curl … | sh`, PowerShell에서는 `$env:LOCAL_EML_PORT=9000`). 어느 포트든 내 PC에서만 접속할 수 있습니다.
+
 ### 설치 없이 더블클릭으로 실행하기
 
 터미널이 익숙하지 않다면 [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요. Local Eml이 전용 브라우저 창으로 열리고, 창을 닫으면 몇 분 뒤 스스로 종료되어 백그라운드에 아무것도 남지 않습니다.

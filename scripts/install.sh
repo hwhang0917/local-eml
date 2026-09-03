@@ -10,6 +10,7 @@
 #   --version <tag>   Specific release tag (default: latest)
 #   --dir <path>      Install directory (default: ~/.local/bin)
 #   --no-service      Skip the `local-eml install` service registration step
+#   --port <n>        Port the service listens on (default: 7878; env LOCAL_EML_PORT)
 #   -h | --help       Show this help
 
 set -eu
@@ -18,6 +19,7 @@ REPO="hwhang0917/local-eml"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="latest"
 RUN_SERVICE=1
+PORT="${LOCAL_EML_PORT:-}"
 
 usage() {
   sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
@@ -30,6 +32,8 @@ while [ $# -gt 0 ]; do
     --dir)         INSTALL_DIR="$2"; shift 2 ;;
     --dir=*)       INSTALL_DIR="${1#*=}"; shift ;;
     --no-service)  RUN_SERVICE=0; shift ;;
+    --port)        PORT="$2"; shift 2 ;;
+    --port=*)      PORT="${1#*=}"; shift ;;
     -h|--help)     usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
@@ -123,9 +127,8 @@ esac
 
 if [ "$RUN_SERVICE" = "1" ]; then
   echo
-  if [ -t 0 ]; then
-    "$INSTALL_DIR/local-eml" install
-  else
-    "$INSTALL_DIR/local-eml" install --yes
-  fi
+  set -- install
+  [ -t 0 ] || set -- "$@" --yes
+  [ -n "$PORT" ] && set -- "$@" --port "$PORT"
+  "$INSTALL_DIR/local-eml" "$@"
 fi

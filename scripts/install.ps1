@@ -27,7 +27,9 @@
 param(
     [string]$Version    = 'latest',
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'local-eml'),
-    [switch]$NoService
+    [switch]$NoService,
+    # Port the service listens on (default 7878). Also read from LOCAL_EML_PORT.
+    [int]$Port = $(if ($env:LOCAL_EML_PORT) { [int]$env:LOCAL_EML_PORT } else { 0 })
 )
 
 $ErrorActionPreference = 'Stop'
@@ -95,11 +97,10 @@ try {
         Write-Host 'Registering Windows Service (this step requires administrator privileges).'
         # Forward an interactive TTY when available, otherwise auto-accept.
         $hasInput = ([Console]::IsInputRedirected -eq $false)
-        if ($hasInput) {
-            & $dest install
-        } else {
-            & $dest install --yes
-        }
+        $installArgs = @('install')
+        if (-not $hasInput) { $installArgs += '--yes' }
+        if ($Port -gt 0) { $installArgs += @('--port', "$Port") }
+        & $dest @installArgs
     }
 }
 finally {
