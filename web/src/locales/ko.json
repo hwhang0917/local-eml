@@ -271,6 +271,7 @@
     "server": "서버",
     "data_location": "데이터 저장 위치: {path}",
     "github": "GitHub",
+    "report_issue": "문제 신고하기",
     "resync_section": "라이브러리",
     "resync": "라이브러리 다시 검사",
     "resync_running": "검사 중…",

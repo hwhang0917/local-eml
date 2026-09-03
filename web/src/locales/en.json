@@ -271,6 +271,7 @@
     "server": "Server",
     "data_location": "Data lives in {path}.",
     "github": "GitHub",
+    "report_issue": "Report an issue",
     "resync_section": "Library",
     "resync": "Rescan library",
     "resync_running": "Rescanning…",

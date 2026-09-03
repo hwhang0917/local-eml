@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Github, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
+import { Github, Bug, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
 import { APP_VERSION } from '@/version'
 import { REPO_URL } from '@/lib/app'
 import { api, type UpdateStatus } from '@/lib/api'
@@ -96,7 +96,7 @@ const latestLabel = computed(() => {
     <p class="text-xs text-muted-foreground">
       {{ t('settings.data_location', { path: '~/.local-eml/' }) }}
     </p>
-    <div>
+    <div class="flex flex-wrap gap-x-5 gap-y-2">
       <a
         :href="REPO_URL"
         target="_blank"
@@ -105,6 +105,15 @@ const latestLabel = computed(() => {
       >
         <Github class="h-4 w-4" />
         {{ t('settings.github') }}
+      </a>
+      <a
+        :href="`${REPO_URL}/issues/new`"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+      >
+        <Bug class="h-4 w-4" />
+        {{ t('settings.report_issue') }}
       </a>
     </div>
 
