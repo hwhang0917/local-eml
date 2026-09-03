@@ -3,10 +3,13 @@ package paths
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 const baseDirName = ".local-eml"
+
+var sha256HexRe = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 type Paths struct {
 	Base string
@@ -60,6 +63,10 @@ func (p Paths) KeyFile() string {
 }
 
 func (p Paths) BlobFor(sha string) string {
+	if !sha256HexRe.MatchString(sha) {
+		return filepath.Join(p.EML, ".invalid.eml")
+	}
+
 	candidate := filepath.Join(p.EML, sha+".eml")
 
 	baseAbs, err := filepath.Abs(p.EML)
