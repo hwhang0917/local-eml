@@ -7,6 +7,9 @@ on:
 
 permissions:
   contents: write
+  # Build provenance attestations (Sigstore via GitHub OIDC).
+  id-token: write
+  attestations: write
 
 jobs:
   build-web:
@@ -127,6 +130,15 @@ jobs:
           cd dist
           sha256sum local-eml-* > SHA256SUMS
           cat SHA256SUMS
+
+      # SLSA provenance: proves each asset was built by this workflow at this
+      # commit. Users check with `gh attestation verify <file> --repo hwhang0917/local-eml`.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            dist/local-eml-*
+            dist/SHA256SUMS
 
       - name: Publish to GitHub Releases
         uses: softprops/action-gh-release@v2

@@ -37,6 +37,16 @@ Not comfortable with terminals? Download the file for your OS from the [latest r
 
 In this mode new mail is only fetched while the window is open; use the installer above if you want mail synced around the clock.
 
+### Verifying a download
+
+Every release asset carries a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) proving it was built by this repository's release workflow from a tagged commit. To check one:
+
+```bash
+gh attestation verify local-eml-linux-amd64 --repo hwhang0917/local-eml
+```
+
+`SHA256SUMS` in each release lists the checksums of the same files.
+
 ## What you can do
 
 - **Import** emails from `.eml` files, folders, `.zip` archives, `.mbox` files (Google Takeout, Thunderbird, Apple Mail), Outlook `.pst` files, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.

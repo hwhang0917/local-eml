@@ -37,6 +37,16 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 이 방식에서는 창이 열려 있는 동안에만 새 메일을 받아옵니다. 항상 메일을 받아오게 하려면 위의 설치 스크립트를 사용하세요.
 
+### 내려받은 파일 검증하기
+
+모든 릴리스 파일에는 이 저장소의 릴리스 워크플로가 태그된 커밋에서 빌드했음을 증명하는 [빌드 출처 증명(attestation)](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)이 붙어 있습니다. 확인하려면:
+
+```bash
+gh attestation verify local-eml-linux-amd64 --repo hwhang0917/local-eml
+```
+
+각 릴리스의 `SHA256SUMS` 파일에는 같은 파일들의 체크섬이 들어 있습니다.
+
 ## 주요 기능
 
 - **가져오기**: `.eml` 파일, 폴더, `.zip` 압축 파일, `.mbox` 파일(Google 테이크아웃, Thunderbird, Apple Mail), Outlook `.pst` 파일, **AWS S3** 버킷, **IMAP** 메일함에서 메일을 가져옵니다. 파일 해시로 중복을 걸러내 같은 메일은 두 번 들어오지 않고 진행 중인 가져오기는 언제든 취소할 수 있습니다.
