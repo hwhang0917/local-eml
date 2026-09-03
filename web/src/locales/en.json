@@ -279,6 +279,8 @@
     "flagged_load_error": "Couldn't load flagged messages",
     "unflag": "Unflag",
     "unflagged": "Message restored to the library.",
+    "risk_warnings": "Warn about likely phishing",
+    "risk_warnings_help": "Checks each message offline for structural signs of phishing — links whose text doesn't match their destination, links to raw IP addresses or lookalike domains, failed SPF/DKIM/DMARC, a Reply-To on another site, executable attachments, password forms. It's a warning, never a verdict; nothing is hidden automatically.",
     "version": "Version",
     "server": "Server",
     "data_location": "Data lives in {path}.",
@@ -366,5 +368,18 @@
     "done_title": "Restore complete",
     "error": "Restore failed",
     "summary": "{emails} emails updated · {categories} categories · {settings} settings · {profiles} profiles added"
+  },
+  "risk": {
+    "title": "This message has signs of phishing",
+    "hint": "Heuristic warning — check the sender and links before acting on it. Flag it to hide it and disable its links, or turn warnings off under Settings → Spam & phishing.",
+    "flag_phishing": "Flag as phishing",
+    "link_mismatch": "Link text names a different site than it goes to",
+    "ip_link": "Link goes to a bare IP address",
+    "idn_domain": "Lookalike or non-ASCII domain",
+    "auth_fail": "Sender authentication failed",
+    "reply_to_mismatch": "Replies would go to a different site",
+    "sender_mismatch": "Display name embeds an address on another site",
+    "dangerous_attachment": "Executable or script attachment",
+    "credential_form": "Body asks for credentials"
   }
 }

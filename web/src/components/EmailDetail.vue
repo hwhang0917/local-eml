@@ -4,13 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, ShieldAlert, Star } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, ShieldAlert, Star, TriangleAlert } from 'lucide-vue-next'
 import { api, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { APP_NAME } from '@/lib/app'
-import { formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
+import { formatBytes, formatDate, formatDateAbsolute, riskWarnings, senderName, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
@@ -45,6 +45,10 @@ const htmlSrc = computed(() =>
 // attachments. The server refuses those endpoints too; this just keeps the
 // UI honest about it.
 const flagged = computed(() => !!email.value?.flag)
+// Heuristic warning: shown until the user flags the message (the flag banner
+// takes over) or turns warnings off in Settings.
+const riskReasons = computed(() =>
+  riskWarnings.value && !flagged.value ? (email.value?.risk ?? []) : [])
 
 const tabs = computed(() => {
   const text = { key: 'text' as const, label: t('viewer.tabs.text') }
@@ -453,6 +457,26 @@ async function toggleStar() {
         </li>
       </ol>
     </Card>
+
+    <div
+      v-if="riskReasons.length"
+      role="alert"
+      class="flex items-start gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-200"
+    >
+      <TriangleAlert class="mt-0.5 h-4 w-4 shrink-0" />
+      <div class="min-w-0 flex-1">
+        <p class="font-medium">{{ t('risk.title') }}</p>
+        <ul class="mt-1 list-disc space-y-0.5 pl-5">
+          <li v-for="(r, i) in riskReasons" :key="i">
+            {{ t(`risk.${r.code}`) }}<code v-if="r.detail" class="ml-1.5 break-all rounded-sm bg-background/60 px-1 text-xs">{{ r.detail }}</code>
+          </li>
+        </ul>
+        <p class="mt-1.5 text-xs opacity-80">{{ t('risk.hint') }}</p>
+      </div>
+      <Button size="sm" variant="destructive" class="shrink-0" @click="setFlag('phishing')">
+        {{ t('risk.flag_phishing') }}
+      </Button>
+    </div>
 
     <div
       v-if="flagged"

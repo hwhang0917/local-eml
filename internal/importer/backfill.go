@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/hwhang0917/local-eml/internal/parser"
+	"github.com/hwhang0917/local-eml/internal/risk"
 )
 
 // attachmentCountVersion marks the one-time re-count of attachment_count after
@@ -85,4 +86,42 @@ func (im *Importer) BackfillThreadIDs(ctx context.Context) (int, error) {
 		updated++
 	}
 	return updated, im.Store.SetUserVersion(ctx, threadIDVersion)
+}
+
+// riskVersion marks the one-time phishing assessment of rows imported before
+// the heuristics existed.
+const riskVersion = 3
+
+// BackfillRisk runs the phishing heuristics over every row that has never
+// been assessed (risk IS NULL). Same contract as the other backfills: once
+// per database via PRAGMA user_version, safe to interrupt.
+func (im *Importer) BackfillRisk(ctx context.Context) (int, error) {
+	v, err := im.Store.UserVersion(ctx)
+	if err != nil || v >= riskVersion {
+		return 0, err
+	}
+	rows, err := im.Store.ListEmailsMissingRisk(ctx)
+	if err != nil {
+		return 0, err
+	}
+	updated := 0
+	for _, r := range rows {
+		if err := ctx.Err(); err != nil {
+			return updated, err
+		}
+		f, err := os.Open(im.Paths.BlobFor(r.SHA256))
+		if err != nil {
+			continue // missing blob: the drift-repair flow owns that case
+		}
+		env, err := parser.Open(f)
+		f.Close()
+		if err != nil {
+			continue // unparseable blob stays unassessed
+		}
+		if err := im.Store.SetEmailRisk(ctx, r.ID, risk.Assess(env)); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, im.Store.SetUserVersion(ctx, riskVersion)
 }

@@ -195,6 +195,11 @@ func (s *Store) migrate(ctx context.Context) error {
 		`CREATE INDEX IF NOT EXISTS idx_emails_flag ON emails(flag) WHERE flag != ''`); err != nil {
 		return err
 	}
+	// risk: JSON array of phishing findings. NULL means "not assessed yet" so
+	// the startup backfill can find pre-existing rows; '[]' means clean.
+	if err := s.ensureColumn(ctx, "emails", "risk", "TEXT"); err != nil {
+		return err
+	}
 	// SQLite only permits ADD COLUMN with a REFERENCES clause when the default is
 	// NULL, which it is here.
 	if err := s.ensureColumn(ctx, "emails", "category_id",

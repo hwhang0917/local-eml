@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"github.com/hwhang0917/local-eml/internal/risk"
 )
 
 type Email struct {
@@ -28,6 +30,8 @@ type Email struct {
 	Starred         bool      `json:"starred"`
 	// Flag is "" or one of FlagSpam / FlagPhishing.
 	Flag string `json:"flag"`
+	// Risk lists phishing findings (see internal/risk); nil until assessed.
+	Risk []risk.Reason `json:"risk"`
 	// ThreadCount is only populated by grouped listings: how many messages the
 	// row's conversation holds (1 for a singleton).
 	ThreadCount int `json:"thread_count,omitempty"`
@@ -68,11 +72,11 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO emails (id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, thread_id, sent_at, received_at, size_bytes, has_attachments,
-			attachment_count, imported_at, chosung_text)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+			attachment_count, imported_at, chosung_text, risk)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		id, e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
 		e.MessageID, nullIfEmpty(e.ThreadID), unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt),
-		e.SizeBytes, hasAtt, e.AttachmentCount, time.Now().Unix(), chosung,
+		e.SizeBytes, hasAtt, e.AttachmentCount, time.Now().Unix(), chosung, riskJSON(e.Risk),
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -151,7 +155,7 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 	row := s.DB.QueryRowContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag
+			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk
 		FROM emails WHERE sha256 = ?`, sha)
 	return scanEmail(row)
 }
@@ -161,7 +165,7 @@ func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag
+			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk
 		FROM emails WHERE thread_id = ? AND flag = '' ORDER BY sent_at ASC, id ASC`, threadID)
 	if err != nil {
 		return nil, err
@@ -374,7 +378,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	// these columns against the subquery.
 	const cols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 		message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
-		has_attachments, attachment_count, imported_at, starred, category_id, flag`
+		has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
 	// Rows without a thread key group with themselves, so singletons still list.
 	const gkey = `COALESCE(thread_id, 'solo:' || id)`
 
@@ -385,7 +389,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 		countQ = "SELECT COUNT(DISTINCT " + gkey + ") FROM emails " + where
 		listQ = `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, thread_id, sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag, cnt FROM (
+			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk, cnt FROM (
 			SELECT ` + cols + `,
 				COUNT(*) OVER (PARTITION BY ` + gkey + `) AS cnt,
 				ROW_NUMBER() OVER (PARTITION BY ` + gkey + ` ORDER BY sent_at DESC, id DESC) AS rn
@@ -446,13 +450,17 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	var sentAt, recvAt, importedAt int64
 	var hasAtt, starred int
 	var categoryID sql.NullInt64
+	var riskJSON sql.NullString
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
 		&to, &cc, &e.MessageID, &e.ThreadID, &sentAt, &recvAt, &e.SizeBytes,
-		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID, &e.Flag)
+		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID, &e.Flag, &riskJSON)
 	if err != nil {
 		return nil, err
 	}
 	e.Starred = starred != 0
+	if riskJSON.Valid {
+		_ = json.Unmarshal([]byte(riskJSON.String), &e.Risk)
+	}
 	if categoryID.Valid {
 		id := categoryID.Int64
 		e.CategoryID = &id
@@ -545,4 +553,37 @@ func (s *Store) SetEmailFlag(ctx context.Context, sha, flag string) error {
 		return ErrEmailNotFound
 	}
 	return nil
+}
+
+// riskJSON serialises findings for storage; a nil slice still stores "[]" so
+// the row counts as assessed.
+func riskJSON(rs []risk.Reason) string {
+	if rs == nil {
+		rs = []risk.Reason{}
+	}
+	b, _ := json.Marshal(rs)
+	return string(b)
+}
+
+// ListEmailsMissingRisk returns rows the phishing heuristics never saw.
+func (s *Store) ListEmailsMissingRisk(ctx context.Context) ([]ThreadBackfillRow, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, sha256 FROM emails WHERE risk IS NULL`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []ThreadBackfillRow{}
+	for rows.Next() {
+		var r ThreadBackfillRow
+		if err := rows.Scan(&r.ID, &r.SHA256); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) SetEmailRisk(ctx context.Context, id int64, rs []risk.Reason) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE emails SET risk = ? WHERE id = ?`, riskJSON(rs), id)
+	return err
 }

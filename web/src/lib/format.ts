@@ -14,6 +14,8 @@ export const dateFormat = useStorage<DateFormat>('settings-date-format', 'absolu
 /** First day of the week in the date-range calendar: 0 = Sunday, 1 = Monday. */
 export type WeekStart = 0 | 1
 export const weekStartsOn = useStorage<WeekStart>('settings-week-start', 0)
+/** Show the phishing-heuristics warning banner and library icon. */
+export const riskWarnings = useStorage('settings-risk-warnings', true)
 
 export function formatDate(iso: string | undefined): string {
   if (!iso) return ''

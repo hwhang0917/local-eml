@@ -1,5 +1,10 @@
 export type EmailFlag = '' | 'spam' | 'phishing'
 
+export interface RiskReason {
+  code: string
+  detail?: string
+}
+
 export interface Email {
   id: number
   sha256: string
@@ -22,6 +27,8 @@ export interface Email {
   starred: boolean
   /** '' or 'spam' | 'phishing'. Flagged mail is hidden and plain-text only. */
   flag: EmailFlag
+  /** Phishing heuristics' findings; empty when clean, null when not yet assessed. */
+  risk: RiskReason[] | null
   /** Row exists but its .eml is gone from disk. */
   blob_missing?: boolean
   /** .eml is on disk but no row exists; metadata was parsed from the file. */

@@ -185,6 +185,11 @@ func serve(port int, appMode bool) int {
 		} else if n > 0 {
 			slog.Info("thread id backfill done", "updated", n)
 		}
+		if n, err := imp.BackfillRisk(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Warn("phishing risk backfill", "err", err)
+		} else if n > 0 {
+			slog.Info("phishing risk backfill done", "assessed", n)
+		}
 	}()
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))

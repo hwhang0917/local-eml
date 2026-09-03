@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/jhillyerd/enmime"
+
+	"github.com/hwhang0917/local-eml/internal/risk"
 )
 
 type Parsed struct {
@@ -22,6 +24,8 @@ type Parsed struct {
 	BodyText        string
 	HTMLAvailable   bool
 	AttachmentCount int
+	// Risk is the phishing heuristics' findings; empty (not nil) when clean.
+	Risk []risk.Reason
 }
 
 func Open(r io.Reader) (*enmime.Envelope, error) {
@@ -51,6 +55,7 @@ func Parse(r io.Reader) (*Parsed, error) {
 		}
 	}
 	p.BodyText = strings.TrimSpace(extractBodyText(env))
+	p.Risk = risk.Assess(env)
 	return p, nil
 }
 

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { ShieldAlert } from 'lucide-vue-next'
 import { api, type Email } from '@/lib/api'
-import { formatDate, senderName } from '@/lib/format'
+import { formatDate, riskWarnings, senderName } from '@/lib/format'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 
@@ -46,6 +46,16 @@ onMounted(load)
   <Card class="p-6 space-y-4">
     <h2 class="text-lg font-semibold">{{ t('settings.section.flagged') }}</h2>
     <p class="text-sm text-muted-foreground">{{ t('settings.flagged_help') }}</p>
+
+    <label class="flex items-start gap-2 text-sm">
+      <input v-model="riskWarnings" type="checkbox" class="mt-1" />
+      <span>
+        {{ t('settings.risk_warnings') }}
+        <span class="block text-xs text-muted-foreground">{{ t('settings.risk_warnings_help') }}</span>
+      </span>
+    </label>
+
+    <hr class="border-border" />
 
     <p v-if="!loading && items.length === 0" class="text-sm text-muted-foreground">
       {{ t('settings.flagged_empty') }}

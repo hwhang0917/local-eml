@@ -2,7 +2,7 @@
 import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, MessagesSquare, RotateCcw, Star, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, MessagesSquare, RotateCcw, Star, TriangleAlert, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import {
   TooltipTrigger,
 } from 'reka-ui'
 import { api, type Email, type PartInfo } from '@/lib/api'
-import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName, shortSHA } from '@/lib/format'
+import { dateFormat, formatBytes, formatDate, formatDateAbsolute, riskWarnings, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
 import { useCategories } from '@/composables/useCategories'
@@ -688,6 +688,15 @@ const pageInfo = computed(() => {
                 <component :is="expandedThreads.has(e.sha256) ? ChevronDown : ChevronRight" class="h-3 w-3" />
                 {{ e.thread_count }}
               </button>
+              <span
+                v-if="riskWarnings && e.risk?.length"
+                role="img"
+                :aria-label="t('risk.title')"
+                :title="t('risk.title') + '\n' + e.risk.map((r) => '• ' + t(`risk.${r.code}`)).join('\n')"
+                class="mr-1.5 inline-flex align-middle text-amber-600 dark:text-amber-400"
+              >
+                <TriangleAlert class="h-3.5 w-3.5" />
+              </span>
               <RouterLink
                 :ref="(el) => setRowLink(el, i)"
                 :to="{ name: 'viewer', params: { sha: e.sha256 } }"

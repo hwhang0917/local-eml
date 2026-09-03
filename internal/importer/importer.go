@@ -98,6 +98,7 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 			SizeBytes:       info.Size(),
 			HasAttachments:  parsed.AttachmentCount > 0,
 			AttachmentCount: parsed.AttachmentCount,
+			Risk:            parsed.Risk,
 		},
 		BodyText: parsed.BodyText,
 	}

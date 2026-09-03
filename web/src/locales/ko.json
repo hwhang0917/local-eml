@@ -279,6 +279,8 @@
     "flagged_load_error": "표시된 메일을 불러오지 못했습니다",
     "unflag": "표시 해제",
     "unflagged": "메일이 라이브러리로 돌아왔습니다.",
+    "risk_warnings": "피싱 의심 메일 경고 표시",
+    "risk_warnings_help": "각 메일을 오프라인에서 검사해 피싱의 구조적 징후를 찾습니다. 링크 텍스트와 실제 주소가 다른 경우, IP 주소나 유사 도메인으로 가는 링크, SPF/DKIM/DMARC 실패, 다른 사이트로 향하는 Reply-To, 실행 파일 첨부, 비밀번호 입력 양식 등입니다. 경고일 뿐 판정이 아니며, 자동으로 숨기지는 않습니다.",
     "version": "버전",
     "server": "서버",
     "data_location": "데이터 저장 위치: {path}",
@@ -366,5 +368,18 @@
     "done_title": "복원 완료",
     "error": "복원 실패",
     "summary": "메일 {emails}건 갱신 · 카테고리 {categories} · 설정 {settings} · 프로필 {profiles}개 추가"
+  },
+  "risk": {
+    "title": "피싱 의심 징후가 있는 메일입니다",
+    "hint": "휴리스틱 경고입니다. 보낸 사람과 링크를 확인한 뒤에 행동하세요. 피싱으로 표시하면 숨겨지고 링크가 비활성화됩니다. 경고는 설정 → 스팸·피싱에서 끌 수 있습니다.",
+    "flag_phishing": "피싱으로 표시",
+    "link_mismatch": "링크 텍스트와 실제 이동 주소의 사이트가 다릅니다",
+    "ip_link": "IP 주소로 바로 연결되는 링크입니다",
+    "idn_domain": "유사 도메인 또는 비ASCII 도메인입니다",
+    "auth_fail": "보낸 사람 인증(SPF/DKIM/DMARC)에 실패했습니다",
+    "reply_to_mismatch": "답장이 다른 사이트로 전달됩니다",
+    "sender_mismatch": "표시 이름에 다른 사이트의 주소가 들어 있습니다",
+    "dangerous_attachment": "실행 파일 또는 스크립트 첨부",
+    "credential_form": "본문에서 비밀번호 등 자격 증명을 요구합니다"
   }
 }
