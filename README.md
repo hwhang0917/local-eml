@@ -90,7 +90,7 @@ Add `--purge` (or `-Purge` on Windows) to also delete the data folder. Without i
 
 ## Building from source
 
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) if you want to build, run, or contribute. Library attributions are listed in-app under **Settings → Attributions**.
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) if you want to build or run from source, and [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Library attributions are listed in-app under **Settings → Attributions**.
 
 ## License
 

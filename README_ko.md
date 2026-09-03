@@ -90,7 +90,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstal
 
 ## 직접 빌드하기
 
-빌드·실행·기여 방법은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) 를 참고하세요. 사용된 오픈소스 라이브러리는 앱 내 **설정 → 오픈소스 라이선스** 에서 확인할 수 있습니다.
+빌드·실행 방법은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) 를, 이슈나 풀 리퀘스트를 올리기 전에는 [`CONTRIBUTING.md`](CONTRIBUTING.md) 를 참고하세요. 사용된 오픈소스 라이브러리는 앱 내 **설정 → 오픈소스 라이선스** 에서 확인할 수 있습니다.
 
 ## 라이선스
 
