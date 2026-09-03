@@ -45,7 +45,7 @@ In this mode new mail is only fetched while the window is open; use the installe
 - **Star** messages you want to revisit and filter to just starred.
 - **Export** your library as a single `.zip` or upload it to an S3 bucket. Existing keys in the destination are skipped, so re-running is safe.
 - **Save profiles** for IMAP and S3 so you don't retype host names and bucket details.
-- **Korean / English** interface and **absolute / relative** date display, switchable in Settings.
+- **Multilingual interface** and **absolute / relative** date display, switchable in Settings.
 
 Your data lives in `~/.local-eml/` (or `%USERPROFILE%\.local-eml\` on Windows). Local Eml only listens on `127.0.0.1` — nothing is exposed to your network. A red banner shows up at the top of the page if the background service stops responding.
 
