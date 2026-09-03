@@ -1,0 +1,75 @@
+# git-cliff configuration — release notes generated from Conventional Commits.
+# release.yml runs it for the tag being published. Preview locally with
+#   npx git-cliff@2.13.1 --latest --strip header
+# https://git-cliff.org/docs/configuration
+
+[changelog]
+# trim would eat the blank line between the body and the footer rule, and a
+# rule directly under a text line renders that line as a heading.
+trim = false
+header = ""
+
+# One section per commit group. Group names carry an HTML-comment prefix so
+# group_by (alphabetical) yields the order we want; striptags removes it.
+body = """
+{%- set breaking = commits | filter(attribute="breaking", value=true) -%}
+{%- if breaking | length > 0 %}
+### ⚠️ Breaking changes
+{% for commit in breaking %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }}{% if commit.breaking_description %} — {{ commit.breaking_description }}{% endif %} ([{{ commit.id | truncate(length=7, end="") }}]({{ self::repo() }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endif -%}
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}:** {% endif %}{{ commit.message | upper_first }} ([{{ commit.id | truncate(length=7, end="") }}]({{ self::repo() }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endfor %}
+{%- if previous and previous.version %}
+**Full changelog:** {{ self::repo() }}/compare/{{ previous.version }}...{{ version }}
+{% endif -%}
+
+{%- macro repo() -%}https://github.com/hwhang0917/local-eml{%- endmacro -%}
+"""
+
+# Same on every release: how to get it, for people who land here from the
+# in-app "release notes" link.
+footer = """
+
+---
+
+### Install
+
+Linux / macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
+irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
+```
+
+Or download the file for your OS below and double-click it — no install needed. Verify downloads against `SHA256SUMS`.
+"""
+
+[git]
+conventional_commits = true
+# Drops "Release version vX" and other free-form subjects from early history.
+filter_unconventional = true
+protect_breaking_commits = true
+tag_pattern = "v[0-9].*"
+sort_commits = "oldest"
+commit_parsers = [
+  # Landed and was reverted within v0.8.0; git-cliff can't pair reverts.
+  { message = "^feat: calendar view", skip = true },
+  { message = "^feat", group = "<!-- 0 -->Features" },
+  { message = "^fix", group = "<!-- 1 -->Fixes" },
+  { message = "^perf", group = "<!-- 2 -->Performance" },
+  { message = "^security", group = "<!-- 3 -->Security" },
+  { message = "^(a11y|i18n)", group = "<!-- 4 -->Improvements" },
+  # docs, refactor, chore, build, ci, style, test, revert: not user-facing.
+  { message = ".*", skip = true },
+]

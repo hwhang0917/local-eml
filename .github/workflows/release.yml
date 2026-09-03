@@ -101,12 +101,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # git-cliff needs the previous tag to bound the notes
 
       - uses: actions/download-artifact@v4
         with:
           path: dist/
           pattern: local-eml-*
           merge-multiple: true
+
+      # Release notes from Conventional Commits since the previous tag
+      # (cliff.toml). GitHub's own generator only sees pull requests, and this
+      # repo commits straight to main.
+      - name: Generate release notes
+        uses: orhun/git-cliff-action@v4
+        with:
+          version: v2.13.1
+          config: cliff.toml
+          args: --latest --strip header
+        env:
+          OUTPUT: dist/RELEASE_NOTES.md
 
       - name: Generate SHA256SUMS
         run: |
@@ -120,5 +134,5 @@ jobs:
           files: |
             dist/local-eml-*
             dist/SHA256SUMS
-          generate_release_notes: true
+          body_path: dist/RELEASE_NOTES.md
           fail_on_unmatched_files: true
