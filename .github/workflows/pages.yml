@@ -1,0 +1,36 @@
+name: Pages
+
+# Publishes docs/intro as-is to https://hwhang0917.github.io/local-eml/.
+# The page is static HTML/CSS/JS with pre-captured screenshots, so there is
+# no build step: whatever is in the directory is what goes live.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/intro/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/intro
+      - id: deployment
+        uses: actions/deploy-pages@v5

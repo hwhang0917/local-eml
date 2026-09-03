@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Local Eml — your old mail, on your own disk</title>
+  <meta name="description" content="A private, local archive and viewer for .eml files. Single binary, no account, nothing leaves your machine." />
+  <meta property="og:title" content="Local Eml" />
+  <meta property="og:description" content="A private, local archive and viewer for .eml files. Single binary, no account, nothing leaves your machine." />
+  <meta property="og:image" content="https://hwhang0917.github.io/local-eml/img/en/library.webp" />
+  <link rel="icon" href="icon.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#">
+      <img src="icon.png" alt="" width="28" height="28" />
+      <span>Local Eml</span>
+    </a>
+    <nav class="top-nav">
+      <a href="#screens" data-i18n="nav.screens">Screens</a>
+      <a href="#install" data-i18n="nav.install">Install</a>
+      <a href="#features" data-i18n="nav.features">Features</a>
+      <a href="https://github.com/hwhang0917/local-eml">GitHub</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en">EN</button>
+        <button type="button" data-lang="ko">한국어</button>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow" data-i18n="hero.eyebrow">Local-first email archive</p>
+      <h1 data-i18n="hero.title"><span class="line">Your old mail,</span><span class="line">on your own disk.</span></h1>
+      <p class="lead" data-i18n="hero.lead">
+        Pull messages out of an overflowing mailbox, keep them as plain <code>.eml</code> files on your PC,
+        and search and read them any time. One binary, no account, nothing leaves your machine.
+      </p>
+      <div class="cta">
+        <a class="btn primary" id="dl-primary" href="https://github.com/hwhang0917/local-eml/releases/latest">
+          <span data-i18n="hero.download">Download</span> <span id="dl-os"></span>
+        </a>
+        <a class="btn" href="https://github.com/hwhang0917/local-eml" data-i18n="hero.github">View on GitHub</a>
+      </div>
+      <p class="fineprint">
+        <a href="https://github.com/hwhang0917/local-eml/releases/latest" data-i18n="hero.other">Other platforms</a>
+        <span aria-hidden="true">·</span>
+        <span data-i18n="hero.badges">Windows · macOS · Linux · GPL-3.0</span>
+      </p>
+      <figure class="frame hero-shot">
+        <div class="frame-bar"><span></span><span></span><span></span></div>
+        <img id="hero-img" src="img/en/library.webp" alt="" width="1440" height="900" />
+      </figure>
+    </section>
+
+    <section id="screens" class="section">
+      <h2 data-i18n="screens.title">A quiet place to read</h2>
+      <p class="sub" data-i18n="screens.sub">Everything runs on 127.0.0.1 in your normal browser. It looks like an app, not a server.</p>
+      <div class="tabs" role="tablist" id="shot-tabs">
+        <button type="button" role="tab" data-shot="library" data-i18n="screens.library">Library</button>
+        <button type="button" role="tab" data-shot="search" data-i18n="screens.search">Search</button>
+        <button type="button" role="tab" data-shot="viewer" aria-selected="true" data-i18n="screens.viewer">Reading</button>
+        <button type="button" role="tab" data-shot="stats" data-i18n="screens.stats">Stats</button>
+        <button type="button" role="tab" data-shot="import" data-i18n="screens.import">Import</button>
+      </div>
+      <figure class="frame">
+        <div class="frame-bar"><span></span><span></span><span></span></div>
+        <img id="shot-img" src="img/en/viewer.webp" alt="" width="1440" height="900" />
+      </figure>
+      <p class="caption" id="shot-caption" data-i18n="screens.cap.viewer">
+        HTML mail in a sandboxed frame, remote images blocked, attachments listed, the whole conversation one click away.
+      </p>
+    </section>
+
+    <section id="install" class="section">
+      <h2 data-i18n="install.title">Install in one line</h2>
+      <p class="sub" data-i18n="install.sub">Downloads the latest release, verifies it, and registers a background service that starts on boot.</p>
+      <div class="cmds">
+        <div class="cmd">
+          <div class="cmd-head"><span>Linux / macOS</span><button type="button" class="copy" data-copy="curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh" data-i18n="install.copy">Copy</button></div>
+          <pre><code>curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh</code></pre>
+        </div>
+        <div class="cmd">
+          <div class="cmd-head"><span>Windows (PowerShell)</span><button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex" data-i18n="install.copy">Copy</button></div>
+          <pre><code>irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex</code></pre>
+        </div>
+      </div>
+      <p class="note">
+        <strong data-i18n="install.dc.title">Not comfortable with terminals?</strong>
+        <span data-i18n="install.dc.body">Download the file for your OS and double-click it. Local Eml opens in its own window. Close the window when you're done and nothing keeps running in the background.</span>
+      </p>
+    </section>
+
+    <section id="features" class="section">
+      <h2 data-i18n="features.title">What it does</h2>
+      <div class="grid">
+        <div class="card">
+          <h3 data-i18n="f.import.t">Import anything</h3>
+          <p data-i18n="f.import.b"><code>.eml</code> files, folders, <code>.zip</code>, <code>.mbox</code> (Google Takeout, Thunderbird), Outlook <code>.pst</code>, an S3 bucket, or an IMAP mailbox. Duplicates are skipped by hash.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.search.t">Search that speaks CJK</h3>
+          <p data-i18n="f.search.b">Full-text search over sender, subject and body. Korean, Japanese and Chinese work out of the box, and typing just the initial consonants (<code>ㅎㄱ</code> → 한국) finds it too.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.private.t">Private by design</h3>
+          <p data-i18n="f.private.b">Listens only on <code>127.0.0.1</code>. No account, no telemetry, no cloud. IMAP passwords are never stored unless you opt in, and then only encrypted with a key that stays on your disk.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.safe.t">Reads HTML safely</h3>
+          <p data-i18n="f.safe.b">Messages render in a sandboxed frame with remote images blocked by default, so tracking pixels stay blind.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.sync.t">Keeps up with new mail</h3>
+          <p data-i18n="f.sync.b">Turn on background sync for any IMAP profile and it fetches only what is new since last time. Read-only: your mailbox is never modified.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.export.t">Yours to take with you</h3>
+          <p data-i18n="f.export.b">Export the whole library as a single <code>.zip</code> or push it to S3. Stars, categories and settings travel with it.</p>
+        </div>
+      </div>
+      <p class="not">
+        <strong data-i18n="not.t">What it isn't:</strong>
+        <span data-i18n="not.b">a mail client. You can't compose, send or reply. Keep your usual client for daily mail; use Local Eml for the mail you want to keep but not carry.</span>
+      </p>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>© <span id="year"></span> hwhang0917 · <a href="https://github.com/hwhang0917/local-eml/blob/main/LICENSE">GPL-3.0</a></span>
+    <span>
+      <a href="https://github.com/hwhang0917/local-eml#readme">README</a> ·
+      <a href="https://github.com/hwhang0917/local-eml/blob/main/README_ko.md">한국어</a> ·
+      <a href="https://github.com/hwhang0917/local-eml/blob/main/CONTRIBUTING.md" data-i18n="foot.contrib">Contributing</a> ·
+      <a href="https://github.com/hwhang0917/local-eml/releases" data-i18n="foot.releases">Releases</a>
+    </span>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
