@@ -186,6 +186,15 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
 		return err
 	}
+	// flag: '' | 'spam' | 'phishing'. Flagged mail is hidden from listings and
+	// served as plain text only; the partial index serves the settings page.
+	if err := s.ensureColumn(ctx, "emails", "flag", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_flag ON emails(flag) WHERE flag != ''`); err != nil {
+		return err
+	}
 	// SQLite only permits ADD COLUMN with a REFERENCES clause when the default is
 	// NULL, which it is here.
 	if err := s.ensureColumn(ctx, "emails", "category_id",

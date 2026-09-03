@@ -16,6 +16,7 @@ const routes = [
       { path: 'categories', name: 'settings-categories', component: () => import('@/pages/settings/CategoriesPage.vue'), meta: { titleKey: 'settings.section.categories' } },
       { path: 'locale', name: 'settings-locale', component: () => import('@/pages/settings/LocalePage.vue'), meta: { titleKey: 'settings.section.locale' } },
       { path: 'restore', name: 'settings-restore', component: () => import('@/pages/settings/RestorePage.vue'), meta: { titleKey: 'settings.section.restore' } },
+      { path: 'flagged', name: 'settings-flagged', component: () => import('@/pages/settings/FlaggedPage.vue'), meta: { titleKey: 'settings.section.flagged' } },
       { path: 'attributions', name: 'settings-attributions', component: () => import('@/pages/settings/AttributionsPage.vue'), meta: { titleKey: 'settings.section.attributions' } },
     ],
   },

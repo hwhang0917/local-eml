@@ -1,3 +1,5 @@
+export type EmailFlag = '' | 'spam' | 'phishing'
+
 export interface Email {
   id: number
   sha256: string
@@ -18,6 +20,8 @@ export interface Email {
   attachment_count: number
   imported_at: string
   starred: boolean
+  /** '' or 'spam' | 'phishing'. Flagged mail is hidden and plain-text only. */
+  flag: EmailFlag
   /** Row exists but its .eml is gone from disk. */
   blob_missing?: boolean
   /** .eml is on disk but no row exists; metadata was parsed from the file. */
@@ -170,7 +174,7 @@ async function okOrThrow(res: Response): Promise<void> {
 }
 
 export const api = {
-  listEmails(params: { q?: string; starred?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number; group?: 'thread' } = {}) {
+  listEmails(params: { q?: string; starred?: boolean; flagged?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number; group?: 'thread' } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === '' || v === false) continue
@@ -183,6 +187,21 @@ export const api = {
     const res = await fetch(`${BASE}/api/emails/${sha}/star`, {
       method: starred ? 'PUT' : 'DELETE',
     })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    }
+  },
+
+  /** Empty flag clears it. */
+  async setFlag(sha: string, flag: EmailFlag): Promise<void> {
+    const res = flag
+      ? await fetch(`${BASE}/api/emails/${sha}/flag`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ flag }),
+        })
+      : await fetch(`${BASE}/api/emails/${sha}/flag`, { method: 'DELETE' })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       throw new Error(`${res.status} ${res.statusText}: ${text}`)

@@ -112,6 +112,12 @@
   },
   "viewer": {
     "back": "← Back to library",
+    "flag_menu": "Flag as spam or phishing",
+    "flag_": "Not flagged",
+    "flag_spam": "Spam",
+    "flag_phishing": "Phishing",
+    "flag_banner": "Flagged as {flag}. Shown as plain text only — HTML, images, attachments and links are disabled. Unflag it under Settings → Spam & phishing.",
+    "flag_error": "Couldn't update the flag",
     "from": "From",
     "to": "To",
     "cc": "Cc",
@@ -265,8 +271,14 @@
       "locale": "Locale",
       "attributions": "Attributions",
       "categories": "Categories",
-      "restore": "Restore from backup"
+      "restore": "Restore from backup",
+      "flagged": "Spam & phishing"
     },
+    "flagged_help": "Messages flagged as spam or phishing are hidden from the library and, when opened, shown as plain text only: no HTML, no images, no attachments, no clickable links. Unflag a message to restore it.",
+    "flagged_empty": "No flagged messages.",
+    "flagged_load_error": "Couldn't load flagged messages",
+    "unflag": "Unflag",
+    "unflagged": "Message restored to the library.",
     "version": "Version",
     "server": "Server",
     "data_location": "Data lives in {path}.",

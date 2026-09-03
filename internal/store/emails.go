@@ -26,6 +26,8 @@ type Email struct {
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
 	Starred         bool      `json:"starred"`
+	// Flag is "" or one of FlagSpam / FlagPhishing.
+	Flag string `json:"flag"`
 	// ThreadCount is only populated by grouped listings: how many messages the
 	// row's conversation holds (1 for a singleton).
 	ThreadCount int `json:"thread_count,omitempty"`
@@ -149,7 +151,7 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 	row := s.DB.QueryRowContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id
+			has_attachments, attachment_count, imported_at, starred, category_id, flag
 		FROM emails WHERE sha256 = ?`, sha)
 	return scanEmail(row)
 }
@@ -159,8 +161,8 @@ func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error
 	rows, err := s.DB.QueryContext(ctx, `
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id
-		FROM emails WHERE thread_id = ? ORDER BY sent_at ASC, id ASC`, threadID)
+			has_attachments, attachment_count, imported_at, starred, category_id, flag
+		FROM emails WHERE thread_id = ? AND flag = '' ORDER BY sent_at ASC, id ASC`, threadID)
 	if err != nil {
 		return nil, err
 	}
@@ -291,6 +293,8 @@ func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) e
 type ListOptions struct {
 	Query       string
 	StarredOnly bool
+	// FlaggedOnly lists spam/phishing instead of hiding it (settings page).
+	FlaggedOnly bool
 	Sort        string
 	Order       string
 	Limit       int
@@ -337,6 +341,12 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	if opts.StarredOnly {
 		conds = append(conds, `starred = 1`)
 	}
+	// Flagged mail never mixes with the library; it only appears when asked for.
+	if opts.FlaggedOnly {
+		conds = append(conds, `flag != ''`)
+	} else {
+		conds = append(conds, `flag = ''`)
+	}
 	// A plain predicate on emails, never a JOIN — the COUNT(*) below shares this
 	// WHERE, and a join would double-count.
 	if opts.Uncategorized {
@@ -364,7 +374,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	// these columns against the subquery.
 	const cols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 		message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
-		has_attachments, attachment_count, imported_at, starred, category_id`
+		has_attachments, attachment_count, imported_at, starred, category_id, flag`
 	// Rows without a thread key group with themselves, so singletons still list.
 	const gkey = `COALESCE(thread_id, 'solo:' || id)`
 
@@ -375,7 +385,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 		countQ = "SELECT COUNT(DISTINCT " + gkey + ") FROM emails " + where
 		listQ = `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, thread_id, sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, cnt FROM (
+			has_attachments, attachment_count, imported_at, starred, category_id, flag, cnt FROM (
 			SELECT ` + cols + `,
 				COUNT(*) OVER (PARTITION BY ` + gkey + `) AS cnt,
 				ROW_NUMBER() OVER (PARTITION BY ` + gkey + ` ORDER BY sent_at DESC, id DESC) AS rn
@@ -438,7 +448,7 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	var categoryID sql.NullInt64
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
 		&to, &cc, &e.MessageID, &e.ThreadID, &sentAt, &recvAt, &e.SizeBytes,
-		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID)
+		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID, &e.Flag)
 	if err != nil {
 		return nil, err
 	}
@@ -510,4 +520,29 @@ func buildFTSQuery(raw string) string {
 		parts = append(parts, `"`+t+`"*`)
 	}
 	return strings.Join(parts, " ")
+}
+
+// Email flags. Flagged mail is hidden from the library and rendered as plain
+// text only; the server refuses HTML, inline images and attachments for it.
+const (
+	FlagSpam     = "spam"
+	FlagPhishing = "phishing"
+)
+
+var ErrInvalidFlag = errors.New("flag must be \"\", \"spam\" or \"phishing\"")
+
+func (s *Store) SetEmailFlag(ctx context.Context, sha, flag string) error {
+	switch flag {
+	case "", FlagSpam, FlagPhishing:
+	default:
+		return ErrInvalidFlag
+	}
+	res, err := s.DB.ExecContext(ctx, `UPDATE emails SET flag = ? WHERE sha256 = ?`, flag, sha)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrEmailNotFound
+	}
+	return nil
 }

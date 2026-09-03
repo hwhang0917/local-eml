@@ -3,8 +3,9 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useStorage } from '@vueuse/core'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Star } from 'lucide-vue-next'
-import { api, type Email, type PartInfo, type PartsManifest } from '@/lib/api'
+import { toast } from 'vue-sonner'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, ShieldAlert, Star } from 'lucide-vue-next'
+import { api, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { useCategories } from '@/composables/useCategories'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
@@ -40,12 +41,44 @@ const previewText = ref('')
 const htmlSrc = computed(() =>
   email.value ? api.htmlURL(email.value.sha256, showRemote.value, locale.value) : '')
 
-const tabs = computed(() => [
-  { key: 'html' as const, label: t('viewer.tabs.html') },
-  { key: 'text' as const, label: t('viewer.tabs.text') },
-  { key: 'attachments' as const, label: t('viewer.tabs.attachments') + (parts.value ? ` (${parts.value.attachments.length})` : '') },
-  { key: 'raw' as const, label: t('viewer.tabs.raw') },
+// Flagged (spam/phishing) mail is plain text only: no HTML frame, no
+// attachments. The server refuses those endpoints too; this just keeps the
+// UI honest about it.
+const flagged = computed(() => !!email.value?.flag)
+
+const tabs = computed(() => {
+  const text = { key: 'text' as const, label: t('viewer.tabs.text') }
+  const raw = { key: 'raw' as const, label: t('viewer.tabs.raw') }
+  if (flagged.value) return [text, raw]
+  return [
+    { key: 'html' as const, label: t('viewer.tabs.html') },
+    text,
+    { key: 'attachments' as const, label: t('viewer.tabs.attachments') + (parts.value ? ` (${parts.value.attachments.length})` : '') },
+    raw,
+  ]
+})
+
+const flagOptions = computed<CategoryOption[]>(() => [
+  { value: '', label: t('viewer.flag_') },
+  { value: 'spam', label: t('viewer.flag_spam'), color: 'orange' },
+  { value: 'phishing', label: t('viewer.flag_phishing'), color: 'red' },
 ])
+
+async function setFlag(value: string) {
+  if (!email.value) return
+  const flag = value as EmailFlag
+  const prev = email.value.flag
+  if (flag === prev) return
+  email.value.flag = flag
+  if (flag) tab.value = 'text'
+  try {
+    await api.setFlag(email.value.sha256, flag)
+    if (!flag && parts.value?.has_html) tab.value = 'html'
+  } catch (err) {
+    if (email.value) email.value.flag = prev
+    toast.error(t('viewer.flag_error'), { description: String(err) })
+  }
+}
 
 async function load() {
   error.value = ''
@@ -76,7 +109,8 @@ async function load() {
     }
     const p = await api.getParts(props.sha)
     parts.value = p
-    if (p.has_html) tab.value = 'html'
+    if (e.flag) tab.value = 'text'
+    else if (p.has_html) tab.value = 'html'
     else if (p.has_text) tab.value = 'text'
     else if (p.attachments.length > 0) tab.value = 'attachments'
     else tab.value = 'raw'
@@ -340,6 +374,25 @@ async function toggleStar() {
             </button>
           </template>
         </CategoryMenu>
+        <CategoryMenu
+          v-if="!email.blob_missing"
+          :model-value="email.flag"
+          :options="flagOptions"
+          @select="setFlag"
+        >
+          <template #trigger>
+            <button
+              type="button"
+              :title="t('viewer.flag_menu')"
+              :aria-label="t('viewer.flag_menu')"
+              :class="['inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0',
+                email.flag === 'phishing' ? 'text-destructive'
+                  : email.flag === 'spam' ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground']"
+            >
+              <ShieldAlert class="h-5 w-5" />
+            </button>
+          </template>
+        </CategoryMenu>
         <button
           type="button"
           :title="email.starred ? t('library.unstar') : t('library.star')"
@@ -400,6 +453,17 @@ async function toggleStar() {
         </li>
       </ol>
     </Card>
+
+    <div
+      v-if="flagged"
+      role="alert"
+      :class="['flex items-start gap-3 rounded-lg border p-3 text-sm',
+        email.flag === 'phishing' ? 'border-destructive/40 bg-destructive/10 text-destructive'
+          : 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300']"
+    >
+      <ShieldAlert class="mt-0.5 h-4 w-4 shrink-0" />
+      <span>{{ t('viewer.flag_banner', { flag: t(`viewer.flag_${email.flag}`) }) }}</span>
+    </div>
 
     <Card v-if="email.blob_missing" class="p-6">
       <div class="flex items-start gap-4">

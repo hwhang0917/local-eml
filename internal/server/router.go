@@ -60,6 +60,8 @@ func (s *Server) Router() http.Handler {
 		api.Post("/emails/{sha}/index", s.handleIndexEmail)
 		api.Put("/emails/{sha}/star", s.handleStarEmail)
 		api.Delete("/emails/{sha}/star", s.handleUnstarEmail)
+		api.Put("/emails/{sha}/flag", s.handleFlagEmail)
+		api.Delete("/emails/{sha}/flag", s.handleUnflagEmail)
 		api.Put("/emails/{sha}/category/{id}", s.handleSetEmailCategory)
 		api.Delete("/emails/{sha}/category", s.handleClearEmailCategory)
 

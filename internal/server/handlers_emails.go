@@ -27,6 +27,7 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	opts := store.ListOptions{
 		Query:        q.Get("q"),
 		StarredOnly:  q.Get("starred") == "1",
+		FlaggedOnly:  q.Get("flagged") == "1",
 		Sort:         q.Get("sort"),
 		Order:        q.Get("order"),
 		Limit:        intParam(q.Get("limit"), 50),
@@ -294,6 +295,9 @@ func (s *Server) handleEmailText(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleEmailHTML(w http.ResponseWriter, r *http.Request) {
 	sha := chi.URLParam(r, "sha")
+	if s.refuseIfFlagged(w, r, sha) {
+		return
+	}
 	env, err := s.openEnvelope(sha)
 	if err != nil {
 		httpEnvErr(w, err)
@@ -335,6 +339,9 @@ func csp(showRemote bool) string {
 func (s *Server) handleEmailCID(w http.ResponseWriter, r *http.Request) {
 	sha := chi.URLParam(r, "sha")
 	cid := chi.URLParam(r, "cid")
+	if s.refuseIfFlagged(w, r, sha) {
+		return
+	}
 	env, err := s.openEnvelope(sha)
 	if err != nil {
 		httpEnvErr(w, err)
@@ -372,6 +379,9 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 	idx, err := strconv.Atoi(chi.URLParam(r, "idx"))
 	if err != nil {
 		http.Error(w, "invalid index", http.StatusBadRequest)
+		return
+	}
+	if s.refuseIfFlagged(w, r, sha) {
 		return
 	}
 	env, err := s.openEnvelope(sha)
