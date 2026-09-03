@@ -7,8 +7,10 @@ import { APP_VERSION } from '@/version'
 import { REPO_URL } from '@/lib/app'
 import { api, type UpdateStatus } from '@/lib/api'
 import { useResync } from '@/composables/useResync'
+import { expectRestart } from '@/composables/useHealth'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const { t } = useI18n()
 const origin = window.location.origin
@@ -16,6 +18,7 @@ const origin = window.location.origin
 const update = ref<UpdateStatus | null>(null)
 const checking = ref(false)
 const installing = ref(false)
+const confirmOpen = ref(false)
 
 async function refreshUpdate(force = false) {
   checking.value = true
@@ -30,13 +33,13 @@ async function refreshUpdate(force = false) {
 
 async function installUpdate() {
   if (!update.value?.has_update || !update.value.can_install) return
-  if (!window.confirm(t('settings.update_confirm', { from: update.value.current, to: update.value.latest }))) return
   installing.value = true
   try {
     await api.installUpdate()
     toast.success(t('settings.update_restarting'))
-    // Server is exiting; the offline banner picks up the gap, then useHealth
-    // notices when the service manager respawns us on the new binary.
+    // Server is exiting. useHealth polls fast until the service manager
+    // respawns us on the new binary, then reloads the page onto its assets.
+    expectRestart()
   } catch (e) {
     toast.error(t('settings.update_install_error'), { description: String(e) })
     installing.value = false
@@ -164,10 +167,18 @@ const latestLabel = computed(() => {
             v-if="update.can_install"
             size="sm"
             :disabled="installing"
-            @click="installUpdate"
+            @click="confirmOpen = true"
           >
             {{ installing ? t('settings.update_installing') : t('settings.update_install') }}
           </Button>
+          <ConfirmDialog
+            v-model:open="confirmOpen"
+            :title="t('settings.update_confirm_title', { to: update.latest })"
+            :description="t('settings.update_confirm', { from: update.current, to: update.latest })"
+            :confirm-label="t('settings.update_install')"
+            :cancel-label="t('settings.update_cancel')"
+            @confirm="installUpdate"
+          />
         </div>
 
         <div v-else-if="!update.error && update.latest"
