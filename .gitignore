@@ -9,3 +9,6 @@ node_modules/
 web/dist/*
 !web/dist/.gitkeep
 _workspace/
+
+# AI planning scratch (design specs/plans written by tooling; not project docs)
+docs/superpowers/
