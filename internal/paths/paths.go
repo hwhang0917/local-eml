@@ -3,6 +3,7 @@ package paths
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const baseDirName = ".local-eml"
@@ -59,5 +60,20 @@ func (p Paths) KeyFile() string {
 }
 
 func (p Paths) BlobFor(sha string) string {
-	return filepath.Join(p.EML, sha+".eml")
+	candidate := filepath.Join(p.EML, sha+".eml")
+
+	baseAbs, err := filepath.Abs(p.EML)
+	if err != nil {
+		return filepath.Join(p.EML, ".invalid.eml")
+	}
+	candidateAbs, err := filepath.Abs(candidate)
+	if err != nil {
+		return filepath.Join(p.EML, ".invalid.eml")
+	}
+	rel, err := filepath.Rel(baseAbs, candidateAbs)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.Join(p.EML, ".invalid.eml")
+	}
+
+	return candidate
 }
