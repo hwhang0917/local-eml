@@ -5,6 +5,7 @@
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
 A private, local viewer for `.eml` files. Drop a folder, a `.zip`, an `.mbox`, a `.pst`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
 

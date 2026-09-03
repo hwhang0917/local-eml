@@ -5,6 +5,7 @@
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
 내 PC에서 `.eml` 파일을 보관하고 읽는 개인용 뷰어입니다. 폴더, `.zip`, `.mbox`, `.pst`를 끌어다 놓아도 되고 S3나 IMAP 메일함에서 가져올 수도 있습니다. 모든 데이터는 내 PC를 벗어나지 않습니다.
 
