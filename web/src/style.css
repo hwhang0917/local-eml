@@ -5,7 +5,11 @@
 @import "@fontsource/roboto/400.css";
 @import "@fontsource/roboto/500.css";
 @import "@fontsource/roboto/700.css";
-@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+/* The single full file, not the 92-way dynamic subset: with font-display
+   forced to optional (vite.config.ts) a subset first fetched when a rare
+   syllable appears misses the block window, and that glyph falls back to the
+   system Hangul font with different metrics. One warm file covers every glyph. */
+@import "pretendard/dist/web/variable/pretendardvariable.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
