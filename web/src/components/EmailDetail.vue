@@ -431,17 +431,20 @@ async function toggleStar() {
     </Card>
 
     <Card v-if="thread.length > 1" class="p-4">
-      <h2 class="text-sm font-semibold">
+      <div class="flex items-center gap-3">
+        <h2 class="flex-1 text-sm font-semibold">{{ t('viewer.conversation', { count: thread.length }) }}</h2>
         <button
           type="button"
+          :title="t('viewer.toggle_thread')"
+          :aria-label="t('viewer.toggle_thread')"
           :aria-expanded="showThread"
-          class="inline-flex items-center gap-1.5 rounded-sm hover:text-foreground"
+          class="inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0
+            text-muted-foreground hover:text-foreground"
           @click="showThread = !showThread"
         >
           <ChevronDown :class="['h-4 w-4 transition-transform', showThread ? '' : '-rotate-90']" />
-          {{ t('viewer.conversation', { count: thread.length }) }}
         </button>
-      </h2>
+      </div>
       <ol v-show="showThread" class="mt-2 space-y-0.5 text-sm">
         <li v-for="m in thread" :key="m.sha256">
           <RouterLink

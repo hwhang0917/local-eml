@@ -162,7 +162,8 @@
     "next": "Next email",
     "position": "{index} of {total}",
     "conversation": "Conversation ({count})",
-    "toggle_details": "Show or hide details"
+    "toggle_details": "Show or hide details",
+    "toggle_thread": "Show or hide the conversation"
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",

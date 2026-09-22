@@ -162,7 +162,8 @@
     "next": "다음 메일",
     "position": "{total}개 중 {index}번째",
     "conversation": "대화 ({count}건)",
-    "toggle_details": "상세 정보 접기/펼치기"
+    "toggle_details": "상세 정보 접기/펼치기",
+    "toggle_thread": "대화 접기/펼치기"
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip·.mbox·.pst를 여기에 드롭하세요",
