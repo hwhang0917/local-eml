@@ -2,7 +2,7 @@
 import { computed, nextTick, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CircleHelp } from 'lucide-vue-next'
+import { CircleHelp, Monitor } from 'lucide-vue-next'
 import { ConfigProvider } from 'reka-ui'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -52,7 +52,15 @@ watchEffect(() => {
        when a dropdown locks scroll, but scrollbar-gutter already reserves that
        space — the extra padding was itself the layout shift. -->
   <ConfigProvider :scroll-body="false">
-  <div class="min-h-screen flex flex-col">
+  <!-- Desktop only. The server is loopback-only so no phone ever reaches it;
+       the one narrow case is a tiled desktop window, and below md the nav and
+       the library table break rather than reflow. A plain notice beats that. -->
+  <div class="md:hidden min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+    <Monitor class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+    <h1 class="text-lg font-semibold">{{ t('app.narrow_title') }}</h1>
+    <p class="max-w-sm text-sm text-muted-foreground">{{ t('app.narrow_body') }}</p>
+  </div>
+  <div class="hidden md:flex min-h-screen flex-col">
     <div class="sticky top-0 z-50 shadow-sm">
       <div
         v-if="!online"

@@ -1,6 +1,8 @@
 {
   "lang": "English",
   "app": {
+    "narrow_title": "Widen the window to continue",
+    "narrow_body": "Local Eml is a desktop mail viewer and needs a wider window to lay out the library. Make the window larger or open it on a PC.",
     "server_offline": "Can't reach the local-eml server. Is it running?",
     "server_retry": "Retry",
     "server_checking": "Checking…"
