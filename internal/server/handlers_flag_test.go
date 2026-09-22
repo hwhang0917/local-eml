@@ -60,4 +60,15 @@ func TestFlaggedEmailIsPlainTextOnly(t *testing.T) {
 	if rec := do(http.MethodGet, "/api/emails/"+sha+"/html", ""); rec.Code == http.StatusForbidden {
 		t.Fatalf("unflagged mail must not be refused (got 403)")
 	}
+
+	// "safe" is not a quarantine: rich content and the library listing stay.
+	if rec := do(http.MethodPut, "/api/emails/"+sha+"/flag", `{"flag":"safe"}`); rec.Code != http.StatusNoContent {
+		t.Fatalf("flag safe: %d %s", rec.Code, rec.Body)
+	}
+	if rec := do(http.MethodGet, "/api/emails/"+sha+"/html", ""); rec.Code == http.StatusForbidden {
+		t.Fatalf("safe mail must not be refused (got 403)")
+	}
+	if rec := do(http.MethodGet, "/api/emails?limit=10", ""); !strings.Contains(rec.Body.String(), `"total":1`) {
+		t.Fatalf("library must keep safe mail: %s", rec.Body)
+	}
 }

@@ -28,7 +28,7 @@ type Email struct {
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
 	Starred         bool      `json:"starred"`
-	// Flag is "" or one of FlagSpam / FlagPhishing.
+	// Flag is "" or one of FlagSpam / FlagPhishing / FlagSafe.
 	Flag string `json:"flag"`
 	// Risk lists phishing findings (see internal/risk); nil until assessed.
 	Risk []risk.Reason `json:"risk"`
@@ -166,7 +166,7 @@ func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error
 		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
 			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk
-		FROM emails WHERE thread_id = ? AND flag = '' ORDER BY sent_at ASC, id ASC`, threadID)
+		FROM emails WHERE thread_id = ? AND `+notQuarantined+` ORDER BY sent_at ASC, id ASC`, threadID)
 	if err != nil {
 		return nil, err
 	}
@@ -347,9 +347,9 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	}
 	// Flagged mail never mixes with the library; it only appears when asked for.
 	if opts.FlaggedOnly {
-		conds = append(conds, `flag != ''`)
+		conds = append(conds, quarantined)
 	} else {
-		conds = append(conds, `flag = ''`)
+		conds = append(conds, notQuarantined)
 	}
 	// A plain predicate on emails, never a JOIN — the COUNT(*) below shares this
 	// WHERE, and a join would double-count.
@@ -530,18 +530,32 @@ func buildFTSQuery(raw string) string {
 	return strings.Join(parts, " ")
 }
 
-// Email flags. Flagged mail is hidden from the library and rendered as plain
-// text only; the server refuses HTML, inline images and attachments for it.
+// Email flags. Spam and phishing quarantine the message: hidden from the
+// library and rendered as plain text only; the server refuses HTML, inline
+// images and attachments for it. Safe is the user's veto of the phishing
+// heuristic — the message is untouched, only the warning goes away.
 const (
 	FlagSpam     = "spam"
 	FlagPhishing = "phishing"
+	FlagSafe     = "safe"
 )
 
-var ErrInvalidFlag = errors.New("flag must be \"\", \"spam\" or \"phishing\"")
+// SQL predicates for the two flag classes; every listing must agree on them.
+const (
+	quarantined    = `flag IN ('spam', 'phishing')`
+	notQuarantined = `flag NOT IN ('spam', 'phishing')`
+)
+
+// Quarantined reports whether flag hides the message and strips it to text.
+func Quarantined(flag string) bool {
+	return flag == FlagSpam || flag == FlagPhishing
+}
+
+var ErrInvalidFlag = errors.New("flag must be \"\", \"spam\", \"phishing\" or \"safe\"")
 
 func (s *Store) SetEmailFlag(ctx context.Context, sha, flag string) error {
 	switch flag {
-	case "", FlagSpam, FlagPhishing:
+	case "", FlagSpam, FlagPhishing, FlagSafe:
 	default:
 		return ErrInvalidFlag
 	}

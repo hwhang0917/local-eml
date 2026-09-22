@@ -112,10 +112,11 @@
   },
   "viewer": {
     "back": "← Back to library",
-    "flag_menu": "Flag as spam or phishing",
+    "flag_menu": "Flag as spam, phishing or safe",
     "flag_": "Not flagged",
     "flag_spam": "Spam",
     "flag_phishing": "Phishing",
+    "flag_safe": "Not spam",
     "flag_banner": "Flagged as {flag}. Shown as plain text only — HTML, images, attachments and links are disabled. Unflag it under Settings → Spam & phishing.",
     "flag_error": "Couldn't update the flag",
     "from": "From",
@@ -371,8 +372,9 @@
   },
   "risk": {
     "title": "This message has signs of phishing",
-    "hint": "Heuristic warning — check the sender and links before acting on it. Flag it to hide it and disable its links, or turn warnings off under Settings → Spam & phishing.",
+    "hint": "Heuristic warning — check the sender and links before acting on it. Flag it to hide it and disable its links, mark it as not spam to silence this warning for this message, or turn warnings off under Settings → Spam & phishing.",
     "flag_phishing": "Flag as phishing",
+    "flag_safe": "Not spam",
     "link_mismatch": "Link text names a different site than it goes to",
     "ip_link": "Link goes to a bare IP address",
     "idn_domain": "Lookalike or non-ASCII domain",

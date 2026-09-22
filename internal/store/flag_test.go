@@ -61,3 +61,26 @@ func TestEmailFlagHidesFromListings(t *testing.T) {
 		t.Fatalf("after unflag total = %d, err = %v", total, err)
 	}
 }
+
+// "safe" only mutes the phishing heuristic: the message stays in the library
+// and its thread, is never listed as flagged, and clears back to "".
+func TestSafeFlagStaysVisible(t *testing.T) {
+	st := newTestStore(t)
+	ctx := context.Background()
+	sha := strings.Repeat("a", 64)
+	if _, err := st.InsertEmail(ctx, EmailRow{Email: Email{SHA256: sha, ThreadID: "t1"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.SetEmailFlag(ctx, sha, FlagSafe); err != nil {
+		t.Fatal(err)
+	}
+	if list, total, err := st.ListEmails(ctx, ListOptions{Limit: 10}); err != nil || total != 1 || len(list) != 1 || list[0].Flag != FlagSafe {
+		t.Fatalf("safe mail must stay listed with its flag: total=%d list=%+v err=%v", total, list, err)
+	}
+	if thread, err := st.ListThread(ctx, "t1"); err != nil || len(thread) != 1 {
+		t.Fatalf("safe mail must stay in its thread: %v err=%v", thread, err)
+	}
+	if _, total, err := st.ListEmails(ctx, ListOptions{Limit: 10, FlaggedOnly: true}); err != nil || total != 0 {
+		t.Fatalf("safe mail must not count as flagged: total=%d err=%v", total, err)
+	}
+}

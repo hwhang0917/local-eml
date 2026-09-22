@@ -10,13 +10,13 @@ import (
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
-// PUT /api/emails/{sha}/flag  {"flag":"spam"|"phishing"}
+// PUT /api/emails/{sha}/flag  {"flag":"spam"|"phishing"|"safe"}
 func (s *Server) handleFlagEmail(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Flag string `json:"flag"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Flag == "" {
-		http.Error(w, `body must be {"flag":"spam"|"phishing"}`, http.StatusBadRequest)
+		http.Error(w, `body must be {"flag":"spam"|"phishing"|"safe"}`, http.StatusBadRequest)
 		return
 	}
 	s.setFlag(w, r, body.Flag)
@@ -54,7 +54,7 @@ func (s *Server) refuseIfFlagged(w http.ResponseWriter, r *http.Request, sha str
 		return false
 	}
 	e, err := s.Store.GetEmailBySHA(r.Context(), sha)
-	if err != nil || e.Flag == "" {
+	if err != nil || !store.Quarantined(e.Flag) {
 		return false
 	}
 	http.Error(w, "message is flagged as "+e.Flag+"; plain text only", http.StatusForbidden)

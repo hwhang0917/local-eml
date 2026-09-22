@@ -1,4 +1,7 @@
-export type EmailFlag = '' | 'spam' | 'phishing'
+export type EmailFlag = '' | 'spam' | 'phishing' | 'safe'
+// Spam and phishing hide the message and strip it to text; safe only mutes
+// the phishing heuristic.
+export const quarantined = (flag: EmailFlag) => flag === 'spam' || flag === 'phishing'
 
 export interface RiskReason {
   code: string

@@ -689,7 +689,7 @@ const pageInfo = computed(() => {
                 {{ e.thread_count }}
               </button>
               <span
-                v-if="riskWarnings && e.risk?.length"
+                v-if="riskWarnings && !e.flag && e.risk?.length"
                 role="img"
                 :aria-label="t('risk.title')"
                 :title="t('risk.title') + '\n' + e.risk.map((r) => '• ' + t(`risk.${r.code}`)).join('\n')"
