@@ -9,6 +9,7 @@ import 'vue-sonner/style.css'
 import { APP_NAME } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
+import { useSession } from '@/composables/useSession'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
 
 const { t } = useI18n()
@@ -16,6 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const { online, checking, retry } = useHealth()
 const tour = useTour()
+const { session } = useSession()
 
 // Two of the steps point at library controls, so the tour has to run from the
 // library route or those steps would highlight nothing.
@@ -110,6 +112,14 @@ watchEffect(() => {
           </button>
         </div>
       </header>
+      <div
+        v-if="session?.mode === 'temporary'"
+        role="status"
+        class="bg-amber-500/15 text-amber-900 dark:text-amber-200 px-6 py-1.5 text-sm text-center"
+      >
+        {{ t('app.temporary_banner') }}
+        <RouterLink :to="{ name: 'settings-privacy' }" class="ml-1 underline">{{ t('nav.settings') }}</RouterLink>
+      </div>
     </div>
     <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
       <RouterView />

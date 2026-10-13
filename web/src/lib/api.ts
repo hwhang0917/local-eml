@@ -158,6 +158,15 @@ export interface Stats {
   per_category: { category_id: number; count: number }[]
 }
 
+// service: started by the service manager. temporary: throwaway folder,
+// deleted on exit. normal: double-click or terminal run on the real library.
+export type SessionMode = 'service' | 'temporary' | 'normal'
+
+export interface SessionInfo {
+  mode: SessionMode
+  temporary_launches: boolean
+}
+
 export interface RestoreSummary {
   emails: number
   categories: number
@@ -184,6 +193,22 @@ async function okOrThrow(res: Response): Promise<void> {
 }
 
 export const api = {
+  getSession() {
+    return fetch(`${BASE}/api/session`).then(jsonOrThrow<SessionInfo>)
+  },
+
+  async setTemporaryLaunches(enabled: boolean): Promise<void> {
+    await okOrThrow(await fetch(`${BASE}/api/session/temporary-launches`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    }))
+  },
+
+  wipeData() {
+    return fetch(`${BASE}/api/data/wipe`, { method: 'POST' }).then(jsonOrThrow<{ emails: number }>)
+  },
+
   listEmails(params: { q?: string; starred?: boolean; flagged?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number; group?: 'thread' } = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
