@@ -26,6 +26,12 @@ type Server struct {
 	// rather than by a service manager. Self-update needs the service manager
 	// to bring us back up after we exit, so it is gated on this flag.
 	RunningInteractive bool
+	// TemporarySession is true when the data folder is a throwaway one that
+	// is deleted on exit.
+	TemporarySession bool
+	// PrefsFile is the launch-preferences file in the persistent data folder,
+	// even during a temporary session, so the switch can be turned back off.
+	PrefsFile string
 
 	// Background IMAP poll state; see StartIMAPSyncer / SetIMAPSyncInterval.
 	syncIntervalNs atomic.Int64
@@ -86,6 +92,10 @@ func (s *Server) Router() http.Handler {
 		api.Post("/restore", s.handleRestore)
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
+
+		api.Get("/session", s.handleSession)
+		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
+		api.Post("/data/wipe", s.handleWipeData)
 
 		api.Get("/update/check", s.handleUpdateCheck)
 		api.Post("/update/install", s.handleUpdateInstall)
