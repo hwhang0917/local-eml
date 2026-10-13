@@ -124,3 +124,25 @@ func TestDownloadVerifiesChecksum(t *testing.T) {
 		t.Fatalf("rejected download must be deleted; temp files left: %v", left)
 	}
 }
+
+func TestManagedByWinget(t *testing.T) {
+	for _, tc := range []struct {
+		path string
+		want bool
+	}{
+		// Portable packages, per-user and machine-wide scope.
+		{`C:\Users\me\AppData\Local\Microsoft\WinGet\Packages\hwhang0917.LocalEml_Microsoft.Winget.Source_8wekyb3d8bbwe\local-eml.exe`, true},
+		{`C:\Program Files\WinGet\Packages\hwhang0917.LocalEml_Microsoft.Winget.Source_8wekyb3d8bbwe\local-eml.exe`, true},
+		// The command alias winget puts on PATH, when not resolved to its target.
+		{`C:\Users\me\AppData\Local\Microsoft\WinGet\Links\local-eml.exe`, true},
+		{`c:/users/me/appdata/local/microsoft/winget/packages/x/local-eml.exe`, true},
+		// Our own installer and a plain download.
+		{`C:\Users\me\AppData\Local\local-eml\local-eml.exe`, false},
+		{`C:\Users\me\Downloads\local-eml-windows-amd64.exe`, false},
+		{`/home/me/.local/bin/local-eml`, false},
+	} {
+		if got := ManagedByWinget(tc.path); got != tc.want {
+			t.Errorf("ManagedByWinget(%q) = %v, want %v", tc.path, got, tc.want)
+		}
+	}
+}

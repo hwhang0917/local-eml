@@ -245,6 +245,24 @@ func CurrentBinary() (string, error) {
 	return resolved, nil
 }
 
+// wingetDirs are the folders winget installs portable packages into (per-user
+// and machine-wide) and the folder of command aliases it puts on PATH. Matched
+// case-insensitively anywhere in the path, since the drive and user vary.
+var wingetDirs = []string{`\winget\packages\`, `\winget\links\`}
+
+// ManagedByWinget reports whether path is a binary winget installed. Winget
+// records the version it installed, so swapping the file in place would leave
+// it reporting the wrong version and fighting the next `winget upgrade`.
+func ManagedByWinget(path string) bool {
+	p := strings.ToLower(strings.ReplaceAll(path, "/", `\`))
+	for _, d := range wingetDirs {
+		if strings.Contains(p, d) {
+			return true
+		}
+	}
+	return false
+}
+
 func httpGet(ctx context.Context, url string, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
