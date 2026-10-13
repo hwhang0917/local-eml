@@ -47,7 +47,7 @@ The switch isn't available while the background service is running, because the 
 
 To clear an existing library, use **Settings → Privacy → Delete all data now**. It removes all mail, the search index, import history and logs, and turns off background sync. Saved profiles, categories and settings are kept.
 
-Both are ordinary file deletion: on SSDs and journaling file systems, deleted data may still be recoverable with special tools.
+**No guarantees.** Both features delete files the ordinary way, the same as deleting them yourself. They are a convenience, not secure erasure: Local Eml does not guarantee that deleted data can't be recovered, and on SSDs and journaling file systems it often can be. Local Eml also can't bring deleted data back, so keep a backup of anything you need. Like the rest of Local Eml, these features are provided as is, without warranty of any kind, under the [GPL v3](LICENSE).
 
 ### Verifying a download
 
