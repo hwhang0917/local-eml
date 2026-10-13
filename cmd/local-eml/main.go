@@ -73,7 +73,16 @@ func resolveSyncInterval(ctx context.Context, st *store.Store) time.Duration {
 	return time.Duration(secs) * time.Second
 }
 
+// isAppLaunch reports whether args start the browser-window app, the mode a
+// double-click runs; the terminal commands keep their console.
+func isAppLaunch(args []string) bool {
+	return len(args) == 0 || args[0] == "app"
+}
+
 func main() {
+	if isAppLaunch(os.Args[1:]) && relaunchWithoutConsole() {
+		return
+	}
 	if len(os.Args) < 2 {
 		// Double-clicked (or bare `local-eml`): behave like an app.
 		os.Exit(runApp())
