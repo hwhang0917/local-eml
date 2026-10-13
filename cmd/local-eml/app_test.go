@@ -32,3 +32,20 @@ func TestServeArgs(t *testing.T) {
 		t.Fatalf("custom port must be passed through, got %v", got)
 	}
 }
+
+func TestIsAppLaunch(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want bool
+	}{
+		{nil, true}, // double-click: Explorer passes no arguments
+		{[]string{"app"}, true},
+		{[]string{"serve"}, false},
+		{[]string{"install", "--yes"}, false},
+		{[]string{"version"}, false},
+	} {
+		if got := isAppLaunch(tc.args); got != tc.want {
+			t.Errorf("isAppLaunch(%v) = %v, want %v", tc.args, got, tc.want)
+		}
+	}
+}
