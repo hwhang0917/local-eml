@@ -414,6 +414,6 @@
     "wipe_confirm": "Delete everything",
     "wipe_done": "Deleted {count} emails",
     "wipe_error": "Couldn't delete the data",
-    "disk_note": "Deletion here is ordinary file deletion. On SSDs and journaling file systems, deleted data may still be recoverable with special tools."
+    "disk_note": "These options delete files the ordinary way. They are not secure erasure: deleted data may still be recoverable, especially on SSDs, and Local Eml can't restore it either. Keep a backup of anything you need. Provided as is, without warranty."
   }
 }
