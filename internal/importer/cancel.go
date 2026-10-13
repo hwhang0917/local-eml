@@ -9,8 +9,8 @@ import (
 // instance is shared between importer and exporter jobs since jobs of either
 // flavor live in the imports table and the SSE Hub.
 type Canceller struct {
-	mu    sync.Mutex
-	jobs  map[string]context.CancelFunc
+	mu   sync.Mutex
+	jobs map[string]context.CancelFunc
 }
 
 func NewCanceller() *Canceller {
@@ -46,4 +46,22 @@ func (c *Canceller) Cancel(id string) bool {
 		cancel()
 	}
 	return ok
+}
+
+// Active reports how many jobs are currently running.
+func (c *Canceller) Active() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return len(c.jobs)
+}
+
+// CancelAll aborts every running job.
+func (c *Canceller) CancelAll() {
+	c.mu.Lock()
+	jobs := c.jobs
+	c.jobs = map[string]context.CancelFunc{}
+	c.mu.Unlock()
+	for _, cancel := range jobs {
+		cancel()
+	}
 }

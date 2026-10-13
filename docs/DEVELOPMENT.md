@@ -32,11 +32,17 @@ make cross        Cross-compile all 6 platforms into dist/
 ```text
 local-eml <command> [flags]
 
-  serve [--port 7878]      run the local web server (loopback only)
+  app [--ephemeral]        open in a browser window; stops when the window closes (default)
+  serve [--port 7878] [--ephemeral]
+                           run the local web server (loopback only)
   install [-y|--yes]       register as a background service (systemd/launchd/svc)
   uninstall [-y|--yes]     stop and unregister the background service
   version | -V | --version
 ```
+
+`--ephemeral` (or `LOCAL_EML_EPHEMERAL=1`) runs a temporary session: the data folder is a fresh
+`local-eml-session-*` directory under the OS temp dir, removed on shutdown, and leftovers from
+crashed sessions are swept on the next launch. It is ignored when running as a service.
 
 `install` / `uninstall` prompt `[Y/n]` (Enter accepts) by default; `--yes` skips for automation.
 

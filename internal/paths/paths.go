@@ -20,14 +20,19 @@ func Resolve() (Paths, error) {
 	if err != nil {
 		return Paths{}, err
 	}
-	base := filepath.Join(home, baseDirName)
+	return At(filepath.Join(home, baseDirName)), nil
+}
+
+// At lays out the data folders under base. Resolve uses the home directory;
+// a temporary session points it at a throwaway folder instead.
+func At(base string) Paths {
 	return Paths{
 		Base: base,
 		EML:  filepath.Join(base, "eml"),
 		DB:   filepath.Join(base, "db"),
 		Logs: filepath.Join(base, "logs"),
 		Keys: filepath.Join(base, "keys"),
-	}, nil
+	}
 }
 
 // Everything under the base directory is private mail: the .eml blobs, the
@@ -52,6 +57,12 @@ func (p Paths) EnsureDirs() error {
 
 func (p Paths) DBFile() string {
 	return filepath.Join(p.DB, "local-eml.db")
+}
+
+// PrefsFile holds launch preferences that must survive a library wipe; see
+// package prefs.
+func (p Paths) PrefsFile() string {
+	return filepath.Join(p.Base, "prefs.json")
 }
 
 func (p Paths) KeyFile() string {

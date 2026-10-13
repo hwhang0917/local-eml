@@ -5,7 +5,8 @@
     "narrow_body": "Local Eml is a desktop mail viewer and needs a wider window to lay out the library. Make the window larger or open it on a PC.",
     "server_offline": "Can't reach the local-eml server. Is it running?",
     "server_retry": "Retry",
-    "server_checking": "Checking…"
+    "server_checking": "Checking…",
+    "temporary_banner": "Temporary session: nothing is kept after you close this window."
   },
   "nav": {
     "library": "Library",
@@ -276,7 +277,8 @@
       "attributions": "Attributions",
       "categories": "Categories",
       "restore": "Restore from backup",
-      "flagged": "Spam & phishing"
+      "flagged": "Spam & phishing",
+      "privacy": "Privacy"
     },
     "flagged_help": "Messages flagged as spam or phishing are hidden from the library and, when opened, shown as plain text only: no HTML, no images, no attachments, no clickable links. Unflag a message to restore it.",
     "flagged_empty": "No flagged messages.",
@@ -386,5 +388,32 @@
     "sender_mismatch": "Display name embeds an address on another site",
     "dangerous_attachment": "Executable or script attachment",
     "credential_form": "Body asks for credentials"
+  },
+  "privacy": {
+    "temp_title": "Temporary sessions",
+    "temp_help": "When this is on, every double-click launch starts with an empty library in a throwaway folder. Everything from that session is deleted when the app closes: mail, the search index, logs, and any profiles you saved. If the app crashes, the leftovers are removed the next time it starts.",
+    "temp_toggle": "Double-click sessions are temporary",
+    "temp_toggle_help": "Takes effect from the next launch. The only thing kept on disk is a small file that remembers this switch.",
+    "temp_now": "You're in a temporary session right now. Nothing from this window is kept after it closes.",
+    "temp_service": "Not available while Local Eml runs as a background service, because the service never closes. To use a temporary session on this computer, stop the service or start Local Eml with --ephemeral.",
+    "temp_on": "Temporary sessions turned on",
+    "temp_off": "Temporary sessions turned off",
+    "temp_error": "Couldn't change the setting",
+    "enable_title": "Turn on temporary sessions?",
+    "enable_body": "From the next double-click launch, Local Eml starts empty and deletes everything when it closes. This window keeps using your current library until then.",
+    "enable_wipe": "Also delete my existing library now",
+    "enable_confirm": "Turn on",
+    "cancel": "Cancel",
+    "wipe_title": "Delete all data now",
+    "wipe_help": "Deletes every email, the search index, the import history and the logs. Background sync is turned off for saved IMAP profiles, so the mail doesn't come back on the next sync.",
+    "wipe_kept": "Kept: saved IMAP and S3 profiles (without stored passwords), categories and settings.",
+    "wipe_button": "Delete all data…",
+    "wipe_confirm_title": "Delete all data?",
+    "wipe_confirm_body": "This can't be undone. Type \"{word}\" to confirm.",
+    "wipe_word": "delete",
+    "wipe_confirm": "Delete everything",
+    "wipe_done": "Deleted {count} emails",
+    "wipe_error": "Couldn't delete the data",
+    "disk_note": "Deletion here is ordinary file deletion. On SSDs and journaling file systems, deleted data may still be recoverable with special tools."
   }
 }

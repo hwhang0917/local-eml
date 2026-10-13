@@ -39,6 +39,16 @@ Not comfortable with terminals? Download the file for your OS from the [latest r
 
 In this mode new mail is only fetched while the window is open; use the installer above if you want mail synced around the clock.
 
+### Temporary sessions
+
+Just want to open a folder of `.eml` files, search it, and leave nothing behind? Turn on **Settings → Privacy → Double-click sessions are temporary**. From the next launch, every double-click starts with an empty library in a throwaway folder, and that folder is deleted when the app closes. If the app crashes, the leftovers are removed the next time it starts. The only thing kept on disk is a small file that remembers the switch.
+
+The switch isn't available while the background service is running, because the service never closes. On those machines, stop the service or start Local Eml with `--ephemeral` (or `LOCAL_EML_EPHEMERAL=1`), which gives you a temporary session that never touches the service's library.
+
+To clear an existing library, use **Settings → Privacy → Delete all data now**. It removes all mail, the search index, import history and logs, and turns off background sync. Saved profiles, categories and settings are kept.
+
+Both are ordinary file deletion: on SSDs and journaling file systems, deleted data may still be recoverable with special tools.
+
 ### Verifying a download
 
 Every release asset carries a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) proving it was built by this repository's release workflow from a tagged commit. To check one:
