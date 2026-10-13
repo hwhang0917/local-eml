@@ -40,6 +40,8 @@ func TestIsAppLaunch(t *testing.T) {
 	}{
 		{nil, true}, // double-click: Explorer passes no arguments
 		{[]string{"app"}, true},
+		{[]string{"--ephemeral"}, true}, // a "temporary session" shortcut
+		{[]string{"-ephemeral"}, true},
 		{[]string{"serve"}, false},
 		{[]string{"install", "--yes"}, false},
 		{[]string{"version"}, false},

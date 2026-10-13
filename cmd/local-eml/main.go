@@ -88,7 +88,14 @@ func resolveSyncInterval(ctx context.Context, st *store.Store) time.Duration {
 // isAppLaunch reports whether args start the browser-window app, the mode a
 // double-click runs; the terminal commands keep their console.
 func isAppLaunch(args []string) bool {
-	return len(args) == 0 || args[0] == "app"
+	if len(args) == 0 {
+		return true
+	}
+	switch args[0] {
+	case "app", "--ephemeral", "-ephemeral":
+		return true
+	}
+	return false
 }
 
 func main() {
