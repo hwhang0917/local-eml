@@ -85,6 +85,10 @@ func resolveSyncInterval(ctx context.Context, st *store.Store) time.Duration {
 	return time.Duration(secs) * time.Second
 }
 
+// psnPrefix marks the process serial number macOS LaunchServices may pass to
+// an app it launches (-psn_0_12345). It carries nothing we use.
+const psnPrefix = "-psn_"
+
 // isAppLaunch reports whether args start the browser-window app, the mode a
 // double-click runs; the terminal commands keep their console.
 func isAppLaunch(args []string) bool {
@@ -95,14 +99,14 @@ func isAppLaunch(args []string) bool {
 	case "app", "--ephemeral", "-ephemeral":
 		return true
 	}
-	return false
+	return strings.HasPrefix(args[0], psnPrefix)
 }
 
 func main() {
 	if isAppLaunch(os.Args[1:]) && relaunchWithoutConsole() {
 		return
 	}
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || strings.HasPrefix(os.Args[1], psnPrefix) {
 		// Double-clicked (or bare `local-eml`): behave like an app.
 		os.Exit(runApp(nil))
 	}

@@ -42,6 +42,7 @@ func TestIsAppLaunch(t *testing.T) {
 		{[]string{"app"}, true},
 		{[]string{"--ephemeral"}, true}, // a "temporary session" shortcut
 		{[]string{"-ephemeral"}, true},
+		{[]string{"-psn_0_4219"}, true}, // macOS LaunchServices launching the .app
 		{[]string{"serve"}, false},
 		{[]string{"install", "--yes"}, false},
 		{[]string{"version"}, false},

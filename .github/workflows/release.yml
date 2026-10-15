@@ -97,9 +97,58 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Finder can't launch a bare downloaded binary (no exec bit, then a Terminal
+  # window), so macOS also gets a zipped .app. The bare binary still ships for
+  # install.sh and the in-app updater. Needs a macOS runner for iconutil,
+  # codesign and ditto.
+  bundle-macos:
+    name: Bundle macOS ${{ matrix.arch }}
+    needs: build-binary
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: local-eml-darwin-${{ matrix.arch }}
+
+      - name: Build app bundle
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          OUT=local-eml-darwin-${{ matrix.arch }}.app.zip
+          scripts/macos-bundle.sh local-eml-darwin-${{ matrix.arch }} "$VERSION" "$OUT"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+
+      # The runner is the host arch, so only that build can actually run.
+      - name: Smoke test
+        if: matrix.arch == 'arm64'
+        run: |
+          ditto -x -k "$OUT" extracted
+          BIN="extracted/Local Eml.app/Contents/MacOS/local-eml"
+          "$BIN" version
+          "$BIN" serve --port 17878 &
+          PID=$!
+          for i in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:17878/healthz; then OK=1; break; fi
+            sleep 0.5
+          done
+          kill "$PID"
+          test "${OK:-}" = 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.OUT }}
+          path: ${{ env.OUT }}
+          if-no-files-found: error
+          retention-days: 7
+
   release:
     name: Publish release
-    needs: build-binary
+    needs: [build-binary, bundle-macos]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
