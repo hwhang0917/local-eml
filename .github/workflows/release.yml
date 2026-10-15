@@ -148,3 +148,18 @@ jobs:
             dist/SHA256SUMS
           body_path: dist/RELEASE_NOTES.md
           fail_on_unmatched_files: true
+
+      # Offers the new version to winget as a pull request to
+      # microsoft/winget-pkgs from the owner's fork. The action only updates
+      # packages that already exist there, and it needs WINGET_TOKEN, a classic
+      # PAT with the public_repo scope, so it is skipped until both are set up.
+      - name: Publish to winget
+        if: env.WINGET_TOKEN != ''
+        uses: vedantmgoyal9/winget-releaser@v2
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        with:
+          identifier: hwhang0917.LocalEml
+          installers-regex: '^local-eml-windows-(amd64|arm64)\.exe$'
+          release-notes-url: https://github.com/hwhang0917/local-eml/releases/tag/${{ github.ref_name }}
+          token: ${{ secrets.WINGET_TOKEN }}
