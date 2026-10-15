@@ -13,29 +13,29 @@ A private, local viewer for `.eml` files. Drop a folder, a `.zip`, an `.mbox`, a
 
 **It isn't** an email client. You can't compose, send, or reply, and it never modifies your mailbox — IMAP access is strictly read-only. It's desktop only, and it listens on `127.0.0.1` alone.
 
-## Install
+## Download
 
-**Linux / macOS**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh
-```
-
-**Windows (PowerShell)**
-
-```powershell
-irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
-```
-
-This registers Local Eml as a background service and serves it at <http://localhost:7878>.
-
-**No install:** download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it.
+Download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own window; close the window and it shuts down. No installer, no account. The [install guide](https://hwhang0917.github.io/local-eml/docs/install) explains the first-run prompt on Windows and macOS.
 
 **winget:** `winget install hwhang0917.LocalEml` (listing pending review).
 
-Ports, verifying downloads, uninstalling and updating are covered in the [install guide](https://hwhang0917.github.io/local-eml/docs/install).
+**Run it all the time instead?** One line installs it as a background service that starts on boot and keeps fetching new IMAP mail:
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
+```
+
+Then open <http://localhost:7878>. Ports, verifying downloads, uninstalling and updating are in the [install guide](https://hwhang0917.github.io/local-eml/docs/install).
 
 ## Learn more
+
+Step-by-step: [open .eml files](https://hwhang0917.github.io/local-eml/docs/how-to/open-eml-files) · [view a Google Takeout .mbox](https://hwhang0917.github.io/local-eml/docs/how-to/takeout-mbox) · [open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook) · [free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
 
 The **[documentation](https://hwhang0917.github.io/local-eml/docs/)** covers everything else:
 

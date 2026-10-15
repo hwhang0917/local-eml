@@ -3,11 +3,32 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Local Eml — your old mail, on your own disk</title>
-  <meta name="description" content="A private, local archive and viewer for .eml files. Single binary, no account, nothing leaves your machine." />
-  <meta property="og:title" content="Local Eml" />
-  <meta property="og:description" content="A private, local archive and viewer for .eml files. Single binary, no account, nothing leaves your machine." />
+  <title>Local Eml — free, open-source EML viewer for Windows, macOS and Linux</title>
+  <meta name="description" content="Open .eml, .mbox and .pst files offline with a free, open-source EML viewer. Search your old mail, keep it as plain files on your own disk. No account, no cloud, nothing leaves your machine." />
+  <link rel="canonical" href="https://hwhang0917.github.io/local-eml/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://hwhang0917.github.io/local-eml/" />
+  <meta property="og:title" content="Local Eml — free, open-source EML viewer" />
+  <meta property="og:description" content="Open .eml, .mbox and .pst files offline. Search your old mail and keep it on your own disk. Windows, macOS, Linux." />
   <meta property="og:image" content="https://hwhang0917.github.io/local-eml/img/en/library.webp" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Local Eml",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Windows, macOS, Linux",
+    "description": "A free, open-source viewer and archive for .eml, .mbox and .pst email files. Runs offline on your own computer.",
+    "url": "https://hwhang0917.github.io/local-eml/",
+    "downloadUrl": "https://github.com/hwhang0917/local-eml/releases/latest",
+    "softwareHelp": "https://hwhang0917.github.io/local-eml/docs/",
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "screenshot": "https://hwhang0917.github.io/local-eml/img/en/library.webp",
+    "author": { "@type": "Person", "name": "hwhang0917", "url": "https://github.com/hwhang0917" }
+  }
+  </script>
   <link rel="icon" href="icon.png" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
@@ -21,7 +42,7 @@
     </a>
     <nav class="top-nav">
       <a href="#screens" data-i18n="nav.screens">Screens</a>
-      <a href="#install" data-i18n="nav.install">Install</a>
+      <a href="#install" data-i18n="nav.install">Download</a>
       <a href="#features" data-i18n="nav.features">Features</a>
       <a href="docs/" data-i18n="nav.docs">Docs</a>
       <a href="https://github.com/hwhang0917/local-eml">GitHub</a>
@@ -34,11 +55,11 @@
 
   <main>
     <section class="hero">
-      <p class="eyebrow" data-i18n="hero.eyebrow">Local-first email archive</p>
-      <h1 data-i18n="hero.title"><span class="line">Your old mail,</span><span class="line">on your own disk.</span></h1>
+      <p class="eyebrow" data-i18n="hero.eyebrow">Free, open-source EML viewer</p>
+      <h1 data-i18n="hero.title"><span class="line">Open your old mail.</span><span class="line">Keep it on your own disk.</span></h1>
       <p class="lead" data-i18n="hero.lead">
-        Pull messages out of an overflowing mailbox, keep them as plain <code>.eml</code> files on your PC,
-        and search and read them any time. One binary, no account, nothing leaves your machine.
+        A viewer and archive for <code>.eml</code>, <code>.mbox</code> and <code>.pst</code> files on Windows, macOS and Linux.
+        Pull messages out of an overflowing mailbox, search them, and read them any time. One file to run, no account, nothing leaves your machine.
       </p>
       <div class="cta">
         <a class="btn primary" id="dl-primary" href="https://github.com/hwhang0917/local-eml/releases/latest">
@@ -77,8 +98,25 @@
     </section>
 
     <section id="install" class="section">
-      <h2 data-i18n="install.title">Install in one line</h2>
-      <p class="sub" data-i18n="install.sub">Downloads the latest release, verifies it, and registers a background service that starts on boot.</p>
+      <h2 data-i18n="install.title">Download and double-click</h2>
+      <p class="sub" data-i18n="install.sub">No installer, no account. Download the file for your OS and open it; Local Eml appears in its own window. Close the window when you're done and nothing keeps running.</p>
+      <div class="grid steps">
+        <div class="card">
+          <h3>Windows</h3>
+          <p data-i18n="install.win">Download <code>local-eml-windows-amd64.exe</code> and double-click it. The first time, Windows may show "Windows protected your PC" because the file is new to it: choose <strong>More info → Run anyway</strong>.</p>
+        </div>
+        <div class="card">
+          <h3>macOS</h3>
+          <p data-i18n="install.mac">Download <code>local-eml-darwin-arm64</code> (Apple silicon) or <code>-amd64</code> (Intel) and open it. If macOS says it can't verify the developer, go to <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>, then open it again.</p>
+        </div>
+        <div class="card">
+          <h3>Linux</h3>
+          <p data-i18n="install.linux">Download <code>local-eml-linux-amd64</code>, mark it executable (<code>chmod +x</code>), and run it. It opens in your browser.</p>
+        </div>
+      </div>
+      <p class="sub" data-i18n="install.howto">Step-by-step guides: <a href="docs/how-to/open-eml-files">open .eml files</a> · <a href="docs/how-to/takeout-mbox">import a Google Takeout .mbox</a> · <a href="docs/how-to/pst-without-outlook">open a .pst without Outlook</a> · <a href="docs/how-to/free-up-gmail">free up Gmail storage</a></p>
+      <h3 class="sub-h" data-i18n="install.svc.title">Want it running all the time?</h3>
+      <p class="sub" data-i18n="install.svc.sub">One line installs it as a background service that starts on boot and keeps fetching new IMAP mail. It downloads the latest release and verifies it first.</p>
       <div class="cmds">
         <div class="cmd">
           <div class="cmd-head"><span>Linux / macOS</span><button type="button" class="copy" data-copy="curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh" data-i18n="install.copy">Copy</button></div>
@@ -90,8 +128,8 @@
         </div>
       </div>
       <p class="note">
-        <strong data-i18n="install.dc.title">Not comfortable with terminals?</strong>
-        <span data-i18n="install.dc.body">Download the file for your OS and double-click it. Local Eml opens in its own window. Close the window when you're done and nothing keeps running in the background.</span>
+        <strong data-i18n="install.winget.title">Windows with winget:</strong>
+        <span data-i18n="install.winget.body"><code>winget install hwhang0917.LocalEml</code> (listing pending review).</span>
       </p>
     </section>
 

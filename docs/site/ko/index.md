@@ -12,8 +12,8 @@ hero:
       text: 설치
       link: /ko/install
     - theme: alt
-      text: 메일 가져오기
-      link: /ko/import
+      text: .eml 파일 열기
+      link: /ko/how-to/open-eml-files
     - theme: alt
       text: GitHub
       link: https://github.com/hwhang0917/local-eml

@@ -12,8 +12,8 @@ hero:
       text: Install
       link: /install
     - theme: alt
-      text: Importing mail
-      link: /import
+      text: How to open .eml files
+      link: /how-to/open-eml-files
     - theme: alt
       text: GitHub
       link: https://github.com/hwhang0917/local-eml

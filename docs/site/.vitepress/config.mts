@@ -6,6 +6,21 @@ const repo = 'https://github.com/hwhang0917/local-eml'
 // so they exist once.
 const site = 'https://hwhang0917.github.io/local-eml/'
 
+const howto = {
+  en: [
+    { text: 'Open .eml files', link: '/how-to/open-eml-files' },
+    { text: 'View a Google Takeout .mbox', link: '/how-to/takeout-mbox' },
+    { text: 'Open a .pst without Outlook', link: '/how-to/pst-without-outlook' },
+    { text: 'Free up Gmail storage', link: '/how-to/free-up-gmail' },
+  ],
+  ko: [
+    { text: '.eml 파일 열기', link: '/ko/how-to/open-eml-files' },
+    { text: 'Google 테이크아웃 .mbox 보기', link: '/ko/how-to/takeout-mbox' },
+    { text: 'Outlook 없이 .pst 열기', link: '/ko/how-to/pst-without-outlook' },
+    { text: 'Gmail 용량 비우기', link: '/ko/how-to/free-up-gmail' },
+  ],
+}
+
 const pages = {
   en: [
     { text: 'Install', link: '/install' },
@@ -49,7 +64,7 @@ export default defineConfig({
           { text: 'Guide', link: '/install' },
           { text: 'Releases', link: `${repo}/releases` },
         ],
-        sidebar: [{ text: 'Guide', items: pages.en }],
+        sidebar: [{ text: 'How-to', items: howto.en }, { text: 'Guide', items: pages.en }],
         editLink: { pattern: `${repo}/edit/main/docs/site/:path`, text: 'Edit this page on GitHub' },
         outline: { label: 'On this page' },
         docFooter: { prev: 'Previous', next: 'Next' },
@@ -66,7 +81,7 @@ export default defineConfig({
           { text: '가이드', link: '/ko/install' },
           { text: '릴리스', link: `${repo}/releases` },
         ],
-        sidebar: [{ text: '가이드', items: pages.ko }],
+        sidebar: [{ text: '따라하기', items: howto.ko }, { text: '가이드', items: pages.ko }],
         editLink: { pattern: `${repo}/edit/main/docs/site/:path`, text: 'GitHub에서 이 페이지 수정' },
         outline: { label: '이 페이지에서' },
         docFooter: { prev: '이전', next: '다음' },
