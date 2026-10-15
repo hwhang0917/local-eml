@@ -158,18 +158,25 @@ func (s *Server) handleUpdateInstall(w http.ResponseWriter, r *http.Request) {
 	}()
 }
 
-// canSelfInstall reports whether we have a managed service to bring us back
-// up after we exit. Without one (e.g. when run as `./local-eml serve` from a
-// terminal), installing an update would leave the server down until the user
-// restarts it manually — we refuse and tell them.
-func (s *Server) canSelfInstall() bool {
-	return !s.RunningInteractive
-}
+// wingetPackageID must match the identifier submitted to winget-pkgs.
+const wingetPackageID = "hwhang0917.LocalEml"
 
-func (s *Server) installNote() string {
-	if !s.canSelfInstall() {
+// installBlocker explains why this copy can't update itself, or returns "" if
+// it can. A winget-installed binary belongs to winget, which tracks its version.
+// Without a service manager to bring us back up after we exit (e.g. when run as
+// `./local-eml serve` from a terminal), installing an update would leave the
+// server down until the user restarts it manually.
+func (s *Server) installBlocker() string {
+	if path, err := updater.CurrentBinary(); err == nil && updater.ManagedByWinget(path) {
+		return "This copy was installed with winget. Update it with `winget upgrade " + wingetPackageID + "`."
+	}
+	if s.RunningInteractive {
 		return "Updates can only be installed when running as a managed service. Run `local-eml install` first."
 	}
 	return ""
 }
+
+func (s *Server) canSelfInstall() bool { return s.installBlocker() == "" }
+
+func (s *Server) installNote() string { return s.installBlocker() }
 
