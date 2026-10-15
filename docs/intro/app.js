@@ -33,10 +33,10 @@
       'install.sub':
         "No installer, no account. Download the file for your OS and open it; Local Eml appears in its own window. Close the window when you're done and nothing keeps running.",
       'install.win':
-        'Download <code>local-eml-windows-amd64.exe</code> and double-click it. The first time, Windows may show "Windows protected your PC" because the file is new to it: choose <strong>More info → Run anyway</strong>.',
+        `Download <a href="${ASSET('local-eml-windows-amd64.exe')}"><code>local-eml-windows-amd64.exe</code></a> and double-click it. The first time, Windows may show "Windows protected your PC" because the file is new to it: choose <strong>More info → Run anyway</strong>.`,
       'install.mac':
-        "Download <code>local-eml-darwin-arm64</code> (Apple silicon) or <code>-amd64</code> (Intel) and open it. If macOS says it can't verify the developer, go to <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>, then open it again.",
-      'install.linux': 'Download <code>local-eml-linux-amd64</code>, mark it executable (<code>chmod +x</code>), and run it. It opens in your browser.',
+        `Download <a href="${ASSET('local-eml-darwin-arm64')}"><code>local-eml-darwin-arm64</code></a> (Apple silicon) or <a href="${ASSET('local-eml-darwin-amd64')}"><code>local-eml-darwin-amd64</code></a> (Intel) and open it. If macOS says it can't verify the developer, go to <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>, then open it again.`,
+      'install.linux': `Download <a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>, mark it executable (<code>chmod +x</code>), and run it. It opens in your browser.`,
       'install.howto':
         'Step-by-step guides: <a href="docs/how-to/open-eml-files">open .eml files</a> · <a href="docs/how-to/takeout-mbox">import a Google Takeout .mbox</a> · <a href="docs/how-to/pst-without-outlook">open a .pst without Outlook</a> · <a href="docs/how-to/free-up-gmail">free up Gmail storage</a>',
       'install.svc.title': 'Want it running all the time?',
@@ -99,10 +99,10 @@
       'install.title': '내려받아 더블클릭',
       'install.sub': '설치 프로그램도 계정도 없습니다. 내 운영체제에 맞는 파일을 내려받아 열면 Local Eml이 전용 창으로 나타납니다. 다 보고 창을 닫으면 그걸로 끝, 뒤에서 돌아가는 건 없습니다.',
       'install.win':
-        '<code>local-eml-windows-amd64.exe</code>를 내려받아 더블클릭하세요. 처음 한 번은 아직 알려지지 않은 파일이라 "Windows의 PC 보호" 창이 뜰 수 있습니다. <strong>추가 정보 → 실행</strong>을 선택하세요.',
+        `<a href="${ASSET('local-eml-windows-amd64.exe')}"><code>local-eml-windows-amd64.exe</code></a>를 내려받아 더블클릭하세요. 처음 한 번은 아직 알려지지 않은 파일이라 "Windows의 PC 보호" 창이 뜰 수 있습니다. <strong>추가 정보 → 실행</strong>을 선택하세요.`,
       'install.mac':
-        '<code>local-eml-darwin-arm64</code>(Apple silicon) 또는 <code>-amd64</code>(Intel)를 내려받아 여세요. 개발자를 확인할 수 없다고 나오면 <strong>시스템 설정 → 개인정보 보호 및 보안</strong>에서 <strong>그래도 열기</strong>를 누른 뒤 다시 여세요.',
-      'install.linux': '<code>local-eml-linux-amd64</code>를 내려받아 실행 권한을 주고(<code>chmod +x</code>) 실행하세요. 브라우저에서 열립니다.',
+        `<a href="${ASSET('local-eml-darwin-arm64')}"><code>local-eml-darwin-arm64</code></a>(Apple silicon) 또는 <a href="${ASSET('local-eml-darwin-amd64')}"><code>local-eml-darwin-amd64</code></a>(Intel)를 내려받아 여세요. 개발자를 확인할 수 없다고 나오면 <strong>시스템 설정 → 개인정보 보호 및 보안</strong>에서 <strong>그래도 열기</strong>를 누른 뒤 다시 여세요.`,
+      'install.linux': `<a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>를 내려받아 실행 권한을 주고(<code>chmod +x</code>) 실행하세요. 브라우저에서 열립니다.`,
       'install.howto':
         '따라하기: <a href="docs/ko/how-to/open-eml-files">.eml 파일 열기</a> · <a href="docs/ko/how-to/takeout-mbox">Google 테이크아웃 .mbox 가져오기</a> · <a href="docs/ko/how-to/pst-without-outlook">Outlook 없이 .pst 열기</a> · <a href="docs/ko/how-to/free-up-gmail">Gmail 용량 비우기</a>',
       'install.svc.title': '항상 켜 두고 싶다면',
