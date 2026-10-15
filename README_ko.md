@@ -13,29 +13,29 @@ Local Eml은 이메일을 로컬에 보관해 두고 꺼내 보는 **아카이�
 
 이메일 클라이언트는 **아닙니다**. 메일을 쓰거나 보내거나 답장할 수 없고 서버의 메일함을 건드리지도 않습니다 — IMAP 연결은 읽기 전용입니다. PC 전용이며 `127.0.0.1`에서만 접속할 수 있습니다.
 
-## 설치
+## 다운로드
 
-**Linux / macOS**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh
-```
-
-**Windows (PowerShell)**
-
-```powershell
-irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
-```
-
-Local Eml을 백그라운드 서비스로 등록하고 <http://localhost:7878> 에서 열어 줍니다.
-
-**설치 없이:** [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요.
+[최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요. Local Eml이 전용 창으로 열리고, 창을 닫으면 종료됩니다. 설치 프로그램도 계정도 없습니다. Windows와 macOS에서 처음 열 때 나오는 안내는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
 
 **winget:** `winget install hwhang0917.LocalEml` (등록 심사 중).
 
-포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
+**항상 켜 두고 싶다면** 한 줄로 부팅 시 자동 시작되고 새 IMAP 메일을 계속 받아오는 백그라운드 서비스로 설치할 수 있습니다.
+
+```bash
+# Linux / macOS
+curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
+```
+
+그다음 <http://localhost:7878> 을 여세요. 포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
 
 ## 더 알아보기
+
+따라하기: [.eml 파일 열기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/open-eml-files) · [Google 테이크아웃 .mbox 보기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/takeout-mbox) · [Outlook 없이 .pst 열기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/pst-without-outlook) · [Gmail 용량 비우기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/free-up-gmail)
 
 나머지는 모두 **[문서](https://hwhang0917.github.io/local-eml/docs/ko/)**에 있습니다.
 

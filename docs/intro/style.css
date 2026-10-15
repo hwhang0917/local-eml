@@ -152,3 +152,7 @@ html[lang="ko"] .card p { word-break: keep-all; }
   .top-nav > a:not([href^="https"]) { display: none; }
   .hero-shot { margin-top: 32px; }
 }
+
+/* install section: OS step cards sit above the service commands */
+.steps { margin-bottom: 1.5rem; }
+.sub-h { margin: 2rem 0 0.25rem; font-size: 1.05rem; }
