@@ -29,7 +29,9 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 Local Eml을 백그라운드 서비스로 등록하고 <http://localhost:7878> 에서 열어 줍니다.
 
-**설치 없이:** [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요. **winget:** `winget install hwhang0917.LocalEml` (등록 심사 중).
+**설치 없이:** [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요.
+
+**winget:** `winget install hwhang0917.LocalEml` (등록 심사 중).
 
 포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
 

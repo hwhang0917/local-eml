@@ -29,7 +29,9 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 
 This registers Local Eml as a background service and serves it at <http://localhost:7878>.
 
-**No install:** download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. **winget:** `winget install hwhang0917.LocalEml` (listing pending review).
+**No install:** download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it.
+
+**winget:** `winget install hwhang0917.LocalEml` (listing pending review).
 
 Ports, verifying downloads, uninstalling and updating are covered in the [install guide](https://hwhang0917.github.io/local-eml/docs/install).
 
