@@ -1,13 +1,14 @@
 name: Pages
 
-# Publishes docs/intro as-is to https://hwhang0917.github.io/local-eml/.
-# The page is static HTML/CSS/JS with pre-captured screenshots, so there is
-# no build step: whatever is in the directory is what goes live.
+# Publishes two things to https://hwhang0917.github.io/local-eml/:
+#   /       the landing page, docs/intro, static files copied as-is
+#   /docs/  the guide, docs/site, built with VitePress
 on:
   push:
     branches: [main]
     paths:
       - 'docs/intro/**'
+      - 'docs/site/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -28,9 +29,24 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs/site/package-lock.json
+      - name: Build guide
+        working-directory: docs/site
+        run: |
+          npm ci
+          npm run build
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r docs/intro/. _site/
+          cp -r docs/site/.vitepress/dist _site/docs
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/intro
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v5

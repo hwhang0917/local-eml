@@ -8,6 +8,7 @@
       'nav.screens': 'Screens',
       'nav.install': 'Install',
       'nav.features': 'Features',
+      'nav.docs': 'Docs',
       'hero.eyebrow': 'Local-first email archive',
       'hero.title': '<span class="line">Your old mail,</span><span class="line">on your own disk.</span>',
       'hero.lead':
@@ -64,6 +65,7 @@
       'nav.screens': '화면',
       'nav.install': '설치',
       'nav.features': '기능',
+      'nav.docs': '문서',
       'hero.eyebrow': '내 PC에 두는 이메일 아카이브',
       'hero.title': '<span class="line">오래된 메일,</span><span class="line">내 PC에 그대로.</span>',
       'hero.lead':
