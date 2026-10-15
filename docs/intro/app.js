@@ -35,7 +35,7 @@
       'install.win':
         `Download <a href="${ASSET('local-eml-windows-amd64.exe')}"><code>local-eml-windows-amd64.exe</code></a> and double-click it. The first time, Windows may show "Windows protected your PC" because the file is new to it: choose <strong>More info → Run anyway</strong>.`,
       'install.mac':
-        `Download <a href="${ASSET('local-eml-darwin-arm64')}"><code>local-eml-darwin-arm64</code></a> (Apple silicon) or <a href="${ASSET('local-eml-darwin-amd64')}"><code>local-eml-darwin-amd64</code></a> (Intel) and open it. If macOS says it can't verify the developer, go to <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>, then open it again.`,
+        `Download <a href="${ASSET('local-eml-darwin-arm64.app.zip')}"><code>local-eml-darwin-arm64.app.zip</code></a> (Apple silicon) or <a href="${ASSET('local-eml-darwin-amd64.app.zip')}"><code>local-eml-darwin-amd64.app.zip</code></a> (Intel), unzip it and double-click <strong>Local Eml</strong>. If macOS says it can't verify the developer, go to <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>, then open it again.`,
       'install.linux': `Download <a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>, mark it executable (<code>chmod +x</code>), and run it. It opens in your browser.`,
       'install.howto':
         'Step-by-step guides: <a href="docs/how-to/open-eml-files">open .eml files</a> · <a href="docs/how-to/takeout-mbox">import a Google Takeout .mbox</a> · <a href="docs/how-to/pst-without-outlook">open a .pst without Outlook</a> · <a href="docs/how-to/free-up-gmail">free up Gmail storage</a>',
@@ -101,7 +101,7 @@
       'install.win':
         `<a href="${ASSET('local-eml-windows-amd64.exe')}"><code>local-eml-windows-amd64.exe</code></a>를 내려받아 더블클릭하세요. 처음 한 번은 아직 알려지지 않은 파일이라 "Windows의 PC 보호" 창이 뜰 수 있습니다. <strong>추가 정보 → 실행</strong>을 선택하세요.`,
       'install.mac':
-        `<a href="${ASSET('local-eml-darwin-arm64')}"><code>local-eml-darwin-arm64</code></a>(Apple silicon) 또는 <a href="${ASSET('local-eml-darwin-amd64')}"><code>local-eml-darwin-amd64</code></a>(Intel)를 내려받아 여세요. 개발자를 확인할 수 없다고 나오면 <strong>시스템 설정 → 개인정보 보호 및 보안</strong>에서 <strong>그래도 열기</strong>를 누른 뒤 다시 여세요.`,
+        `<a href="${ASSET('local-eml-darwin-arm64.app.zip')}"><code>local-eml-darwin-arm64.app.zip</code></a>(Apple silicon) 또는 <a href="${ASSET('local-eml-darwin-amd64.app.zip')}"><code>local-eml-darwin-amd64.app.zip</code></a>(Intel)를 내려받아 압축을 풀고 <strong>Local Eml</strong>을 더블클릭하세요. 개발자를 확인할 수 없다고 나오면 <strong>시스템 설정 → 개인정보 보호 및 보안</strong>에서 <strong>그래도 열기</strong>를 누른 뒤 다시 여세요.`,
       'install.linux': `<a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>를 내려받아 실행 권한을 주고(<code>chmod +x</code>) 실행하세요. 브라우저에서 열립니다.`,
       'install.howto':
         '따라하기: <a href="docs/ko/how-to/open-eml-files">.eml 파일 열기</a> · <a href="docs/ko/how-to/takeout-mbox">Google 테이크아웃 .mbox 가져오기</a> · <a href="docs/ko/how-to/pst-without-outlook">Outlook 없이 .pst 열기</a> · <a href="docs/ko/how-to/free-up-gmail">Gmail 용량 비우기</a>',
@@ -183,7 +183,7 @@
   function detectOS() {
     const ua = navigator.userAgent
     if (/Windows/i.test(ua)) return { key: 'windows', asset: 'local-eml-windows-amd64.exe' }
-    if (/Mac OS X|Macintosh/i.test(ua)) return { key: 'mac', asset: 'local-eml-darwin-arm64' }
+    if (/Mac OS X|Macintosh/i.test(ua)) return { key: 'mac', asset: 'local-eml-darwin-arm64.app.zip' }
     if (/Linux/i.test(ua)) return { key: 'linux', asset: 'local-eml-linux-amd64' }
     return { key: '', asset: '' }
   }

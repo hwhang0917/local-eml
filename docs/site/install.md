@@ -14,7 +14,7 @@ The simplest way, and the one most people want. Download the file for your OS fr
 
 **Windows:** `local-eml-windows-amd64.exe` (or `-arm64` on ARM laptops). The first time, Windows may show **"Windows protected your PC"**. That appears for any new program that isn't yet known to Microsoft's reputation service. Click **More info**, then **Run anyway**.
 
-**macOS:** `local-eml-darwin-arm64` for Apple silicon, `local-eml-darwin-amd64` for Intel. macOS blocks programs from outside the App Store that aren't notarized, with a message that it can't verify the developer. Open **System Settings → Privacy & Security**, scroll down to the message about Local Eml, click **Open Anyway**, then open the file again. On macOS 14 and earlier, right-click the file and choose **Open** instead.
+**macOS:** `local-eml-darwin-arm64.app.zip` for Apple silicon, `local-eml-darwin-amd64.app.zip` for Intel. Unzip it and double-click **Local Eml**. macOS blocks programs from outside the App Store that aren't notarized, with a message that it can't verify the developer. Open **System Settings → Privacy & Security**, scroll down to the message about Local Eml, click **Open Anyway**, then open the app again. On macOS 14 and earlier, right-click the app and choose **Open** instead.
 
 **Linux:** `local-eml-linux-amd64` or `-arm64`. Mark it executable with `chmod +x`, then run it. It opens in your default browser.
 
