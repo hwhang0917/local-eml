@@ -1,6 +1,6 @@
 # Local Eml
 
-[English](README.md) · [한국어](README_ko.md)
+[English](README.md) · [한국어](README_ko.md) · **[Documentation](https://hwhang0917.github.io/local-eml/docs/)**
 
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
@@ -9,11 +9,9 @@
 
 A private, local viewer for `.eml` files. Drop a folder, a `.zip`, an `.mbox`, a `.pst`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
 
-## What it is — and what it isn't
+**It is** a local archive for your email: pull old messages out of an overflowing mailbox, keep them as plain `.eml` files on your own disk, and search and read them any time.
 
-**It is** a local archive for your email. Pull old messages out of an overflowing mailbox, keep them as plain `.eml` files on your own disk, and search and read them any time — freeing up space in your mail account without losing anything.
-
-**It isn't** a full email client like Thunderbird or Outlook, and it isn't for phones — the interface is desktop only and asks for a wider window below tablet width. You can't compose, send, or reply, and it never modifies your mailbox — IMAP access is strictly read-only, only for fetching copies. Keep your regular client for day-to-day mail; use Local Eml for the mail you want to keep but not carry.
+**It isn't** an email client. You can't compose, send, or reply, and it never modifies your mailbox — IMAP access is strictly read-only. It's desktop only, and it listens on `127.0.0.1` alone.
 
 ## Install
 
@@ -29,91 +27,28 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-The installer downloads the latest release, verifies it, and registers Local Eml as a background service so it starts automatically. Open <http://localhost:7878> in your browser.
+This registers Local Eml as a background service and serves it at <http://localhost:7878>.
 
-To use a different port, set `LOCAL_EML_PORT` before running the installer (e.g. `LOCAL_EML_PORT=9000 curl … | sh`, or `$env:LOCAL_EML_PORT=9000` in PowerShell). It stays loopback-only either way.
+**No install:** download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it.
 
-### Or just double-click it — no install
+**winget:** `winget install hwhang0917.LocalEml` (listing pending review).
 
-Not comfortable with terminals? Download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own browser window, and when you close the window it shuts itself down a few minutes later — nothing keeps running in the background.
+Ports, verifying downloads, uninstalling and updating are covered in the [install guide](https://hwhang0917.github.io/local-eml/docs/install).
 
-In this mode new mail is only fetched while the window is open; use the installer above if you want mail synced around the clock.
+## Learn more
 
-### Temporary sessions
+The **[documentation](https://hwhang0917.github.io/local-eml/docs/)** covers everything else:
 
-Just want to open a folder of `.eml` files, search it, and leave nothing behind? Turn on **Settings → Privacy → Double-click sessions are temporary**. From the next launch, every double-click starts with an empty library in a throwaway folder, and that folder is deleted when the app closes. If the app crashes, the leftovers are removed the next time it starts. The only thing kept on disk is a small file that remembers the switch.
+- [Importing mail](https://hwhang0917.github.io/local-eml/docs/import) from files, folders, archives, `.mbox`, `.pst`, S3 and IMAP
+- [Searching](https://hwhang0917.github.io/local-eml/docs/search), including Korean 초성검색, filters and performance
+- [Receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync) from IMAP in the background
+- [Spam & phishing](https://hwhang0917.github.io/local-eml/docs/spam-phishing) warnings and flags
+- [Privacy & your data](https://hwhang0917.github.io/local-eml/docs/privacy): where data lives, credentials, temporary sessions, deleting everything
+- [Settings & CLI](https://hwhang0917.github.io/local-eml/docs/settings-cli) and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting)
 
-The switch isn't available while the background service is running, because the service never closes. On those machines, stop the service or start Local Eml with `--ephemeral` (or `LOCAL_EML_EPHEMERAL=1`), which gives you a temporary session that never touches the service's library.
+## Contributing
 
-To clear an existing library, use **Settings → Privacy → Delete all data now**. It removes all mail, the search index, import history and logs, and turns off background sync. Saved profiles, categories and settings are kept.
-
-**No guarantees.** Both features delete files the ordinary way, the same as deleting them yourself. They are a convenience, not secure erasure: Local Eml does not guarantee that deleted data can't be recovered, and on SSDs and journaling file systems it often can be. Local Eml also can't bring deleted data back, so keep a backup of anything you need. Like the rest of Local Eml, these features are provided as is, without warranty of any kind, under the [GPL v3](LICENSE).
-
-### Verifying a download
-
-Every release asset carries a [build provenance attestation](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations) proving it was built by this repository's release workflow from a tagged commit. To check one:
-
-```bash
-gh attestation verify local-eml-linux-amd64 --repo hwhang0917/local-eml
-```
-
-`SHA256SUMS` in each release lists the checksums of the same files.
-
-## What you can do
-
-- **Import** emails from `.eml` files, folders, `.zip` archives, `.mbox` files (Google Takeout, Thunderbird, Apple Mail), Outlook `.pst` files, an **AWS S3** bucket, or an **IMAP** mailbox. Duplicates are detected by file hash and skipped. In-flight imports can be cancelled at any time.
-- **Search** by sender, subject, or body. Korean and other CJK languages work out of the box, and typing only Hangul initial consonants (e.g. `ㅎㄱ` to find `한국`) does **초성검색** across the whole library.
-- **Receive new mail** automatically from any saved IMAP profile (opt-in per profile). Local Eml fetches only what's new since the last sync; every 10 minutes by default, adjustable on the Import page.
-- **Read safely** — HTML messages render in a sandboxed iframe with remote images blocked by default.
-- **Star** messages you want to revisit and filter to just starred.
-- **Export** your library as a single `.zip` or upload it to an S3 bucket. Existing keys in the destination are skipped, so re-running is safe.
-- **Save profiles** for IMAP and S3 so you don't retype host names and bucket details.
-- **Multilingual interface** and **absolute / relative** date display, switchable in Settings.
-
-Your data lives in `~/.local-eml/` (or `%USERPROFILE%\.local-eml\` on Windows). Local Eml only listens on `127.0.0.1` — nothing is exposed to your network. A red banner shows up at the top of the page if the background service stops responding.
-
-## Performance
-
-How does it hold up as the library grows? Benchmarked with synthetic catalogs on a mid-range laptop (12th-gen i5, WSL2), timing one 50-row page of the library API including its total count:
-
-| Operation | 10k emails | 100k emails |
-|---|---|---|
-| Browse / paginate | < 1 ms | < 1 ms |
-| Search, typical term | < 1 ms | ~2 ms |
-| Search, term matching nearly every email | ~20 ms | ~200 ms |
-| 초성 search | ~5 ms | ~50 ms |
-| Conversation-grouped list | ~85 ms | ~0.9 s |
-| Grouped list + search | ~100 ms | ~1 s |
-
-Browsing and full-text search (SQLite FTS5) stay effectively instant well past 100k messages. The conversation-grouped view is the one thing that grows with catalog size — if pages feel slow on a very large library, turn the grouping toggle off. Reproduce with:
-
-```bash
-go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
-LOCAL_EML_BENCH_N=100000 go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
-```
-
-## Where credentials go
-
-- **AWS S3 secret key, session token** — never persisted. You re-enter them per import / export.
-- **IMAP password** — by default, never persisted; you re-enter it per import.
-  - If you turn on **"Receive new mail in the background"** on a saved IMAP profile, Local Eml needs to log in unattended. The password is then encrypted with AES-256-GCM and stored in the database; the encryption key lives in a separate file at `~/.local-eml/keys/secret.key` (mode `0600`). A leaked or backed-up database alone does not expose the password — the attacker also needs the keyfile. Turning the toggle off removes the stored password and sync state on the next save.
-- **Other profile fields** (host, bucket, region, username, access-key-id, etc.) — saved in plain SQLite, since they're not secrets.
-
-## Uninstall
-
-```bash
-# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstall.sh | sh
-
-# Windows
-irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstall.ps1 | iex
-```
-
-Add `--purge` (or `-Purge` on Windows) to also delete the data folder. Without it, your mail library stays.
-
-## Building from source
-
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) if you want to build or run from source, and [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Library attributions are listed in-app under **Settings → Attributions**.
+See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) to build or run from source, and [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Library attributions are listed in-app under **Settings → Attributions**.
 
 ## License
 

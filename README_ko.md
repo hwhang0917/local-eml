@@ -1,6 +1,6 @@
 # Local Eml
 
-[English](README.md) · [한국어](README_ko.md)
+[English](README.md) · [한국어](README_ko.md) · **[문서](https://hwhang0917.github.io/local-eml/docs/ko/)**
 
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)
@@ -9,11 +9,9 @@
 
 내 PC에서 `.eml` 파일을 보관하고 읽는 개인용 뷰어입니다. 폴더, `.zip`, `.mbox`, `.pst`를 끌어다 놓아도 되고 S3나 IMAP 메일함에서 가져올 수도 있습니다. 모든 데이터는 내 PC를 벗어나지 않습니다.
 
-## 어떤 도구인가요?
+Local Eml은 이메일을 로컬에 보관해 두고 꺼내 보는 **아카이브 도구**입니다. 메일함을 가득 채운 오래된 메일을 `.eml` 파일 그대로 내 PC에 옮겨 두고, 필요할 때 언제든 검색해서 읽을 수 있습니다.
 
-Local Eml은 이메일을 로컬에 보관해 두고 꺼내 보는 **아카이브 도구**입니다. 메일함을 가득 채운 오래된 메일을 `.eml` 파일 그대로 내 PC에 옮겨 두면, 계정 용량은 비우면서도 필요할 때 언제든 검색해서 읽을 수 있습니다.
-
-다만 Thunderbird나 Outlook 같은 이메일 클라이언트는 **아닙니다**. 휴대폰용도 아니라서 화면은 PC 전용이며, 태블릿보다 좁은 창에서는 창을 넓혀 달라는 안내만 보여줍니다. 메일을 쓰거나 보내거나 답장할 수 없고 서버의 메일함을 건드리지도 않습니다 — IMAP 연결도 복사본만 가져오는 읽기 전용입니다. 평소 메일은 쓰던 클라이언트에서 그대로 보고, 오래 남겨 두고 싶은 메일만 Local Eml에 보관하세요.
+이메일 클라이언트는 **아닙니다**. 메일을 쓰거나 보내거나 답장할 수 없고 서버의 메일함을 건드리지도 않습니다 — IMAP 연결은 읽기 전용입니다. PC 전용이며 `127.0.0.1`에서만 접속할 수 있습니다.
 
 ## 설치
 
@@ -29,89 +27,26 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-설치 스크립트가 최신 릴리스를 내려받아 무결성을 확인한 뒤, 부팅 시 자동으로 시작되도록 백그라운드 서비스로 등록합니다. 설치가 끝나면 브라우저에서 <http://localhost:7878> 을 열어 사용하세요.
+Local Eml을 백그라운드 서비스로 등록하고 <http://localhost:7878> 에서 열어 줍니다.
 
-다른 포트를 쓰려면 설치 전에 `LOCAL_EML_PORT`를 지정하세요 (예: `LOCAL_EML_PORT=9000 curl … | sh`, PowerShell에서는 `$env:LOCAL_EML_PORT=9000`). 어느 포트든 내 PC에서만 접속할 수 있습니다.
+**설치 없이:** [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요.
 
-### 설치 없이 더블클릭으로 실행하기
+**winget:** `winget install hwhang0917.LocalEml` (등록 심사 중).
 
-터미널이 익숙하지 않다면 [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 내 운영체제에 맞는 파일을 내려받아 더블클릭하세요. Local Eml이 전용 브라우저 창으로 열리고, 창을 닫으면 몇 분 뒤 스스로 종료되어 백그라운드에 아무것도 남지 않습니다.
+포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
 
-이 방식에서는 창이 열려 있는 동안에만 새 메일을 받아옵니다. 항상 메일을 받아오게 하려면 위의 설치 스크립트를 사용하세요.
+## 더 알아보기
 
-### 임시 세션
+나머지는 모두 **[문서](https://hwhang0917.github.io/local-eml/docs/ko/)**에 있습니다.
 
-`.eml` 폴더를 잠깐 열어 검색만 하고 흔적을 남기고 싶지 않다면 **설정 → 개인정보 → 더블클릭 실행을 임시 세션으로**를 켜세요. 다음 실행부터 더블클릭할 때마다 임시 폴더의 빈 라이브러리로 시작하고, 앱을 닫으면 그 폴더가 삭제됩니다. 앱이 비정상 종료되면 남은 파일은 다음 실행 때 지워집니다. 디스크에는 이 설정을 기억하는 작은 파일 하나만 남습니다.
+- [메일 가져오기](https://hwhang0917.github.io/local-eml/docs/ko/import): 파일, 폴더, 압축 파일, `.mbox`, `.pst`, S3, IMAP
+- [검색](https://hwhang0917.github.io/local-eml/docs/ko/search): 초성검색, 필터, 성능
+- [새 메일 받기](https://hwhang0917.github.io/local-eml/docs/ko/sync): IMAP 백그라운드 동기화
+- [스팸·피싱](https://hwhang0917.github.io/local-eml/docs/ko/spam-phishing): 경고와 표시
+- [개인정보와 데이터](https://hwhang0917.github.io/local-eml/docs/ko/privacy): 데이터 위치, 자격 증명, 임시 세션, 모든 데이터 삭제
+- [설정과 CLI](https://hwhang0917.github.io/local-eml/docs/ko/settings-cli), [문제 해결](https://hwhang0917.github.io/local-eml/docs/ko/troubleshooting)
 
-백그라운드 서비스가 실행 중이면 이 설정은 쓸 수 없습니다. 서비스는 닫히지 않기 때문입니다. 그런 PC에서는 서비스를 멈추거나 `--ephemeral` 옵션(또는 `LOCAL_EML_EPHEMERAL=1`)으로 실행하세요. 서비스의 라이브러리는 건드리지 않는 임시 세션으로 열립니다.
-
-이미 쌓인 라이브러리를 지우려면 **설정 → 개인정보 → 지금 모든 데이터 삭제**를 사용하세요. 모든 메일, 검색 색인, 가져오기 기록, 로그를 지우고 백그라운드 동기화를 끕니다. 저장된 프로필, 카테고리, 설정은 남습니다.
-
-**보증하지 않습니다.** 두 기능 모두 파일을 직접 지우는 것과 같은 일반적인 방식으로 삭제합니다. 편의 기능일 뿐 안전한 완전 삭제가 아닙니다. Local Eml은 삭제한 데이터를 복구할 수 없다고 보증하지 않으며, SSD나 저널링 파일 시스템에서는 복구되는 경우가 많습니다. 또한 Local Eml은 삭제한 데이터를 되살릴 수 없으니, 필요한 데이터는 따로 백업해 두세요. Local Eml의 다른 기능과 마찬가지로 이 기능들은 [GPL v3](LICENSE)에 따라 어떠한 보증도 없이 있는 그대로 제공됩니다.
-
-### 내려받은 파일 검증하기
-
-모든 릴리스 파일에는 이 저장소의 릴리스 워크플로가 태그된 커밋에서 빌드했음을 증명하는 [빌드 출처 증명(attestation)](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations)이 붙어 있습니다. 확인하려면:
-
-```bash
-gh attestation verify local-eml-linux-amd64 --repo hwhang0917/local-eml
-```
-
-각 릴리스의 `SHA256SUMS` 파일에는 같은 파일들의 체크섬이 들어 있습니다.
-
-## 주요 기능
-
-- **가져오기**: `.eml` 파일, 폴더, `.zip` 압축 파일, `.mbox` 파일(Google 테이크아웃, Thunderbird, Apple Mail), Outlook `.pst` 파일, **AWS S3** 버킷, **IMAP** 메일함에서 메일을 가져옵니다. 파일 해시로 중복을 걸러내 같은 메일은 두 번 들어오지 않고 진행 중인 가져오기는 언제든 취소할 수 있습니다.
-- **검색**: 보낸 사람, 제목, 본문을 한 번에 검색합니다. 한글을 비롯한 CJK 언어도 잘 검색되고 초성만 입력하는 **초성검색**(예: `ㅎㄱ` → `한국`)도 라이브러리 전체에서 동작합니다.
-- **새 메일 자동 수신**: IMAP 프로필별로 켜 두면 마지막 동기화 이후 도착한 메일만 자동으로 받아옵니다 (기본 10분 간격, 가져오기 화면에서 변경 가능).
-- **안전한 미리보기**: HTML 메일은 격리된 iframe 안에 표시되고 외부 이미지는 기본적으로 차단됩니다.
-- **별표**: 다시 볼 메일에 별표를 붙여 두고 "별표한 메일만 보기"로 골라 볼 수 있습니다.
-- **내보내기**: 라이브러리 전체를 `.zip` 하나로 내려받거나 S3 버킷에 올릴 수 있습니다. 이미 올라가 있는 파일은 건너뛰므로 여러 번 실행해도 안전합니다.
-- **프로필 저장**: IMAP과 S3 접속 정보에 이름을 붙여 저장해 두면 매번 다시 입력할 필요가 없습니다.
-- **다국어 인터페이스**와 **절대 / 상대** 날짜 표시를 설정에서 바꿀 수 있습니다.
-
-데이터는 `~/.local-eml/` (Windows에서는 `%USERPROFILE%\.local-eml\`)에 저장됩니다. Local Eml은 `127.0.0.1`, 즉 내 PC에서만 접속할 수 있고 네트워크에는 전혀 노출되지 않습니다. 백그라운드 서비스가 응답하지 않으면 화면 상단에 빨간 안내 바가 나타납니다.
-
-## 성능
-
-메일이 많아져도 괜찮을까요? 중급 노트북(12세대 i5, WSL2)에서 가상 메일 1만 건·10만 건을 만들어 측정한 결과입니다. 목록 한 페이지(50건, 전체 건수 집계 포함)를 불러오는 데 걸린 시간:
-
-| 작업 | 메일 1만 건 | 메일 10만 건 |
-|---|---|---|
-| 목록 탐색 / 페이지 이동 | 1 ms 미만 | 1 ms 미만 |
-| 검색 (일반적인 검색어) | 1 ms 미만 | 약 2 ms |
-| 검색 (거의 모든 메일에 들어 있는 단어) | 약 20 ms | 약 200 ms |
-| 초성검색 | 약 5 ms | 약 50 ms |
-| 대화별로 묶은 목록 | 약 85 ms | 약 0.9초 |
-| 대화별 묶기 + 검색 | 약 100 ms | 약 1초 |
-
-목록 탐색과 전문 검색(SQLite FTS5)은 10만 건을 훌쩍 넘어도 사실상 바로 응답합니다. 메일이 많아질수록 느려지는 것은 대화별로 묶은 목록뿐이니, 라이브러리가 아주 커져서 페이지가 굼뜨게 느껴지면 묶기 토글만 끄면 됩니다. 직접 측정해 보려면:
-
-```bash
-go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
-LOCAL_EML_BENCH_N=100000 go test ./internal/store -bench ListEmails -benchtime 5x -run '^$'
-```
-
-## 비밀번호와 키는 어디에 저장되나요?
-
-- **AWS S3 시크릿 키, 세션 토큰**: 저장하지 않습니다. 가져오기 / 내보내기 때마다 다시 입력합니다.
-- **IMAP 비밀번호**: 기본적으로 저장하지 않습니다. 가져오기 때마다 다시 입력하세요.
-  - 저장된 IMAP 프로필에서 **"새 메일을 백그라운드에서 받아오기"** 를 켜면, 사용자가 자리에 없어도 Local Eml이 스스로 로그인해야 합니다. 이때 비밀번호는 AES-256-GCM으로 암호화해 데이터베이스에 저장하고 암호화 키는 별도 파일(`~/.local-eml/keys/secret.key`, 권한 `0600`)에 보관합니다. 데이터베이스가 유출되더라도 키 파일이 없으면 비밀번호를 복호화할 수 없습니다. 토글을 끄면 저장된 비밀번호와 동기화 상태도 함께 삭제됩니다.
-- **그 외 프로필 정보**(호스트, 버킷, 리전, 사용자명, Access Key ID 등): 비밀이 아니므로 SQLite에 그대로 저장됩니다.
-
-## 제거
-
-```bash
-# Linux / macOS
-curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstall.sh | sh
-
-# Windows
-irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/uninstall.ps1 | iex
-```
-
-데이터 폴더까지 함께 지우려면 `--purge` (Windows는 `-Purge`)를 덧붙이세요. 옵션 없이 제거하면 메일 라이브러리는 그대로 남습니다.
-
-## 직접 빌드하기
+## 기여하기
 
 빌드·실행 방법은 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) 를, 이슈나 풀 리퀘스트를 올리기 전에는 [`CONTRIBUTING.md`](CONTRIBUTING.md) 를 참고하세요. 사용된 오픈소스 라이브러리는 앱 내 **설정 → 오픈소스 라이선스** 에서 확인할 수 있습니다.
 
