@@ -8,6 +8,8 @@
 node_modules/
 web/dist/*
 !web/dist/.gitkeep
+docs/site/.vitepress/dist/
+docs/site/.vitepress/cache/
 _workspace/
 
 # AI planning scratch (design specs/plans written by tooling; not project docs)
