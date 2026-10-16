@@ -158,6 +158,15 @@ function weekendClass(d: DateParts | undefined) {
   }
 }
 
+/** One cell of the month/year pickers; the current one is filled. */
+function cellClass(selected: boolean) {
+  return [
+    'h-10 rounded-sm text-sm disabled:pointer-events-none disabled:opacity-30',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+    selected ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'hover:bg-accent',
+  ]
+}
+
 function zoomOut() {
   view.value = view.value === 'day' ? 'month' : 'year'
 }
@@ -291,13 +300,7 @@ function clear() {
               :key="name"
               type="button"
               :disabled="isMonthDisabled(i + 1)"
-              :class="[
-                'h-10 rounded-sm text-sm disabled:pointer-events-none disabled:opacity-30',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                i + 1 === placeholder.month
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'hover:bg-accent',
-              ]"
+              :class="cellClass(i + 1 === placeholder.month)"
               @click="pickMonth(i + 1)"
             >
               {{ name }}
@@ -310,13 +313,7 @@ function clear() {
               :key="year"
               type="button"
               :disabled="isYearDisabled(year)"
-              :class="[
-                'h-10 rounded-sm text-sm disabled:pointer-events-none disabled:opacity-30',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                year === placeholder.year
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : 'hover:bg-accent',
-              ]"
+              :class="cellClass(year === placeholder.year)"
               @click="pickYear(year)"
             >
               {{ year }}

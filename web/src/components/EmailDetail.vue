@@ -1,24 +1,30 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { useStorage } from '@vueuse/core'
+import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, ShieldAlert, ShieldCheck, Star, TriangleAlert } from 'lucide-vue-next'
 import { api, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
-import { useCategories } from '@/composables/useCategories'
+import { NO_CATEGORY, useCategories } from '@/composables/useCategories'
+import { useEmailActions } from '@/composables/useEmailActions'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
-import { APP_NAME } from '@/lib/app'
-import { formatBytes, formatDate, formatDateAbsolute, riskWarnings, senderName, shortSHA } from '@/lib/format'
+import { pageTitle } from '@/lib/app'
+import { dialogClass } from '@/lib/utils'
+import { attachmentName, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import Card from '@/components/ui/Card.vue'
 
+// Larger plain-text attachments are a download, not a preview.
+const TEXT_PREVIEW_MAX_BYTES = 512 * 1024
+
 const props = defineProps<{ sha: string }>()
 const { t, locale } = useI18n()
 const router = useRouter()
+const { toggleStar, setCategory: assignCategory } = useEmailActions()
 
 const email = ref<Email | null>(null)
 const parts = ref<PartsManifest | null>(null)
@@ -45,10 +51,7 @@ const htmlSrc = computed(() =>
 // attachments. The server refuses those endpoints too; this just keeps the
 // UI honest about it.
 const flagged = computed(() => quarantined(email.value?.flag ?? ''))
-// Heuristic warning: shown until the user flags the message either way (the
-// flag banner takes over, or "safe" vetoes it) or turns warnings off in Settings.
-const riskReasons = computed(() =>
-  riskWarnings.value && !email.value?.flag ? (email.value?.risk ?? []) : [])
+const riskReasons = computed(() => (email.value ? riskFor(email.value) : []))
 
 const tabs = computed(() => {
   const text = { key: 'text' as const, label: t('viewer.tabs.text') }
@@ -93,15 +96,15 @@ async function load() {
   try {
     const e = await api.getEmail(props.sha)
     email.value = e
-    if (!e.thread_id) {
-      thread.value = []
-    } else if (!thread.value.some((m) => m.sha256 === e.sha256)) {
+    if (e.thread_id && !thread.value.some((m) => m.sha256 === e.sha256)) {
       // Moving within the already-loaded conversation keeps the card as-is —
       // clearing and refetching made it unmount and pop back, jolting the page.
       // Not awaited: the card appearing late beats the whole viewer waiting.
       api.getThread(props.sha)
         .then((r) => { thread.value = r.items })
         .catch(() => { thread.value = [] })
+    } else if (!e.thread_id) {
+      thread.value = []
     }
     // With no file on disk every body endpoint 404s, so stop here and let the
     // template offer to clear the dangling row.
@@ -128,12 +131,16 @@ watch(() => props.sha, load, { immediate: true })
 
 watch([tab, () => email.value?.sha256], async ([tb, sha]) => {
   if (!sha) return
-  if (tb === 'text' && !textBody.value) textBody.value = await api.getText(sha)
-  if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
+  try {
+    if (tb === 'text' && !textBody.value) textBody.value = await api.getText(sha)
+    if (tb === 'raw' && !rawBody.value) rawBody.value = await api.getRaw(sha)
+  } catch (err) {
+    toast.error(t('viewer.body_load_error'), { description: String(err) })
+  }
 })
 
 watch(() => email.value?.subject, (subject) => {
-  document.title = subject ? `${subject} — ${APP_NAME}` : APP_NAME
+  document.title = pageTitle(subject)
 })
 
 // The button promises "back to library", so that is where it must go. history
@@ -172,8 +179,7 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowLeft') goSibling(nav.value.prev, -1)
   else if (e.key === 'ArrowRight') goSibling(nav.value.next, 1)
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+useEventListener(window, 'keydown', onKeydown)
 
 // The message iframe is sandboxed without allow-scripts, so a link click would
 // otherwise navigate the iframe itself and render the remote site inside the
@@ -215,7 +221,7 @@ async function deleteDangling() {
   repairing.value = true
   try {
     await api.deleteEmail(props.sha)
-    router.push('/')
+    router.push({ name: 'library' })
   } catch (err) {
     error.value = String(err)
   } finally {
@@ -236,28 +242,12 @@ async function indexOrphan() {
   }
 }
 
-const { categories, byId, labelFor, load: loadCategories } = useCategories()
+const { byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
 onMounted(loadCategories)
 
-const assignOptions = computed<CategoryOption[]>(() => [
-  { value: 'none', label: t('library.category_none') },
-  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
-])
 const currentCategory = computed(() =>
   email.value?.category_id ? byId.value.get(email.value.category_id) : undefined,
 )
-
-async function setCategory(value: string) {
-  if (!email.value) return
-  const next = value === 'none' ? null : Number(value)
-  const prev = email.value.category_id
-  email.value.category_id = next ?? undefined
-  try {
-    await api.setCategory(email.value.sha256, next)
-  } catch {
-    if (email.value) email.value.category_id = prev
-  }
-}
 
 // --- attachment inline preview ---
 type PreviewKind = 'image' | 'pdf' | 'audio' | 'video' | 'text'
@@ -271,12 +261,12 @@ function previewKind(a: PartInfo): PreviewKind | null {
   if (ct === 'application/pdf') return 'pdf'
   if (ct.startsWith('audio/')) return 'audio'
   if (ct.startsWith('video/')) return 'video'
-  if (ct === 'text/plain' && a.size <= 512 * 1024) return 'text'
+  if (ct === 'text/plain' && a.size <= TEXT_PREVIEW_MAX_BYTES) return 'text'
   return null
 }
 
 function inlineURL(index: number) {
-  return `${api.attachmentURL(email.value!.sha256, index)}?inline=1`
+  return api.attachmentURL(email.value!.sha256, index, true)
 }
 
 async function togglePreview(a: PartInfo) {
@@ -287,18 +277,7 @@ async function togglePreview(a: PartInfo) {
   previewIdx.value = a.index
   if (previewKind(a) === 'text') {
     previewText.value = ''
-    previewText.value = await fetch(inlineURL(a.index)).then((r) => r.text()).catch(() => '')
-  }
-}
-
-async function toggleStar() {
-  if (!email.value) return
-  const next = !email.value.starred
-  email.value.starred = next
-  try {
-    await api.setStarred(email.value.sha256, next)
-  } catch {
-    if (email.value) email.value.starred = !next
+    previewText.value = await api.getAttachmentText(email.value!.sha256, a.index).catch(() => '')
   }
 }
 </script>
@@ -363,9 +342,9 @@ async function toggleStar() {
         </h1>
         <CategoryMenu
           v-if="!email.blob_missing"
-          :model-value="email.category_id ? String(email.category_id) : 'none'"
+          :model-value="email.category_id ? String(email.category_id) : NO_CATEGORY"
           :options="assignOptions"
-        @select="setCategory"
+          @select="(v) => assignCategory(email!, v)"
         >
           <template #trigger>
             <button
@@ -405,7 +384,7 @@ async function toggleStar() {
           :aria-label="email.starred ? t('library.unstar') : t('library.star')"
           :class="['inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0',
             email.starred ? 'text-amber-500' : 'text-muted-foreground hover:text-foreground']"
-          @click="toggleStar"
+          @click="toggleStar(email)"
         >
           <Star class="h-5 w-5" :fill="email.starred ? 'currentColor' : 'none'" />
         </button>
@@ -554,7 +533,7 @@ async function toggleStar() {
       <ul v-if="parts && parts.attachments.length" class="divide-y">
         <li v-for="a in parts.attachments" :key="a.index" class="py-2">
           <div class="flex items-center gap-3">
-            <span class="font-medium flex-1">{{ a.filename || `attachment-${a.index}` }}</span>
+            <span class="font-medium flex-1">{{ attachmentName(a) }}</span>
             <span class="text-xs text-muted-foreground">{{ a.content_type }}</span>
             <span class="text-xs text-muted-foreground">{{ formatBytes(a.size) }}</span>
             <button
@@ -585,8 +564,7 @@ async function toggleStar() {
       <p v-else class="text-muted-foreground">{{ t('viewer.no_attachments') }}</p>
     </Card>
 
-    <dialog ref="indexDialog" aria-labelledby="index-dialog-title"
-      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+    <dialog ref="indexDialog" aria-labelledby="index-dialog-title" :class="dialogClass">
       <div class="space-y-3 p-5">
         <h2 id="index-dialog-title" class="font-semibold">{{ t('viewer.not_indexed.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('viewer.not_indexed.body') }}</p>
@@ -601,8 +579,7 @@ async function toggleStar() {
       </div>
     </dialog>
 
-    <dialog ref="linkDialog" aria-labelledby="link-dialog-title"
-      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+    <dialog ref="linkDialog" aria-labelledby="link-dialog-title" :class="dialogClass">
       <div class="space-y-3 p-5">
         <h2 id="link-dialog-title" class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('viewer.external_link.body') }}</p>

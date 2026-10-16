@@ -4,17 +4,17 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
 import type { RestoreSummary } from '@/lib/api'
+import { fieldClass } from '@/lib/utils'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 const { t } = useI18n()
-
-const inputClass =
-  'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary'
 
 const restoreFile = ref<File | null>(null)
 const restoreBusy = ref(false)
 const restoreResult = ref<RestoreSummary | null>(null)
+const confirmOpen = ref(false)
 
 function onRestoreFileChange(e: Event) {
   restoreFile.value = (e.target as HTMLInputElement).files?.[0] ?? null
@@ -24,7 +24,6 @@ function onRestoreFileChange(e: Event) {
 async function runRestore() {
   const f = restoreFile.value
   if (!f || restoreBusy.value) return
-  if (!window.confirm(t('restore.confirm'))) return
   restoreBusy.value = true
   try {
     restoreResult.value = await api.restoreBackup(f)
@@ -47,7 +46,7 @@ async function runRestore() {
     <input
       type="file"
       accept=".db,.zip"
-      :class="inputClass"
+      :class="fieldClass"
       class="cursor-pointer"
       @change="onRestoreFileChange"
     />
@@ -67,9 +66,17 @@ async function runRestore() {
     </div>
 
     <div class="flex justify-end">
-      <Button :disabled="!restoreFile || restoreBusy" @click="runRestore">
+      <Button :disabled="!restoreFile || restoreBusy" @click="confirmOpen = true">
         {{ restoreBusy ? t('restore.busy') : t('restore.start') }}
       </Button>
+      <ConfirmDialog
+        v-model:open="confirmOpen"
+        :title="t('restore.title')"
+        :description="t('restore.confirm')"
+        :confirm-label="t('restore.start')"
+        :cancel-label="t('import.cancel')"
+        @confirm="runRestore"
+      />
     </div>
   </Card>
 </template>

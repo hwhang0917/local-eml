@@ -72,8 +72,7 @@ async function resyncLibrary() {
 const latestLabel = computed(() => {
   const u = update.value
   if (!u) return ''
-  if (u.error) return t('settings.update_check_unavailable')
-  if (!u.latest) return t('settings.update_check_unavailable')
+  if (u.error || !u.latest) return t('settings.update_check_unavailable')
   return u.latest
 })
 </script>
@@ -181,16 +180,16 @@ const latestLabel = computed(() => {
           />
         </div>
 
-        <div v-else-if="!update.error && update.latest"
-             class="flex items-center gap-2 text-sm text-muted-foreground">
-          <CheckCircle2 class="h-4 w-4 text-emerald-500" />
-          <span>{{ t('settings.update_uptodate') }}</span>
-        </div>
-
         <div v-else-if="update.error"
              class="flex items-center gap-2 text-sm text-muted-foreground">
           <AlertCircle class="h-4 w-4 text-amber-500" />
           <span>{{ t('settings.update_check_failed', { err: update.error }) }}</span>
+        </div>
+
+        <div v-else-if="update.latest"
+             class="flex items-center gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 class="h-4 w-4 text-emerald-500" />
+          <span>{{ t('settings.update_uptodate') }}</span>
         </div>
       </div>
     </div>

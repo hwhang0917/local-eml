@@ -6,6 +6,7 @@ import { api, type ImportStatus } from '@/lib/api'
 // ponytail: a full page reload forgets a running job; add a server-side
 // "active resync" query if that ever matters.
 const running = ref(false)
+const POLL_MS = 1000
 
 export function useResync() {
   // Starts the rescan and polls it to completion. Returns the final job
@@ -16,7 +17,7 @@ export function useResync() {
     try {
       const { import_id } = await api.resync()
       for (;;) {
-        await new Promise((r) => setTimeout(r, 1000))
+        await new Promise((r) => setTimeout(r, POLL_MS))
         const st = await api.importStatus(import_id)
         if (st.status === 'done' || st.status === 'error') return st
       }

@@ -6,6 +6,10 @@ import { i18n } from '@/i18n'
 const t = (key: string, params?: Record<string, unknown>) =>
   i18n.global.t(key, params ?? {})
 
+// Newest first; older entries fall off so a million-message import can't
+// grow the page without bound.
+const MAX_LOG_ENTRIES = 200
+
 export interface LogEntry {
   path: string
   kind: 'ok' | 'dup' | 'err'
@@ -27,11 +31,17 @@ export interface ImportRun {
 
 const runs = ref<ImportRun[]>([])
 
+// The server names export jobs with a '-export' suffix on the kind; that is the
+// only thing telling the two pages' job lists (and toast namespaces) apart.
+const isExport = (r: ImportRun) => r.kind.endsWith('-export')
+
+const importRuns = computed(() => runs.value.filter((r) => !isExport(r)))
+const exportRuns = computed(() => runs.value.filter(isExport))
+
 // Module scope like runs itself: leaving the page and coming back mid-job must
-// still show the start buttons as busy. The '-export' suffix is the same
-// discriminator notify() uses to pick a toast namespace.
-const importActive = computed(() => runs.value.some((r) => !r.done && !r.kind.endsWith('-export')))
-const exportActive = computed(() => runs.value.some((r) => !r.done && r.kind.endsWith('-export')))
+// still show the start buttons as busy.
+const importActive = computed(() => importRuns.value.some((r) => !r.done))
+const exportActive = computed(() => exportRuns.value.some((r) => !r.done))
 
 async function hydrateFromDB(run: ImportRun) {
   try {
@@ -41,12 +51,12 @@ async function hydrateFromDB(run: ImportRun) {
     run.duplicates = Math.max(run.duplicates, s.duplicates)
     run.errors = Math.max(run.errors, s.errors)
   } catch {
-    /* */
+    // The live counters are already on screen; the DB row only tightens them.
   }
 }
 
 function notify(run: ImportRun) {
-  const ns = run.kind.endsWith('-export') ? 'export' : 'import'
+  const ns = isExport(run) ? 'export' : 'import'
   const desc = t(`${ns}.toast_summary`, {
     processed: run.processed,
     dup: run.duplicates,
@@ -82,7 +92,7 @@ function followProgress(run: ImportRun) {
         kind: ev.message ? 'err' : ev.duplicate ? 'dup' : 'ok',
         detail: ev.message || ev.sha256 || '',
       })
-      if (run.log.length > 200) run.log.length = 200
+      if (run.log.length > MAX_LOG_ENTRIES) run.log.length = MAX_LOG_ENTRIES
     } else if (ev.type === 'done') {
       if (ev.total) run.total = ev.total
       if (ev.processed) run.processed = ev.processed
@@ -96,7 +106,11 @@ function followProgress(run: ImportRun) {
       run.phase = ev.phase || t('import.failed_fallback')
       run.current = ''
       run.done = true
-      run.log.unshift({ path: '(job)', kind: 'err', detail: ev.message || 'error' })
+      run.log.unshift({
+        path: t('import.log_job'),
+        kind: 'err',
+        detail: ev.message || t('import.failed_fallback'),
+      })
       es.close()
       finish(run)
     }
@@ -118,82 +132,47 @@ async function cancelRun(id: string) {
   }
 }
 
+function track(id: string, kind: string, phaseKey: string, total = 0) {
+  const run = reactive<ImportRun>({
+    id,
+    kind,
+    phase: t(phaseKey),
+    current: '',
+    total,
+    processed: 0,
+    duplicates: 0,
+    errors: 0,
+    done: false,
+    log: [],
+  })
+  runs.value.unshift(run)
+  followProgress(run)
+}
+
 export function useImports() {
   async function startImport(files: File[]) {
     const { import_id, kind } = await api.upload(files)
-    const run = reactive<ImportRun>({
-      id: import_id,
-      kind,
-      phase: t('import.queued'),
-      current: '',
-      // Archives report their real total once the server has scanned them.
-      total: kind === 'file' || kind === 'dir' ? files.length : 0,
-      processed: 0,
-      duplicates: 0,
-      errors: 0,
-      done: false,
-      log: [],
-    })
-    runs.value.unshift(run)
-    followProgress(run)
+    // Archives report their real total once the server has scanned them.
+    track(import_id, kind, 'import.queued', kind === 'file' || kind === 'dir' ? files.length : 0)
   }
 
   async function startS3Import(cfg: S3ImportConfig) {
     const { import_id, kind } = await api.uploadS3(cfg)
-    const run = reactive<ImportRun>({
-      id: import_id,
-      kind,
-      phase: t('import.queued'),
-      current: '',
-      total: 0,
-      processed: 0,
-      duplicates: 0,
-      errors: 0,
-      done: false,
-      log: [],
-    })
-    runs.value.unshift(run)
-    followProgress(run)
+    track(import_id, kind, 'import.queued')
   }
 
   async function startImapImport(cfg: IMAPImportConfig) {
     const { import_id, kind } = await api.uploadImap(cfg)
-    const run = reactive<ImportRun>({
-      id: import_id,
-      kind,
-      phase: t('import.queued'),
-      current: '',
-      total: 0,
-      processed: 0,
-      duplicates: 0,
-      errors: 0,
-      done: false,
-      log: [],
-    })
-    runs.value.unshift(run)
-    followProgress(run)
+    track(import_id, kind, 'import.queued')
   }
 
   async function startS3Export(cfg: S3ImportConfig) {
     const { export_id, kind } = await api.exportS3(cfg)
-    const run = reactive<ImportRun>({
-      id: export_id,
-      kind,
-      phase: t('export.queued'),
-      current: '',
-      total: 0,
-      processed: 0,
-      duplicates: 0,
-      errors: 0,
-      done: false,
-      log: [],
-    })
-    runs.value.unshift(run)
-    followProgress(run)
+    track(export_id, kind, 'export.queued')
   }
 
   return {
-    runs, importActive, exportActive,
+    importRuns, exportRuns, importActive, exportActive,
     startImport, startS3Import, startImapImport, startS3Export, cancelRun,
   }
 }
