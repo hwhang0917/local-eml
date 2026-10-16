@@ -6,6 +6,10 @@ import (
 	"runtime"
 )
 
+// ServiceName is what the service manager knows this program as; the
+// installer registers it and the self-updater restarts it by this name.
+const ServiceName = "local-eml"
+
 // restartPlan describes how to ask the platform's service manager to bring
 // us back up out-of-band, instead of relying on the auto-restart-after-exit
 // path. The latter is rate-limited on systemd (RestartSec=120 in the
@@ -32,7 +36,7 @@ func planRestart(goos string) restartPlan {
 		return restartPlan{
 			available: true,
 			cmd:       "systemctl",
-			args:      []string{"--user", "--no-block", "restart", "local-eml"},
+			args:      []string{"--user", "--no-block", "restart", ServiceName},
 			why:       "queue an explicit systemd restart so RestartSec is bypassed",
 		}
 	case "darwin":
