@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+// Import job statuses. Everything but ImportRunning is terminal.
+const (
+	ImportQueued  = "queued"
+	ImportRunning = "running"
+	ImportDone    = "done"
+	ImportError   = "error"
+)
+
 type Import struct {
 	ID         string    `json:"id"`
 	SourceKind string    `json:"source_kind"`
@@ -31,14 +39,15 @@ func (s *Store) SetImportTotal(ctx context.Context, id string, total int) error 
 	return err
 }
 
-func (s *Store) UpdateImportStatus(ctx context.Context, id, status string, finished bool) error {
-	if finished {
-		_, err := s.DB.ExecContext(ctx, `
-			UPDATE imports SET status = ?, finished_at = ? WHERE id = ?`,
-			status, time.Now().Unix(), id)
+// UpdateImportStatus records status; a terminal status also stamps finished_at.
+func (s *Store) UpdateImportStatus(ctx context.Context, id, status string) error {
+	if status == ImportRunning {
+		_, err := s.DB.ExecContext(ctx, `UPDATE imports SET status = ? WHERE id = ?`, status, id)
 		return err
 	}
-	_, err := s.DB.ExecContext(ctx, `UPDATE imports SET status = ? WHERE id = ?`, status, id)
+	_, err := s.DB.ExecContext(ctx, `
+		UPDATE imports SET status = ?, finished_at = ? WHERE id = ?`,
+		status, time.Now().Unix(), id)
 	return err
 }
 
@@ -65,12 +74,8 @@ func (s *Store) GetImport(ctx context.Context, id string) (*Import, error) {
 	if err != nil {
 		return nil, err
 	}
-	if started > 0 {
-		imp.StartedAt = time.Unix(started, 0).UTC()
-	}
-	if finished > 0 {
-		imp.FinishedAt = time.Unix(finished, 0).UTC()
-	}
+	imp.StartedAt = timeFromUnix(started)
+	imp.FinishedAt = timeFromUnix(finished)
 	return &imp, nil
 }
 

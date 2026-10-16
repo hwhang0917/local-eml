@@ -40,7 +40,7 @@ func (j *Job) RunSource(ctx context.Context, src Source) {
 	items, err := src.Scan(ctx)
 	if err != nil {
 		log.Error("source scan failed", slog.String("err", err.Error()))
-		_ = j.Store.UpdateImportStatus(ctx, j.ID, "error", true)
+		_ = j.Store.UpdateImportStatus(ctx, j.ID, store.ImportError)
 		j.publish(Event{Type: "error", Message: err.Error()})
 		return
 	}
@@ -74,12 +74,12 @@ func (j *Job) RunSource(ctx context.Context, src Source) {
 	finalCtx := context.Background()
 	if cancelled {
 		j.publish(Event{Type: "step", Phase: "Cancelled"})
-		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, "error", true)
+		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportError)
 		j.publish(Event{Type: "error", Phase: "Cancelled",
 			Message: "cancelled", Processed: processed, Total: total})
 	} else {
 		j.publish(Event{Type: "step", Phase: "Finalizing"})
-		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, "done", true)
+		_ = j.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportDone)
 		j.publish(Event{Type: "done", Processed: total, Total: total})
 	}
 

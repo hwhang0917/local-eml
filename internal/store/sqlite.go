@@ -44,14 +44,26 @@ func (s *Store) Close() error {
 	return s.DB.Close()
 }
 
+// requireRow turns an UPDATE or DELETE that matched nothing into notFound.
+func requireRow(res sql.Result, notFound error) error {
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return notFound
+	}
+	return nil
+}
+
 // SnapshotTo writes a consistent point-in-time copy of the database to path
 // via VACUUM INTO, which is safe against a live WAL-mode database (a plain
 // file copy is not). The target must not already exist.
 //
 // Encrypted IMAP passwords are scrubbed from the copy: the AES key never
 // leaves this machine, so on any other install the ciphertext is unrecoverable
-// noise — exporting it is pure liability. Sync flags are cleared with them so
-// a restored profile doesn't try to sync without credentials.
+// noise — exporting it is pure liability. Sync flags and cursors are cleared
+// with them so a restored profile doesn't try to sync without credentials.
 func (s *Store) SnapshotTo(ctx context.Context, path string) error {
 	if _, err := s.DB.ExecContext(ctx, "VACUUM INTO ?", path); err != nil {
 		return err
@@ -61,8 +73,7 @@ func (s *Store) SnapshotTo(ctx context.Context, path string) error {
 		return err
 	}
 	defer snap.Close()
-	_, err = snap.ExecContext(ctx,
-		`UPDATE imap_profiles SET encrypted_password = NULL, sync_enabled = 0`)
+	_, err = snap.ExecContext(ctx, `UPDATE imap_profiles SET `+revokeIMAPSyncSet)
 	return err
 }
 
@@ -186,8 +197,9 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
 		return err
 	}
-	// flag: '' | 'spam' | 'phishing'. Flagged mail is hidden from listings and
-	// served as plain text only; the partial index serves the settings page.
+	// flag: '' | 'spam' | 'phishing' | 'safe'. Quarantined mail is hidden from
+	// listings and served as plain text only; the partial index serves the
+	// settings page.
 	if err := s.ensureColumn(ctx, "emails", "flag", "TEXT NOT NULL DEFAULT ''"); err != nil {
 		return err
 	}
@@ -263,7 +275,7 @@ func (s *Store) backfillChosung(ctx context.Context) error {
 			rows.Close()
 			return err
 		}
-		todo = append(todo, pending{id: id, text: ToChosung(subject + " " + from)})
+		todo = append(todo, pending{id: id, text: toChosung(subject + " " + from)})
 	}
 	if err := rows.Err(); err != nil {
 		rows.Close()

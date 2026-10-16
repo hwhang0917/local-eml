@@ -101,7 +101,7 @@ func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func
 	defer cleanup()
 	ctx, release := s.Canceller.Register(context.Background(), importID)
 	defer release()
-	_ = s.Store.UpdateImportStatus(ctx, importID, "running", false)
+	_ = s.Store.UpdateImportStatus(ctx, importID, store.ImportRunning)
 
 	log := slog.Default().With(
 		slog.String("import_id", importID),
@@ -119,7 +119,7 @@ func (s *Server) runJob(importID, kind string, src importer.Source, cleanup func
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Error("import job panic", slog.Any("panic", rec))
-			_ = s.Store.UpdateImportStatus(context.Background(), importID, "error", true)
+			_ = s.Store.UpdateImportStatus(context.Background(), importID, store.ImportError)
 			s.Hub.Publish(importID, importer.Event{Type: "error", Message: fmt.Sprint(rec)})
 			s.Hub.Close(importID)
 		}

@@ -50,10 +50,6 @@ var ErrDuplicate = errors.New("email already exists")
 func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 	to, _ := json.Marshal(stringsOrEmpty(e.ToAddrs))
 	cc, _ := json.Marshal(stringsOrEmpty(e.CcAddrs))
-	hasAtt := 0
-	if e.HasAttachments {
-		hasAtt = 1
-	}
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, err
@@ -68,7 +64,7 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 		return 0, err
 	}
 
-	chosung := ToChosung(e.Subject + " " + e.FromAddr)
+	chosung := toChosung(e.Subject + " " + e.FromAddr)
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO emails (id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 			message_id, thread_id, sent_at, received_at, size_bytes, has_attachments,
@@ -76,7 +72,7 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
 		id, e.SHA256, e.Filename, e.Subject, e.FromAddr, string(to), string(cc),
 		e.MessageID, nullIfEmpty(e.ThreadID), unixOrZero(e.SentAt), unixOrZero(e.ReceivedAt),
-		e.SizeBytes, hasAtt, e.AttachmentCount, time.Now().Unix(), chosung, riskJSON(e.Risk),
+		e.SizeBytes, e.HasAttachments, e.AttachmentCount, time.Now().Unix(), chosung, riskJSON(e.Risk),
 	)
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -129,14 +125,7 @@ func (s *Store) DeleteEmailBySHA(ctx context.Context, sha string) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return ErrEmailNotFound
-	}
-	return nil
+	return requireRow(res, ErrEmailNotFound)
 }
 
 func (s *Store) EmailExists(ctx context.Context, sha string) (bool, error) {
@@ -152,21 +141,16 @@ func (s *Store) EmailExists(ctx context.Context, sha string) (bool, error) {
 }
 
 func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
-	row := s.DB.QueryRowContext(ctx, `
-		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk
-		FROM emails WHERE sha256 = ?`, sha)
+	row := s.DB.QueryRowContext(ctx,
+		`SELECT `+emailCols+` FROM emails WHERE sha256 = ?`, sha)
 	return scanEmail(row)
 }
 
 // ListThread returns every email sharing threadID, oldest first.
 func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-			message_id, COALESCE(thread_id, ''), sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk
-		FROM emails WHERE thread_id = ? AND `+notQuarantined+` ORDER BY sent_at ASC, id ASC`, threadID)
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT `+emailCols+` FROM emails WHERE thread_id = ? AND `+notQuarantined+
+			` ORDER BY sent_at ASC, id ASC`, threadID)
 	if err != nil {
 		return nil, err
 	}
@@ -234,32 +218,37 @@ func (s *Store) ListEmailAttachmentCounts(ctx context.Context) ([]EmailAttachmen
 }
 
 func (s *Store) SetEmailAttachmentCount(ctx context.Context, id int64, count int) error {
-	flag := 0
-	if count > 0 {
-		flag = 1
-	}
 	_, err := s.DB.ExecContext(ctx,
 		`UPDATE emails SET has_attachments = ?, attachment_count = ? WHERE id = ?`,
-		flag, count, id)
+		count > 0, count, id)
 	return err
 }
 
-// ThreadBackfillRow is the minimal projection the thread-id backfill needs.
-type ThreadBackfillRow struct {
+// BackfillRow is the minimal projection a blob re-parse backfill needs.
+type BackfillRow struct {
 	ID     int64
 	SHA256 string
 }
 
-func (s *Store) ListEmailsMissingThreadID(ctx context.Context) ([]ThreadBackfillRow, error) {
-	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, sha256 FROM emails WHERE thread_id IS NULL`)
+// ListEmailsMissingThreadID returns rows imported before conversations existed.
+func (s *Store) ListEmailsMissingThreadID(ctx context.Context) ([]BackfillRow, error) {
+	return s.listBackfillRows(ctx, `thread_id IS NULL`)
+}
+
+// ListEmailsMissingRisk returns rows the phishing heuristics never saw.
+func (s *Store) ListEmailsMissingRisk(ctx context.Context) ([]BackfillRow, error) {
+	return s.listBackfillRows(ctx, `risk IS NULL`)
+}
+
+func (s *Store) listBackfillRows(ctx context.Context, where string) ([]BackfillRow, error) {
+	rows, err := s.DB.QueryContext(ctx, `SELECT id, sha256 FROM emails WHERE `+where)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := []ThreadBackfillRow{}
+	out := []BackfillRow{}
 	for rows.Next() {
-		var r ThreadBackfillRow
+		var r BackfillRow
 		if err := rows.Scan(&r.ID, &r.SHA256); err != nil {
 			return nil, err
 		}
@@ -275,23 +264,12 @@ func (s *Store) SetEmailThreadID(ctx context.Context, id int64, threadID string)
 }
 
 func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) error {
-	flag := 0
-	if starred {
-		flag = 1
-	}
 	res, err := s.DB.ExecContext(ctx,
-		`UPDATE emails SET starred = ? WHERE sha256 = ?`, flag, sha)
+		`UPDATE emails SET starred = ? WHERE sha256 = ?`, starred, sha)
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return ErrEmailNotFound
-	}
-	return nil
+	return requireRow(res, ErrEmailNotFound)
 }
 
 type ListOptions struct {
@@ -317,10 +295,34 @@ type ListOptions struct {
 	GroupThreads bool
 }
 
-func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
-	if opts.Limit <= 0 || opts.Limit > 500 {
-		opts.Limit = 50
+// Page-size bounds for listings. Out-of-range requests fall back to the
+// default rather than failing, so a stale link still shows something.
+const (
+	DefaultPageSize = 50
+	MaxPageSize     = 500
+)
+
+// ClampPageSize is the limit ListEmails will actually use for a request.
+func ClampPageSize(limit int) int {
+	if limit <= 0 || limit > MaxPageSize {
+		return DefaultPageSize
 	}
+	return limit
+}
+
+// emailCols is the projection scanEmail expects, in order. The COALESCE is
+// aliased so the grouped query's outer SELECT can re-list these columns
+// against the subquery by name (emailColNames).
+const emailCols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+	message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
+	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
+
+const emailColNames = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
+	message_id, thread_id, sent_at, received_at, size_bytes,
+	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
+
+func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
+	opts.Limit = ClampPageSize(opts.Limit)
 	sortCol := "sent_at"
 	switch opts.Sort {
 	case "from_addr", "subject", "size_bytes", "imported_at", "sent_at":
@@ -330,67 +332,18 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	if strings.EqualFold(opts.Order, "asc") {
 		order = "ASC"
 	}
+	where, args := listWhere(opts)
 
-	args := []any{}
-	conds := []string{}
-	if HasJamo(opts.Query) {
-		for _, term := range strings.Fields(opts.Query) {
-			conds = append(conds, `chosung_text LIKE ?`)
-			args = append(args, "%"+ToChosung(term)+"%")
-		}
-	} else if fts := buildFTSQuery(opts.Query); fts != "" {
-		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
-		args = append(args, fts)
-	}
-	if opts.StarredOnly {
-		conds = append(conds, `starred = 1`)
-	}
-	// Flagged mail never mixes with the library; it only appears when asked for.
-	if opts.FlaggedOnly {
-		conds = append(conds, quarantined)
-	} else {
-		conds = append(conds, notQuarantined)
-	}
-	// A plain predicate on emails, never a JOIN — the COUNT(*) below shares this
-	// WHERE, and a join would double-count.
-	if opts.Uncategorized {
-		conds = append(conds, `category_id IS NULL`)
-	} else if opts.CategoryID != nil {
-		conds = append(conds, `category_id = ?`)
-		args = append(args, *opts.CategoryID)
-	}
-	// Messages with no parseable Date header store sent_at = 0, so any bound
-	// drops them — which is what a date filter should do.
-	if opts.From > 0 {
-		conds = append(conds, `sent_at >= ?`)
-		args = append(args, opts.From)
-	}
-	if opts.To > 0 {
-		conds = append(conds, `sent_at <= ?`)
-		args = append(args, opts.To)
-	}
-	where := ""
-	if len(conds) > 0 {
-		where = "WHERE " + strings.Join(conds, " AND ")
-	}
-
-	// The COALESCE is aliased so the grouped query's outer SELECT can re-list
-	// these columns against the subquery.
-	const cols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-		message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
-		has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
 	// Rows without a thread key group with themselves, so singletons still list.
 	const gkey = `COALESCE(thread_id, 'solo:' || id)`
 
 	countQ := "SELECT COUNT(*) FROM emails " + where
-	listQ := `SELECT ` + cols + ` FROM emails ` + where +
+	listQ := `SELECT ` + emailCols + ` FROM emails ` + where +
 		` ORDER BY ` + sortCol + ` ` + order + ` LIMIT ? OFFSET ?`
 	if opts.GroupThreads {
 		countQ = "SELECT COUNT(DISTINCT " + gkey + ") FROM emails " + where
-		listQ = `SELECT id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
-			message_id, thread_id, sent_at, received_at, size_bytes,
-			has_attachments, attachment_count, imported_at, starred, category_id, flag, risk, cnt FROM (
-			SELECT ` + cols + `,
+		listQ = `SELECT ` + emailColNames + `, cnt FROM (
+			SELECT ` + emailCols + `,
 				COUNT(*) OVER (PARTITION BY ` + gkey + `) AS cnt,
 				ROW_NUMBER() OVER (PARTITION BY ` + gkey + ` ORDER BY sent_at DESC, id DESC) AS rn
 			FROM emails ` + where + `
@@ -427,6 +380,52 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 		return nil, 0, err
 	}
 	return out, total, nil
+}
+
+// listWhere builds the WHERE clause both the count and the page query share.
+// It must stay a plain predicate on emails, never a JOIN: a join would make
+// the COUNT(*) double-count.
+func listWhere(opts ListOptions) (string, []any) {
+	args := []any{}
+	conds := []string{}
+	if hasJamo(opts.Query) {
+		for _, term := range strings.Fields(opts.Query) {
+			conds = append(conds, `chosung_text LIKE ?`)
+			args = append(args, "%"+toChosung(term)+"%")
+		}
+	} else if fts := buildFTSQuery(opts.Query); fts != "" {
+		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
+		args = append(args, fts)
+	}
+	if opts.StarredOnly {
+		conds = append(conds, `starred = 1`)
+	}
+	// Flagged mail never mixes with the library; it only appears when asked for.
+	if opts.FlaggedOnly {
+		conds = append(conds, quarantined)
+	} else {
+		conds = append(conds, notQuarantined)
+	}
+	if opts.Uncategorized {
+		conds = append(conds, `category_id IS NULL`)
+	} else if opts.CategoryID != nil {
+		conds = append(conds, `category_id = ?`)
+		args = append(args, *opts.CategoryID)
+	}
+	// Messages with no parseable Date header store sent_at = 0, so any bound
+	// drops them — which is what a date filter should do.
+	if opts.From > 0 {
+		conds = append(conds, `sent_at >= ?`)
+		args = append(args, opts.From)
+	}
+	if opts.To > 0 {
+		conds = append(conds, `sent_at <= ?`)
+		args = append(args, opts.To)
+	}
+	if len(conds) == 0 {
+		return "", args
+	}
+	return "WHERE " + strings.Join(conds, " AND "), args
 }
 
 // extraScanner appends fixed destinations to every Scan, so scanEmail's column
@@ -471,15 +470,9 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	if cc != "" {
 		_ = json.Unmarshal([]byte(cc), &e.CcAddrs)
 	}
-	if sentAt > 0 {
-		e.SentAt = time.Unix(sentAt, 0).UTC()
-	}
-	if recvAt > 0 {
-		e.ReceivedAt = time.Unix(recvAt, 0).UTC()
-	}
-	if importedAt > 0 {
-		e.ImportedAt = time.Unix(importedAt, 0).UTC()
-	}
+	e.SentAt = timeFromUnix(sentAt)
+	e.ReceivedAt = timeFromUnix(recvAt)
+	e.ImportedAt = timeFromUnix(importedAt)
 	e.HasAttachments = hasAtt != 0
 	return &e, nil
 }
@@ -489,6 +482,14 @@ func unixOrZero(t time.Time) int64 {
 		return 0
 	}
 	return t.Unix()
+}
+
+// timeFromUnix is the inverse of unixOrZero: 0 stays the zero time.
+func timeFromUnix(secs int64) time.Time {
+	if secs == 0 {
+		return time.Time{}
+	}
+	return time.Unix(secs, 0).UTC()
 }
 
 // nullIfEmpty keeps "no thread" as NULL so the partial index stays small and
@@ -542,8 +543,9 @@ const (
 
 // SQL predicates for the two flag classes; every listing must agree on them.
 const (
-	quarantined    = `flag IN ('spam', 'phishing')`
-	notQuarantined = `flag NOT IN ('spam', 'phishing')`
+	quarantineSet  = `('` + FlagSpam + `', '` + FlagPhishing + `')`
+	quarantined    = `flag IN ` + quarantineSet
+	notQuarantined = `flag NOT IN ` + quarantineSet
 )
 
 // Quarantined reports whether flag hides the message and strips it to text.
@@ -563,10 +565,7 @@ func (s *Store) SetEmailFlag(ctx context.Context, sha, flag string) error {
 	if err != nil {
 		return err
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrEmailNotFound
-	}
-	return nil
+	return requireRow(res, ErrEmailNotFound)
 }
 
 // riskJSON serialises findings for storage; a nil slice still stores "[]" so
@@ -577,24 +576,6 @@ func riskJSON(rs []risk.Reason) string {
 	}
 	b, _ := json.Marshal(rs)
 	return string(b)
-}
-
-// ListEmailsMissingRisk returns rows the phishing heuristics never saw.
-func (s *Store) ListEmailsMissingRisk(ctx context.Context) ([]ThreadBackfillRow, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT id, sha256 FROM emails WHERE risk IS NULL`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []ThreadBackfillRow{}
-	for rows.Next() {
-		var r ThreadBackfillRow
-		if err := rows.Scan(&r.ID, &r.SHA256); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
 }
 
 func (s *Store) SetEmailRisk(ctx context.Context, id int64, rs []risk.Reason) error {

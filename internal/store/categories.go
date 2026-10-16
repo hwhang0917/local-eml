@@ -66,10 +66,8 @@ func (s *Store) RenameCategory(ctx context.Context, id int64, name string) (Cate
 	if err != nil {
 		return Category{}, err
 	}
-	if n, err := res.RowsAffected(); err != nil {
+	if err := requireRow(res, ErrCategoryNotFound); err != nil {
 		return Category{}, err
-	} else if n == 0 {
-		return Category{}, ErrCategoryNotFound
 	}
 
 	var c Category
@@ -114,12 +112,8 @@ func (s *Store) SetEmailCategory(ctx context.Context, sha string, categoryID *in
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
+	if err := requireRow(res, ErrEmailNotFound); err != nil {
 		return err
-	}
-	if n == 0 {
-		return ErrEmailNotFound
 	}
 	return tx.Commit()
 }

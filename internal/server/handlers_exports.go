@@ -89,7 +89,7 @@ func (s *Server) handleExportS3(w http.ResponseWriter, r *http.Request) {
 func (s *Server) runExport(id string, cfg exporter.S3Config) {
 	ctx, release := s.Canceller.Register(context.Background(), id)
 	defer release()
-	_ = s.Store.UpdateImportStatus(ctx, id, "running", false)
+	_ = s.Store.UpdateImportStatus(ctx, id, store.ImportRunning)
 
 	log := slog.Default().With(
 		slog.String("export_id", id), slog.String("kind", "s3-export"))
@@ -100,7 +100,7 @@ func (s *Server) runExport(id string, cfg exporter.S3Config) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Error("export job panic", slog.Any("panic", rec))
-			_ = s.Store.UpdateImportStatus(context.Background(), id, "error", true)
+			_ = s.Store.UpdateImportStatus(context.Background(), id, store.ImportError)
 			s.Hub.Publish(id, importer.Event{Type: "error", Message: fmt.Sprint(rec)})
 			s.Hub.Close(id)
 		}
