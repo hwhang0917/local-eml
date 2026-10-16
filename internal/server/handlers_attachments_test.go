@@ -42,7 +42,7 @@ func newAttachmentTestServer(t *testing.T) (*Server, string) {
 	p := newTestPaths(t)
 	sha := strings.Repeat("b", 64)
 	writeBlobAs(t, p, sha, attachmentFixture)
-	return &Server{Importer: &importer.Importer{Paths: p}}, sha
+	return &Server{Importer: &importer.Importer{Paths: p}, Token: testToken}, sha
 }
 
 func TestAttachmentInlineOnlyForSafeTypes(t *testing.T) {

@@ -2,7 +2,8 @@
 import { computed, nextTick, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { CircleHelp, Monitor } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { CircleHelp, Lock, Monitor } from 'lucide-vue-next'
 import { ConfigProvider } from 'reka-ui'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
@@ -11,6 +12,9 @@ import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
+import Button from '@/components/ui/Button.vue'
+import { fieldClass } from '@/lib/utils'
+import { locked, unlock } from '@/lib/auth'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -18,6 +22,7 @@ const router = useRouter()
 const { online, checking, retry } = useHealth()
 const tour = useTour()
 const { session } = useSession()
+const token = ref('')
 
 // Two of the steps point at library controls, so the tour has to run from the
 // library route or those steps would highlight nothing.
@@ -54,6 +59,26 @@ watchEffect(() => {
        when a dropdown locks scroll, but scrollbar-gutter already reserves that
        space — the extra padding was itself the layout shift. -->
   <ConfigProvider :scroll-body="false">
+  <!-- No session cookie for this server: shown in place of the app until the
+       token from the launcher or `local-eml token` is pasted. -->
+  <div v-if="locked" class="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+    <Lock class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
+    <h1 class="text-lg font-semibold">{{ t('auth.title') }}</h1>
+    <p class="max-w-md text-sm text-muted-foreground">{{ t('auth.body') }}</p>
+    <form class="flex gap-2 w-full max-w-md" @submit.prevent="unlock(token)">
+      <input
+        v-model="token"
+        :class="fieldClass"
+        :placeholder="t('auth.placeholder')"
+        :aria-label="t('auth.placeholder')"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <Button type="submit" :disabled="!token.trim()">{{ t('auth.submit') }}</Button>
+    </form>
+    <p class="text-xs text-muted-foreground">{{ t('auth.hint') }} <code>local-eml token</code></p>
+  </div>
+  <template v-else>
   <!-- Desktop only. The server is loopback-only so no phone ever reaches it;
        the one narrow case is a tiled desktop window, and below md the nav and
        the library table break rather than reflow. A plain notice beats that.
@@ -127,6 +152,7 @@ watchEffect(() => {
       <RouterView />
     </main>
   </div>
+  </template>
 
   <ShortcutsHelp />
   <Toaster position="bottom-right" rich-colors close-button />

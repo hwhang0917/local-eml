@@ -23,12 +23,23 @@ local-eml <command> [flags]
   install [-y|--yes] [--port 7878]
                            백그라운드 서비스로 등록 (systemd/launchd/Windows 서비스)
   uninstall [-y|--yes]     백그라운드 서비스 중지 및 등록 해제
+  token                    API와 브라우저에 필요한 세션 토큰 출력
   version | -V | --version
 ```
 
 인수 없이 실행하면 `app`과 같습니다. 더블클릭이 바로 그 동작입니다.
 
 `install`과 `uninstall`은 확인을 묻습니다. 스크립트에서는 `--yes`로 생략할 수 있습니다.
+
+## 세션 토큰
+
+서버는 내 PC에서만 듣지만, 그 PC의 모든 프로그램과 모든 사용자 계정이 접속할 수 있어서 주소만으로는 충분하지 않습니다. 라이브러리마다 데이터 폴더의 `session-token` 파일에 소유자만 읽을 수 있는 무작위 토큰이 있습니다.
+
+- **더블클릭**은 로그인된 창을 바로 엽니다. 실행 파일이 토큰을 전달하고 브라우저가 그 포트의 쿠키로 보관합니다.
+- **직접 연 브라우저**는 처음 한 번 로그인 화면을 보여 줍니다. `local-eml token`의 출력을 붙여 넣으세요.
+- **스크립트**는 헤더로 보냅니다. `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`
+
+[임시 세션](./privacy#임시-세션)은 자기만의 토큰을 가지며, 실행 파일이 같은 방식으로 처리합니다.
 
 ## 환경 변수
 

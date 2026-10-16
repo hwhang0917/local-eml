@@ -205,8 +205,15 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 	)
 
 	return &imapClientSession{
-		client:      c,
-		bodySection: &imap.FetchItemBodySection{Specifier: imap.PartSpecifierNone, Peek: true},
+		client: c,
+		// The server declares the literal's length; asking for one byte past
+		// the cap keeps a hostile size from being read into memory whole, and
+		// lets Fetch tell an oversized message apart from an exact fit.
+		bodySection: &imap.FetchItemBodySection{
+			Specifier: imap.PartSpecifierNone,
+			Peek:      true,
+			Partial:   &imap.SectionPartial{Offset: 0, Size: MaxMessageBytes + 1},
+		},
 		uidValidity: selectData.UIDValidity,
 	}, nil
 }
@@ -241,6 +248,9 @@ func (s *imapClientSession) Fetch(uid imap.UID) ([]byte, error) {
 	body := msgs[0].FindBodySection(s.bodySection)
 	if body == nil {
 		return nil, fmt.Errorf("imap fetch uid %d: empty body", uid)
+	}
+	if len(body) > MaxMessageBytes {
+		return nil, fmt.Errorf("imap fetch uid %d: %w", uid, ErrMessageTooLarge)
 	}
 	return body, nil
 }

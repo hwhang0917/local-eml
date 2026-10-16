@@ -7,11 +7,16 @@ import (
 	"testing"
 )
 
+// testToken is what every test server is built with and every test request
+// presents; the auth tests pass their own headers.
+const testToken = "test-session-token"
+
 // httptest.NewRequest defaults Host to example.com, which loopbackGuard
 // rejects. Router-level tests build their requests through here instead.
 func newLoopbackRequest(method, target string, body io.Reader) *http.Request {
 	req := httptest.NewRequest(method, target, body)
 	req.Host = "127.0.0.1:7878"
+	req.Header.Set("Authorization", bearerPrefix+testToken)
 	return req
 }
 
@@ -34,6 +39,8 @@ func TestLoopbackGuard(t *testing.T) {
 		{"rebound host", "evil.example.com:7878", "", http.StatusForbidden},
 		{"cross-site origin", "127.0.0.1:7878", "https://evil.example.com", http.StatusForbidden},
 		{"origin lookalike", "127.0.0.1:7878", "http://127.0.0.1.evil.example.com", http.StatusForbidden},
+		{"other loopback port", "127.0.0.1:7878", "http://127.0.0.1:3000", http.StatusForbidden},
+		{"other loopback name", "127.0.0.1:7878", "http://localhost:7878", http.StatusForbidden},
 		{"null origin", "127.0.0.1:7878", "null", http.StatusForbidden},
 	}
 
