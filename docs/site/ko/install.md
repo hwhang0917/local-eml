@@ -14,7 +14,7 @@ Local Eml은 실행 파일 하나입니다. 실행 방법은 세 가지이며, �
 
 **Windows:** `local-eml-windows-amd64.exe` (ARM 노트북은 `-arm64`). 처음 열 때 **"Windows의 PC 보호"** 창이 뜰 수 있습니다. Microsoft의 평판 서비스에 아직 알려지지 않은 새 프로그램이면 모두 나오는 안내입니다. **추가 정보**를 누른 뒤 **실행**을 선택하세요.
 
-**macOS:** Apple silicon은 `local-eml-darwin-arm64`, Intel은 `local-eml-darwin-amd64`. macOS는 App Store 밖에서 온 공증되지 않은 프로그램을 개발자를 확인할 수 없다는 메시지와 함께 막습니다. **시스템 설정 → 개인정보 보호 및 보안**을 열어 아래쪽의 Local Eml 안내에서 **그래도 열기**를 누른 뒤 파일을 다시 여세요. macOS 14 이하에서는 파일을 오른쪽 클릭해 **열기**를 선택하면 됩니다.
+**macOS:** Apple silicon은 `local-eml-darwin-arm64.app.zip`, Intel은 `local-eml-darwin-amd64.app.zip`. 압축을 풀고 **Local Eml**을 더블클릭하세요. macOS는 App Store 밖에서 온 공증되지 않은 프로그램을 개발자를 확인할 수 없다는 메시지와 함께 막습니다. **시스템 설정 → 개인정보 보호 및 보안**을 열어 아래쪽의 Local Eml 안내에서 **그래도 열기**를 누른 뒤 앱을 다시 여세요. macOS 14 이하에서는 앱을 오른쪽 클릭해 **열기**를 선택하면 됩니다.
 
 **Linux:** `local-eml-linux-amd64` 또는 `-arm64`. `chmod +x`로 실행 권한을 주고 실행하세요. 기본 브라우저에서 열립니다.
 

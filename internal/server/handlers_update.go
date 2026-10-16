@@ -118,6 +118,10 @@ func (s *Server) handleUpdateInstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "swap binary: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if err := updater.Reseal(currentPath); err != nil {
+		// The new binary carries its own signature, so it still runs.
+		slog.Warn("reseal app bundle", slog.Any("err", err))
+	}
 
 	slog.Info("update installed",
 		slog.String("from", s.Version),

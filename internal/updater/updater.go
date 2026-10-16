@@ -20,6 +20,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -227,6 +228,28 @@ func Swap(currentPath, newPath string) error {
 	}
 	if err := os.Rename(newPath, currentPath); err != nil {
 		return fmt.Errorf("rename: %w", err)
+	}
+	return nil
+}
+
+// bundleBinDir is where a macOS .app keeps its executable.
+const bundleBinDir = ".app/Contents/MacOS/"
+
+// Reseal re-signs the .app that path lives in, if any. Swapping the binary
+// breaks the bundle's ad-hoc seal; codesign ships with macOS, so restoring it
+// is cheap. Elsewhere, or outside a bundle, it does nothing.
+func Reseal(path string) error {
+	if runtime.GOOS != "darwin" {
+		return nil
+	}
+	i := strings.Index(path, bundleBinDir)
+	if i < 0 {
+		return nil
+	}
+	app := path[:i+len(".app")]
+	out, err := exec.Command("codesign", "--force", "--sign", "-", app).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("codesign %s: %w: %s", app, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
