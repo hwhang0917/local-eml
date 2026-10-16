@@ -25,14 +25,34 @@ type IMAPProfile struct {
 
 var ErrIMAPProfileNotFound = errors.New("imap profile not found")
 
+// imapProfileCols is the projection scanIMAPProfile expects, in order.
+const imapProfileCols = `id, name, host, port, username, folder,
+	sync_enabled, uid_validity, last_uid, last_synced_at,
+	encrypted_password IS NOT NULL AND length(encrypted_password) > 0,
+	created_at, updated_at`
+
+// revokeIMAPSyncSet is the SET clause that takes a profile out of background
+// sync: no stored password and no cursor. Disabling sync, wiping the library
+// and exporting a snapshot all apply the same reset.
+const revokeIMAPSyncSet = `sync_enabled = 0, encrypted_password = NULL,
+	uid_validity = NULL, last_uid = NULL, last_synced_at = NULL`
+
 func (s *Store) ListIMAPProfiles(ctx context.Context) ([]IMAPProfile, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, name, host, port, username, folder,
-			sync_enabled, uid_validity, last_uid, last_synced_at,
-			encrypted_password IS NOT NULL AND length(encrypted_password) > 0,
-			created_at, updated_at
-		FROM imap_profiles
-		ORDER BY name COLLATE NOCASE`)
+	return s.queryIMAPProfiles(ctx, ``)
+}
+
+// ListIMAPProfilesForSync returns every profile flagged sync_enabled=1 that
+// also has a stored encrypted password — the precondition for unattended sync.
+func (s *Store) ListIMAPProfilesForSync(ctx context.Context) ([]IMAPProfile, error) {
+	return s.queryIMAPProfiles(ctx, `
+		WHERE sync_enabled = 1
+		  AND encrypted_password IS NOT NULL
+		  AND length(encrypted_password) > 0`)
+}
+
+func (s *Store) queryIMAPProfiles(ctx context.Context, where string) ([]IMAPProfile, error) {
+	rows, err := s.DB.QueryContext(ctx,
+		`SELECT `+imapProfileCols+` FROM imap_profiles `+where+` ORDER BY name COLLATE NOCASE`)
 	if err != nil {
 		return nil, err
 	}
@@ -49,12 +69,8 @@ func (s *Store) ListIMAPProfiles(ctx context.Context) ([]IMAPProfile, error) {
 }
 
 func (s *Store) GetIMAPProfile(ctx context.Context, id int64) (*IMAPProfile, error) {
-	row := s.DB.QueryRowContext(ctx, `
-		SELECT id, name, host, port, username, folder,
-			sync_enabled, uid_validity, last_uid, last_synced_at,
-			encrypted_password IS NOT NULL AND length(encrypted_password) > 0,
-			created_at, updated_at
-		FROM imap_profiles WHERE id = ?`, id)
+	row := s.DB.QueryRowContext(ctx,
+		`SELECT `+imapProfileCols+` FROM imap_profiles WHERE id = ?`, id)
 	p, err := scanIMAPProfile(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrIMAPProfileNotFound
@@ -63,33 +79,6 @@ func (s *Store) GetIMAPProfile(ctx context.Context, id int64) (*IMAPProfile, err
 		return nil, err
 	}
 	return &p, nil
-}
-
-// ListIMAPProfilesForSync returns every profile flagged sync_enabled=1 that
-// also has a stored encrypted password — the precondition for unattended sync.
-func (s *Store) ListIMAPProfilesForSync(ctx context.Context) ([]IMAPProfile, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, name, host, port, username, folder,
-			sync_enabled, uid_validity, last_uid, last_synced_at,
-			1, created_at, updated_at
-		FROM imap_profiles
-		WHERE sync_enabled = 1
-		  AND encrypted_password IS NOT NULL
-		  AND length(encrypted_password) > 0
-		ORDER BY name COLLATE NOCASE`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []IMAPProfile{}
-	for rows.Next() {
-		p, err := scanIMAPProfile(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
 }
 
 func (s *Store) GetIMAPProfilePassword(ctx context.Context, id int64) ([]byte, error) {
@@ -109,11 +98,7 @@ func (s *Store) SetIMAPProfilePassword(ctx context.Context, id int64, blob []byt
 	if err != nil {
 		return err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return ErrIMAPProfileNotFound
-	}
-	return nil
+	return requireRow(res, ErrIMAPProfileNotFound)
 }
 
 func (s *Store) UpdateIMAPProfileSyncState(ctx context.Context, id int64,
@@ -126,11 +111,7 @@ func (s *Store) UpdateIMAPProfileSyncState(ctx context.Context, id int64,
 	if err != nil {
 		return err
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return ErrIMAPProfileNotFound
-	}
-	return nil
+	return requireRow(res, ErrIMAPProfileNotFound)
 }
 
 func (s *Store) UpsertIMAPProfile(ctx context.Context, p IMAPProfile) (IMAPProfile, error) {
@@ -141,18 +122,8 @@ func (s *Store) UpsertIMAPProfile(ctx context.Context, p IMAPProfile) (IMAPProfi
 	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now().Unix()
-	var portVal any
-	if p.Port != nil {
-		portVal = *p.Port
-	}
-	var folderVal any
-	if p.Folder != nil {
-		folderVal = *p.Folder
-	}
-	syncFlag := 0
-	if p.SyncEnabled {
-		syncFlag = 1
-	}
+	portVal := nullable(p.Port)
+	folderVal := nullable(p.Folder)
 
 	var existingID, existingCreated int64
 	err = tx.QueryRowContext(ctx,
@@ -164,7 +135,7 @@ func (s *Store) UpsertIMAPProfile(ctx context.Context, p IMAPProfile) (IMAPProfi
 			INSERT INTO imap_profiles
 			  (name, host, port, username, folder, sync_enabled, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			p.Name, p.Host, portVal, p.Username, folderVal, syncFlag, now, now)
+			p.Name, p.Host, portVal, p.Username, folderVal, p.SyncEnabled, now, now)
 		if err != nil {
 			return IMAPProfile{}, err
 		}
@@ -181,20 +152,15 @@ func (s *Store) UpsertIMAPProfile(ctx context.Context, p IMAPProfile) (IMAPProfi
 			SET host = ?, port = ?, username = ?, folder = ?,
 			    sync_enabled = ?, updated_at = ?
 			WHERE id = ?`,
-			p.Host, portVal, p.Username, folderVal, syncFlag, now, existingID); err != nil {
+			p.Host, portVal, p.Username, folderVal, p.SyncEnabled, now, existingID); err != nil {
 			return IMAPProfile{}, err
 		}
 		// Disabling sync revokes the stored password + sync cursor. The README
 		// promises this behavior; failing to drop the secret here would leave
 		// an unused but still-decryptable blob in the database.
 		if !p.SyncEnabled {
-			if _, err := tx.ExecContext(ctx, `
-				UPDATE imap_profiles
-				SET encrypted_password = NULL,
-				    uid_validity = NULL,
-				    last_uid = NULL,
-				    last_synced_at = NULL
-				WHERE id = ?`, existingID); err != nil {
+			if _, err := tx.ExecContext(ctx,
+				`UPDATE imap_profiles SET `+revokeIMAPSyncSet+` WHERE id = ?`, existingID); err != nil {
 				return IMAPProfile{}, err
 			}
 		}
@@ -216,21 +182,10 @@ func (s *Store) DeleteIMAPProfile(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return ErrIMAPProfileNotFound
-	}
-	return nil
+	return requireRow(res, ErrIMAPProfileNotFound)
 }
 
-type imapProfileScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanIMAPProfile(rs imapProfileScanner) (IMAPProfile, error) {
+func scanIMAPProfile(rs rowScanner) (IMAPProfile, error) {
 	var p IMAPProfile
 	var port sql.NullInt64
 	var folder sql.NullString

@@ -15,9 +15,9 @@ func TestToChosung(t *testing.T) {
 		{"ㅎㄱ", "ㅎㄱ"},
 	}
 	for _, c := range cases {
-		got := ToChosung(c.in)
+		got := toChosung(c.in)
 		if got != c.want {
-			t.Errorf("ToChosung(%q) = %q, want %q", c.in, got, c.want)
+			t.Errorf("toChosung(%q) = %q, want %q", c.in, got, c.want)
 		}
 	}
 }
@@ -34,9 +34,9 @@ func TestHasJamo(t *testing.T) {
 		{"", false},
 	}
 	for _, c := range cases {
-		got := HasJamo(c.in)
+		got := hasJamo(c.in)
 		if got != c.want {
-			t.Errorf("HasJamo(%q) = %v, want %v", c.in, got, c.want)
+			t.Errorf("hasJamo(%q) = %v, want %v", c.in, got, c.want)
 		}
 	}
 }

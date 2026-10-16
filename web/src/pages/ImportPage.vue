@@ -1,27 +1,36 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { cn } from '@/lib/utils'
-import { formatBytes } from '@/lib/format'
+import { cn, fieldClass, segmentClass } from '@/lib/utils'
+import { formatBytes, formatEpoch } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
+import { NEW_PROFILE } from '@/composables/useS3Form'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
-import type { S3ImportConfig, IMAPImportConfig, IMAPProfile, S3Profile } from '@/lib/api'
+import type { IMAPImportConfig, IMAPProfile } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import S3FormCard from '@/components/S3FormCard.vue'
+import JobRunCard from '@/components/JobRunCard.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
-const NEW_PROFILE = '__new__'
+const IMAP_DEFAULT_PORT = 993
+const IMAP_DEFAULT_FOLDER = 'INBOX'
+
+// Seconds. Mirrors what the server accepts; 0 turns background sync off.
+const SYNC_INTERVALS_S = [0, 300, 600, 1800, 3600]
+// Also the server default, so the help text never renders blank before the
+// fetch corrects it.
+const DEFAULT_SYNC_INTERVAL_S = 600
 
 const { t } = useI18n()
-const { runs, importActive, startImport, startS3Import, startImapImport, cancelRun } = useImports()
-
-const importRuns = computed(() => runs.value.filter((r) => !r.kind.endsWith('-export')))
+const { importRuns, importActive, startImport, startS3Import, startImapImport } = useImports()
 
 type Provider = 'local' | 's3' | 'imap'
 const provider = ref<Provider>('local')
 
-// --- local upload (unchanged behavior) ---
+// --- local upload ---
 const stagedFiles = ref<File[]>([])
 const dragOver = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -76,182 +85,12 @@ const dropzoneClass = computed(() =>
   ),
 )
 
-// --- S3 provider ---
-const s3 = ref<S3ImportConfig>({
-  accessKeyId: '',
-  secretAccessKey: '',
-  sessionToken: '',
-  region: '',
-  bucket: '',
-  prefix: '',
-})
-const s3Confirming = ref(false)
-
-const s3Profiles = ref<S3Profile[]>([])
-const selectedS3ProfileId = ref<number | null>(null)
-
-const activeS3Profile = computed(() =>
-  s3Profiles.value.find((p) => p.id === selectedS3ProfileId.value) ?? null,
-)
-
-const canSaveS3Profile = computed(() => s3.value.bucket.trim().length > 0)
-
-const s3Valid = computed(() => s3.value.bucket.trim().length > 0)
-
-async function loadS3Profiles() {
-  try {
-    s3Profiles.value = await api.listS3Profiles()
-  } catch (e) {
-    toast.error(t('import.s3_profile_load_error'), { description: String(e) })
-  }
-}
-
-function applyS3Profile(p: S3Profile | null) {
-  if (!p) {
-    s3.value = {
-      accessKeyId: '', secretAccessKey: '', sessionToken: '',
-      region: '', bucket: '', prefix: '',
-    }
-    return
-  }
-  s3.value = {
-    accessKeyId: p.access_key_id ?? '',
-    secretAccessKey: '',
-    sessionToken: '',
-    region: p.region ?? '',
-    bucket: p.bucket,
-    prefix: p.prefix ?? '',
-  }
-}
-
-function onS3ProfileChange(value: string) {
-  if (value === NEW_PROFILE) {
-    selectedS3ProfileId.value = null
-    applyS3Profile(null)
-    return
-  }
-  const id = Number(value)
-  selectedS3ProfileId.value = id
-  applyS3Profile(s3Profiles.value.find((p) => p.id === id) ?? null)
-}
-
-const s3ProfileSelectValue = computed(() =>
-  selectedS3ProfileId.value == null ? NEW_PROFILE : String(selectedS3ProfileId.value),
-)
-
-const s3ProfileSelectLabel = computed(() =>
-  activeS3Profile.value?.name ?? t('import.s3_profile_new'),
-)
-
-async function saveS3Profile() {
-  const existing = activeS3Profile.value
-  let name = existing?.name ?? ''
-  if (!existing) {
-    const entered = window.prompt(t('import.s3_profile_save_prompt'), '')
-    if (entered == null) return
-    name = entered.trim()
-    if (!name) return
-  }
-  try {
-    const saved = await api.saveS3Profile({
-      name,
-      bucket: s3.value.bucket.trim(),
-      prefix: s3.value.prefix?.trim() || undefined,
-      region: s3.value.region?.trim() || undefined,
-      access_key_id: s3.value.accessKeyId?.trim() || undefined,
-    })
-    await loadS3Profiles()
-    selectedS3ProfileId.value = saved.id
-  } catch (e) {
-    toast.error(t('import.s3_profile_save_error'), { description: String(e) })
-  }
-}
-
-async function deleteS3Profile() {
-  const p = activeS3Profile.value
-  if (!p) return
-  if (!window.confirm(t('import.s3_profile_delete_confirm', { name: p.name }))) return
-  try {
-    await api.deleteS3Profile(p.id)
-    selectedS3ProfileId.value = null
-    applyS3Profile(null)
-    await loadS3Profiles()
-  } catch (e) {
-    toast.error(t('import.s3_profile_delete_error'), { description: String(e) })
-  }
-}
-
-const s3CredsLabel = computed(() =>
-  s3.value.accessKeyId?.trim() ? t('import.s3_creds_form') : t('import.s3_creds_system'),
-)
-
-function reviewS3() {
-  if (s3Valid.value) s3Confirming.value = true
-}
-
-function cancelS3() {
-  s3Confirming.value = false
-}
-
-async function confirmS3() {
-  const cfg: S3ImportConfig = {
-    bucket: s3.value.bucket.trim(),
-    prefix: s3.value.prefix?.trim() || undefined,
-    region: s3.value.region?.trim() || undefined,
-    accessKeyId: s3.value.accessKeyId?.trim() || undefined,
-    secretAccessKey: s3.value.secretAccessKey || undefined,
-    sessionToken: s3.value.sessionToken || undefined,
-  }
-  s3Confirming.value = false
-  await startS3Import(cfg)
-}
-
-function providerBtnClass(p: Provider) {
-  return cn(
-    'px-4 py-1.5 text-sm rounded-md cursor-pointer transition-colors',
-    provider.value === p
-      ? 'bg-primary text-primary-foreground'
-      : 'text-muted-foreground hover:text-foreground',
-  )
-}
-
-const inputClass =
-  'w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary'
-
-// Suggestions only — the input still accepts any value, so newly launched
-// regions keep working without a code change.
-const awsRegions: { code: string; name: string }[] = [
-  { code: 'us-east-1', name: 'US East (N. Virginia)' },
-  { code: 'us-east-2', name: 'US East (Ohio)' },
-  { code: 'us-west-1', name: 'US West (N. California)' },
-  { code: 'us-west-2', name: 'US West (Oregon)' },
-  { code: 'ca-central-1', name: 'Canada (Central)' },
-  { code: 'sa-east-1', name: 'South America (São Paulo)' },
-  { code: 'eu-west-1', name: 'Europe (Ireland)' },
-  { code: 'eu-west-2', name: 'Europe (London)' },
-  { code: 'eu-west-3', name: 'Europe (Paris)' },
-  { code: 'eu-central-1', name: 'Europe (Frankfurt)' },
-  { code: 'eu-north-1', name: 'Europe (Stockholm)' },
-  { code: 'eu-south-1', name: 'Europe (Milan)' },
-  { code: 'ap-northeast-1', name: 'Asia Pacific (Tokyo)' },
-  { code: 'ap-northeast-2', name: 'Asia Pacific (Seoul)' },
-  { code: 'ap-northeast-3', name: 'Asia Pacific (Osaka)' },
-  { code: 'ap-southeast-1', name: 'Asia Pacific (Singapore)' },
-  { code: 'ap-southeast-2', name: 'Asia Pacific (Sydney)' },
-  { code: 'ap-south-1', name: 'Asia Pacific (Mumbai)' },
-  { code: 'ap-east-1', name: 'Asia Pacific (Hong Kong)' },
-  { code: 'me-south-1', name: 'Middle East (Bahrain)' },
-  { code: 'af-south-1', name: 'Africa (Cape Town)' },
-]
-
 // --- IMAP provider ---
-const imapForm = ref<IMAPImportConfig>({
-  host: '',
-  port: 993,
-  username: '',
-  password: '',
-  folder: 'INBOX',
-})
+function emptyImap(): IMAPImportConfig {
+  return { host: '', port: IMAP_DEFAULT_PORT, username: '', password: '', folder: IMAP_DEFAULT_FOLDER }
+}
+
+const imapForm = ref<IMAPImportConfig>(emptyImap())
 const imapConfirming = ref(false)
 const imapSyncEnabled = ref(false)
 const imapSyncing = ref(false)
@@ -266,6 +105,7 @@ const imapValid = computed(
 // --- IMAP profiles ---
 const imapProfiles = ref<IMAPProfile[]>([])
 const selectedImapProfileId = ref<number | null>(null)
+const imapDeleteConfirmOpen = ref(false)
 
 const activeImapProfile = computed(() =>
   imapProfiles.value.find((p) => p.id === selectedImapProfileId.value) ?? null,
@@ -286,25 +126,20 @@ async function loadImapProfiles() {
 }
 
 // --- IMAP background poll interval ---
-// Seeded with the server default so the help text never renders blank; the
-// fetch corrects it right after mount.
-const syncIntervalSeconds = ref<number>(600)
-const syncIntervalChoices = computed(() => [
-  { value: 0, label: t('import.sync_interval_off') },
-  { value: 300, label: t('import.sync_interval_minutes', { n: 5 }) },
-  { value: 600, label: t('import.sync_interval_minutes', { n: 10 }) },
-  { value: 1800, label: t('import.sync_interval_minutes', { n: 30 }) },
-  { value: 3600, label: t('import.sync_interval_hours', { n: 1 }, 1) },
-])
-const syncIntervalLabel = computed(() => {
-  const s = syncIntervalSeconds.value
-  const found = syncIntervalChoices.value.find((c) => c.value === s)
-  if (found) return found.label
-  // Interval set via env var to something off-menu — still state it exactly.
+const syncIntervalSeconds = ref<number>(DEFAULT_SYNC_INTERVAL_S)
+
+function intervalLabel(s: number): string {
+  if (s === 0) return t('import.sync_interval_off')
   return s % 3600 === 0
     ? t('import.sync_interval_hours', { n: s / 3600 }, s / 3600)
     : t('import.sync_interval_minutes', { n: Math.round(s / 60) })
-})
+}
+
+const syncIntervalChoices = computed(() =>
+  SYNC_INTERVALS_S.map((value) => ({ value, label: intervalLabel(value) })),
+)
+// An interval set via env var to something off-menu is still stated exactly.
+const syncIntervalLabel = computed(() => intervalLabel(syncIntervalSeconds.value))
 
 async function loadSyncInterval() {
   try {
@@ -330,21 +165,20 @@ async function setSyncInterval(v: string | undefined) {
 onMounted(() => {
   loadImapProfiles()
   loadSyncInterval()
-  loadS3Profiles()
 })
 
 function applyImapProfile(p: IMAPProfile | null) {
   if (!p) {
-    imapForm.value = { host: '', port: 993, username: '', password: '', folder: 'INBOX' }
+    imapForm.value = emptyImap()
     imapSyncEnabled.value = false
     return
   }
   imapForm.value = {
     host: p.host,
-    port: p.port ?? 993,
+    port: p.port ?? IMAP_DEFAULT_PORT,
     username: p.username,
     password: '',
-    folder: p.folder ?? 'INBOX',
+    folder: p.folder ?? IMAP_DEFAULT_FOLDER,
   }
   imapSyncEnabled.value = p.sync_enabled
 }
@@ -411,7 +245,6 @@ async function syncImapNow() {
 async function deleteImapProfile() {
   const p = activeImapProfile.value
   if (!p) return
-  if (!window.confirm(t('import.imap_profile_delete_confirm', { name: p.name }))) return
   try {
     await api.deleteIMAPProfile(p.id)
     selectedImapProfileId.value = null
@@ -442,22 +275,18 @@ async function confirmImap() {
   imapConfirming.value = false
   await startImapImport(cfg)
 }
-
-function formatRelativeSync(ts: number): string {
-  return new Date(ts * 1000).toLocaleString()
-}
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="inline-flex gap-1 p-1 rounded-lg bg-muted">
-      <button :class="providerBtnClass('local')" :aria-pressed="provider === 'local'" @click="provider = 'local'">
+      <button :class="segmentClass(provider === 'local')" :aria-pressed="provider === 'local'" @click="provider = 'local'">
         {{ t('import.provider_local') }}
       </button>
-      <button :class="providerBtnClass('s3')" :aria-pressed="provider === 's3'" @click="provider = 's3'">
+      <button :class="segmentClass(provider === 's3')" :aria-pressed="provider === 's3'" @click="provider = 's3'">
         {{ t('import.provider_s3') }}
       </button>
-      <button :class="providerBtnClass('imap')" :aria-pressed="provider === 'imap'" @click="provider = 'imap'">
+      <button :class="segmentClass(provider === 'imap')" :aria-pressed="provider === 'imap'" @click="provider = 'imap'">
         {{ t('import.provider_imap') }}
       </button>
     </div>
@@ -510,115 +339,51 @@ function formatRelativeSync(ts: number): string {
     </template>
 
     <!-- S3 provider -->
-    <template v-else-if="provider === 's3'">
-      <Card v-if="!s3Confirming" class="p-6 space-y-4">
-        <div>
-          <h3 class="text-lg font-semibold">{{ t('import.s3_title') }}</h3>
-        </div>
+    <S3FormCard
+      v-else-if="provider === 's3'"
+      title-key="import.s3_title"
+      confirm-title-key="import.confirm_title"
+      confirm-hint-key="import.s3_confirm_hint"
+      start-key="import.confirm"
+      busy-key="import.busy"
+      :busy="importActive"
+      :start="startS3Import"
+    />
 
-        <div class="flex items-end gap-2">
-          <div class="space-y-1 flex-1 max-w-xs">
-            <span class="text-sm">{{ t('import.s3_profile') }}</span>
-            <Select
-              :model-value="s3ProfileSelectValue"
-              @update:model-value="(v) => v && onS3ProfileChange(String(v))"
-            >
-              <SelectTrigger class="w-full">
-                <SelectValue>{{ s3ProfileSelectLabel }}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="NEW_PROFILE">{{ t('import.s3_profile_new') }}</SelectItem>
-                <SelectItem v-for="p in s3Profiles" :key="p.id" :value="String(p.id)">
-                  {{ p.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" :disabled="!canSaveS3Profile" @click="saveS3Profile">
-            {{ t('import.s3_profile_save') }}
-          </Button>
-          <Button variant="outline" :disabled="!activeS3Profile" @click="deleteS3Profile">
-            {{ t('import.s3_profile_delete') }}
-          </Button>
-        </div>
-
-        <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_optional') }}</p>
-        <div class="grid gap-4 sm:grid-cols-2">
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_access_key') }}</span>
-            <input v-model="s3.accessKeyId" :class="inputClass" autocomplete="off" />
-          </label>
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_secret_key') }}</span>
-            <input v-model="s3.secretAccessKey" type="password" :class="inputClass" autocomplete="off" />
-          </label>
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_session_token') }}</span>
-            <input v-model="s3.sessionToken" type="password" :class="inputClass" autocomplete="off" />
-          </label>
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_region') }}</span>
-            <input
-              v-model="s3.region"
-              :class="inputClass"
-              list="aws-regions"
-              placeholder="us-east-1"
-              autocomplete="off"
-            />
-            <datalist id="aws-regions">
-              <option v-for="r in awsRegions" :key="r.code" :value="r.code">{{ r.name }}</option>
-            </datalist>
-          </label>
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_bucket') }} *</span>
-            <input v-model="s3.bucket" :class="inputClass" autocomplete="off" />
-          </label>
-          <label class="space-y-1">
-            <span class="text-sm">{{ t('import.s3_prefix') }}</span>
-            <input v-model="s3.prefix" :class="inputClass" placeholder="mail/2026/" autocomplete="off" />
-          </label>
-        </div>
-
-        <div class="flex justify-end">
-          <Button :disabled="!s3Valid" @click="reviewS3">{{ t('import.review') }}</Button>
-        </div>
-      </Card>
-
-      <Card v-else class="p-6">
+    <!-- IMAP provider -->
+    <template v-else>
+      <Card v-if="imapConfirming" class="p-6">
         <div class="flex items-start justify-between gap-4 mb-4">
           <div>
             <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
-            <p class="text-sm text-muted-foreground">{{ t('import.s3_confirm_hint') }}</p>
+            <p class="text-sm text-muted-foreground">{{ t('import.imap_confirm_hint') }}</p>
           </div>
           <div class="flex gap-2 shrink-0">
-            <Button variant="outline" @click="cancelS3">{{ t('import.cancel') }}</Button>
-            <Button :disabled="importActive" @click="confirmS3">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
+            <Button variant="outline" @click="cancelImap">{{ t('import.cancel') }}</Button>
+            <Button :disabled="importActive" @click="confirmImap">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
           </div>
         </div>
         <dl class="text-sm space-y-2">
           <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_bucket') }}</dt>
-            <dd class="font-mono">{{ s3.bucket }}</dd>
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_host') }}</dt>
+            <dd class="font-mono">{{ imapForm.host }}</dd>
           </div>
           <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_prefix') }}</dt>
-            <dd class="font-mono">{{ s3.prefix || '—' }}</dd>
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_username') }}</dt>
+            <dd class="font-mono">{{ imapForm.username }}</dd>
           </div>
           <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_region') }}</dt>
-            <dd class="font-mono">{{ s3.region || t('import.s3_region_default') }}</dd>
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_folder') }}</dt>
+            <dd class="font-mono">{{ imapForm.folder || IMAP_DEFAULT_FOLDER }}</dd>
           </div>
           <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_creds') }}</dt>
-            <dd>{{ s3CredsLabel }}</dd>
+            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_port') }}</dt>
+            <dd class="font-mono">{{ imapForm.port || IMAP_DEFAULT_PORT }}</dd>
           </div>
         </dl>
       </Card>
-    </template>
 
-    <!-- IMAP provider -->
-    <template v-else>
-      <Card v-if="!imapConfirming" class="p-6 space-y-4">
+      <Card v-else class="p-6 space-y-4">
         <div>
           <h3 class="text-lg font-semibold mb-1">{{ t('import.imap_title') }}</h3>
           <p class="text-sm text-muted-foreground">{{ t('import.imap_hint') }}</p>
@@ -645,9 +410,18 @@ function formatRelativeSync(ts: number): string {
           <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
             {{ t('import.imap_profile_save') }}
           </Button>
-          <Button variant="outline" :disabled="!activeImapProfile" @click="deleteImapProfile">
+          <Button variant="outline" :disabled="!activeImapProfile" @click="imapDeleteConfirmOpen = true">
             {{ t('import.imap_profile_delete') }}
           </Button>
+          <ConfirmDialog
+            v-model:open="imapDeleteConfirmOpen"
+            :title="t('import.imap_profile_delete_confirm', { name: activeImapProfile?.name ?? '' })"
+            :description="t('import.profile_delete_body')"
+            :confirm-label="t('import.imap_profile_delete')"
+            :cancel-label="t('import.cancel')"
+            destructive
+            @confirm="deleteImapProfile"
+          />
         </div>
 
         <div class="rounded-md border border-border bg-muted/30 p-3 space-y-2">
@@ -688,12 +462,9 @@ function formatRelativeSync(ts: number): string {
             class="flex items-center gap-3 text-xs text-muted-foreground pl-6"
           >
             <span v-if="activeImapProfile.last_synced_at">
-              {{ t('import.imap_last_synced', { when: formatRelativeSync(activeImapProfile.last_synced_at) }) }}
+              {{ t('import.imap_last_synced', { when: formatEpoch(activeImapProfile.last_synced_at) }) }}
             </span>
             <span v-else>{{ t('import.imap_never_synced') }}</span>
-            <span v-if="!activeImapProfile.has_password" class="text-amber-600">
-              · {{ t('import.imap_sync_needs_password') }}
-            </span>
             <Button
               v-if="activeImapProfile.has_password"
               size="sm"
@@ -703,29 +474,32 @@ function formatRelativeSync(ts: number): string {
             >
               {{ imapSyncing ? t('import.imap_sync_running') : t('import.imap_sync_now') }}
             </Button>
+            <span v-else class="text-amber-600">
+              · {{ t('import.imap_sync_needs_password') }}
+            </span>
           </div>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.imap_host') }} *</span>
-            <input v-model="imapForm.host" :class="inputClass" placeholder="imap.example.com" autocomplete="off" />
+            <input v-model="imapForm.host" :class="fieldClass" placeholder="imap.example.com" autocomplete="off" />
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.imap_port') }}</span>
-            <input v-model.number="imapForm.port" type="number" :class="inputClass" placeholder="993" autocomplete="off" />
+            <input v-model.number="imapForm.port" type="number" :class="fieldClass" :placeholder="String(IMAP_DEFAULT_PORT)" autocomplete="off" />
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.imap_username') }} *</span>
-            <input v-model="imapForm.username" :class="inputClass" autocomplete="off" />
+            <input v-model="imapForm.username" :class="fieldClass" autocomplete="off" />
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.imap_password') }} *</span>
-            <input v-model="imapForm.password" type="password" :class="inputClass" autocomplete="off" />
+            <input v-model="imapForm.password" type="password" :class="fieldClass" autocomplete="off" />
           </label>
           <label class="space-y-1">
             <span class="text-sm">{{ t('import.imap_folder') }}</span>
-            <input v-model="imapForm.folder" :class="inputClass" placeholder="INBOX" autocomplete="off" />
+            <input v-model="imapForm.folder" :class="fieldClass" :placeholder="IMAP_DEFAULT_FOLDER" autocomplete="off" />
           </label>
         </div>
 
@@ -733,99 +507,8 @@ function formatRelativeSync(ts: number): string {
           <Button :disabled="!imapValid" @click="reviewImap">{{ t('import.review') }}</Button>
         </div>
       </Card>
-
-      <Card v-else class="p-6">
-        <div class="flex items-start justify-between gap-4 mb-4">
-          <div>
-            <h3 class="text-lg font-semibold mb-1">{{ t('import.confirm_title') }}</h3>
-            <p class="text-sm text-muted-foreground">{{ t('import.imap_confirm_hint') }}</p>
-          </div>
-          <div class="flex gap-2 shrink-0">
-            <Button variant="outline" @click="cancelImap">{{ t('import.cancel') }}</Button>
-            <Button :disabled="importActive" @click="confirmImap">{{ importActive ? t('import.busy') : t('import.confirm') }}</Button>
-          </div>
-        </div>
-        <dl class="text-sm space-y-2">
-          <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_host') }}</dt>
-            <dd class="font-mono">{{ imapForm.host }}</dd>
-          </div>
-          <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_username') }}</dt>
-            <dd class="font-mono">{{ imapForm.username }}</dd>
-          </div>
-          <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_folder') }}</dt>
-            <dd class="font-mono">{{ imapForm.folder || 'INBOX' }}</dd>
-          </div>
-          <div class="flex gap-3">
-            <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.imap_port') }}</dt>
-            <dd class="font-mono">{{ imapForm.port || 993 }}</dd>
-          </div>
-        </dl>
-      </Card>
     </template>
 
-    <!-- progress (imports only) -->
-    <div v-for="run in importRuns" :key="run.id" class="space-y-2">
-      <Card class="p-4">
-        <div class="flex items-center gap-3 mb-2">
-          <span class="font-medium">{{ t('import.import_label', { id: run.id.slice(0, 8) }) }}</span>
-          <span class="text-xs px-1.5 py-0.5 rounded bg-accent">{{ run.kind }}</span>
-          <span class="ml-auto text-sm text-muted-foreground">
-            <span v-if="run.total">{{ run.processed }} / {{ run.total }}</span>
-            <span v-if="run.duplicates"> · {{ run.duplicates }} {{ t('import.dup') }}</span>
-            <span v-if="run.errors" class="text-destructive"> · {{ run.errors }} {{ t('import.err') }}</span>
-          </span>
-          <Button v-if="!run.done" size="sm" variant="outline" @click="cancelRun(run.id)">
-            {{ t('import.abort') }}
-          </Button>
-        </div>
-
-        <div class="flex items-center justify-between text-xs text-muted-foreground mb-1">
-          <span :class="{ 'text-foreground': run.done && run.errors === 0 }">
-            <span v-if="run.done && run.errors === 0">✓</span>
-            <span v-else-if="run.done && run.errors > 0" class="text-destructive">✗</span>
-            {{ run.phase }}
-          </span>
-          <span v-if="run.current" class="truncate ml-2 max-w-[50%]" :title="run.current">
-            {{ run.current }}
-          </span>
-        </div>
-
-        <div
-          class="h-1.5 bg-muted rounded overflow-hidden"
-          role="progressbar"
-          :aria-label="t('import.import_label', { id: run.id.slice(0, 8) })"
-          :aria-valuemin="0"
-          :aria-valuemax="run.total || undefined"
-          :aria-valuenow="run.total ? run.processed : undefined"
-        >
-          <div
-            class="h-full bg-primary transition-all"
-            :class="{ 'animate-pulse': !run.done && run.total === 0 }"
-            :style="{
-              width: run.total
-                ? `${Math.min(100, (run.processed / run.total) * 100)}%`
-                : (run.done ? '100%' : '15%'),
-            }"
-          ></div>
-        </div>
-
-        <details class="mt-3" v-if="run.log.length">
-          <summary class="text-xs text-muted-foreground cursor-pointer">{{ t('import.log') }} ({{ run.log.length }})</summary>
-          <ul class="mt-2 text-xs font-mono space-y-0.5 max-h-48 overflow-auto">
-            <li v-for="(e, i) in run.log" :key="i" :class="{
-              'text-destructive': e.kind === 'err',
-              'text-muted-foreground': e.kind === 'dup',
-            }">
-              <span class="inline-block w-12">{{ e.kind }}</span>
-              <span>{{ e.path }}</span>
-              <span v-if="e.detail" class="ml-2 text-muted-foreground">{{ e.detail.slice(0, 80) }}</span>
-            </li>
-          </ul>
-        </details>
-      </Card>
-    </div>
+    <JobRunCard v-for="run in importRuns" :key="run.id" :run="run" label-key="import.import_label" />
   </div>
 </template>

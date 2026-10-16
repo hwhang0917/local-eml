@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
@@ -12,18 +11,14 @@ func TestSyncIntervalRoundTrip(t *testing.T) {
 	s, _ := newDriftServer(t)
 
 	put := func(body string) *httptest.ResponseRecorder {
-		rec := httptest.NewRecorder()
-		req := newLoopbackRequest(http.MethodPut, "/api/imap/sync-interval", strings.NewReader(body))
-		s.Router().ServeHTTP(rec, req)
-		return rec
+		return doJSON(t, s, http.MethodPut, "/api/imap/sync-interval", body)
 	}
 
 	if rec := put(`{"seconds": 300}`); rec.Code != http.StatusOK {
 		t.Fatalf("put: %d %s", rec.Code, rec.Body)
 	}
 
-	rec := httptest.NewRecorder()
-	s.Router().ServeHTTP(rec, newLoopbackRequest(http.MethodGet, "/api/imap/sync-interval", nil))
+	rec := doJSON(t, s, http.MethodGet, "/api/imap/sync-interval", "")
 	var got syncIntervalPayload
 	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
 		t.Fatalf("decode: %v", err)

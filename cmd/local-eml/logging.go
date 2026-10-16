@@ -24,8 +24,10 @@ func setupLogger(p paths.Paths) (*slog.Logger, func()) {
 		level = slog.LevelError
 	}
 
+	// Logs carry subjects and addresses, so they get the same owner-only mode
+	// as the rest of the data folder.
 	logPath := filepath.Join(p.Logs, "local-eml.log")
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 
 	var w io.Writer = os.Stderr
 	cleanup := func() {}

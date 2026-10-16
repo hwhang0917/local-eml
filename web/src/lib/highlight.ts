@@ -12,7 +12,7 @@ const HANGUL_BASE = 0xac00
 const HANGUL_LAST = 0xd7a3
 const JAMO_PER_CHOSUNG = 21 * 28
 
-export function hasJamo(s: string): boolean {
+function hasJamo(s: string): boolean {
   for (const c of s) {
     const cp = c.codePointAt(0)!
     if (cp >= 0x3131 && cp <= 0x318e) return true

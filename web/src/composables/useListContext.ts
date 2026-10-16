@@ -1,11 +1,9 @@
 import { useStorage } from '@vueuse/core'
-import { api, type Email } from '@/lib/api'
-
-type ListParams = NonNullable<Parameters<typeof api.listEmails>[0]>
+import { api, type Email, type EmailListParams } from '@/lib/api'
 
 export interface ListCtx {
   /** The library's filter/sort params, without limit/offset. */
-  params: ListParams
+  params: EmailListParams
   /** Absolute index of the opened email in the filtered list. */
   index: number
   total: number
@@ -27,7 +25,7 @@ const ctx = useStorage<ListCtx | null>('library-list-ctx', null, sessionStorage,
   },
 })
 
-async function windowAround(params: ListParams, index: number) {
+async function windowAround(params: EmailListParams, index: number) {
   const offset = Math.max(0, index - 1)
   const r = await api.listEmails({ ...params, limit: 3, offset })
   return { r, offset }
@@ -66,7 +64,6 @@ async function neighbors(sha: string): Promise<Neighbors | null> {
 
 export function useListContext() {
   return {
-    ctx,
     set(value: ListCtx) {
       ctx.value = value
     },

@@ -1,6 +1,9 @@
 package server
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestPlanRestart_LinuxAlwaysIncludesNoBlock(t *testing.T) {
 	// Regression guard: dropping --no-block re-introduces the original bug.
@@ -16,13 +19,13 @@ func TestPlanRestart_LinuxAlwaysIncludesNoBlock(t *testing.T) {
 	if p.cmd != "systemctl" {
 		t.Errorf("cmd = %q, want systemctl", p.cmd)
 	}
-	if !contains(p.args, "--no-block") {
+	if !slices.Contains(p.args, "--no-block") {
 		t.Errorf("args=%v missing --no-block (would deadlock)", p.args)
 	}
-	if !contains(p.args, "--user") {
+	if !slices.Contains(p.args, "--user") {
 		t.Errorf("args=%v missing --user (we install a user service)", p.args)
 	}
-	if !contains(p.args, "restart") {
+	if !slices.Contains(p.args, "restart") {
 		t.Errorf("args=%v missing 'restart' verb", p.args)
 	}
 }
@@ -40,13 +43,4 @@ func TestPlanRestart_UnknownNoOp(t *testing.T) {
 	if p.available {
 		t.Error("plan9: expected available=false")
 	}
-}
-
-func contains(haystack []string, needle string) bool {
-	for _, s := range haystack {
-		if s == needle {
-			return true
-		}
-	}
-	return false
 }

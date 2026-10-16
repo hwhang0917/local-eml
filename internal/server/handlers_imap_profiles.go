@@ -2,13 +2,8 @@ package server
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"net/http"
-	"strconv"
 	"strings"
-
-	"github.com/go-chi/chi/v5"
 
 	"github.com/hwhang0917/local-eml/internal/store"
 )
@@ -23,9 +18,8 @@ type imapProfileBody struct {
 }
 
 const (
-	maxIMAPProfileName = 64
-	minIMAPPort        = 1
-	maxIMAPPort        = 65535
+	minIMAPPort = 1
+	maxIMAPPort = 65535
 )
 
 func (s *Server) handleListIMAPProfiles(w http.ResponseWriter, r *http.Request) {
@@ -39,14 +33,13 @@ func (s *Server) handleListIMAPProfiles(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
 	var body imapProfileBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid body: "+err.Error(), http.StatusBadRequest)
+	if !decodeJSON(w, r, &body) {
 		return
 	}
 	name := strings.TrimSpace(body.Name)
 	host := strings.TrimSpace(body.Host)
 	username := strings.TrimSpace(body.Username)
-	if name == "" || len(name) > maxIMAPProfileName {
+	if !validName(name) {
 		http.Error(w, "invalid name", http.StatusBadRequest)
 		return
 	}
@@ -62,15 +55,9 @@ func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid port", http.StatusBadRequest)
 		return
 	}
-	var folder *string
-	if body.Folder != nil {
-		trimmed := strings.TrimSpace(*body.Folder)
-		if trimmed != "" {
-			folder = &trimmed
-		}
-	}
 	saved, err := s.Store.UpsertIMAPProfile(r.Context(), store.IMAPProfile{
-		Name: name, Host: host, Port: body.Port, Username: username, Folder: folder,
+		Name: name, Host: host, Port: body.Port, Username: username,
+		Folder:      trimmedOrNil(body.Folder),
 		SyncEnabled: body.SyncEnabled,
 	})
 	if err != nil {
@@ -81,18 +68,12 @@ func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDeleteIMAPProfile(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+	id, ok := idParam(w, r)
+	if !ok {
 		return
 	}
 	if err := s.Store.DeleteIMAPProfile(r.Context(), id); err != nil {
-		if errors.Is(err, store.ErrIMAPProfileNotFound) {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeStoreErr(w, err, store.ErrIMAPProfileNotFound)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -102,19 +83,13 @@ func (s *Server) handleDeleteIMAPProfile(w http.ResponseWriter, r *http.Request)
 // Returns 202 immediately and runs the import in a goroutine so callers get
 // the same import-job lifecycle they're used to.
 func (s *Server) handleSyncIMAPProfile(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.Error(w, "invalid id", http.StatusBadRequest)
+	id, ok := idParam(w, r)
+	if !ok {
 		return
 	}
 	profile, err := s.Store.GetIMAPProfile(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, store.ErrIMAPProfileNotFound) {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeStoreErr(w, err, store.ErrIMAPProfileNotFound)
 		return
 	}
 	if !profile.SyncEnabled {
@@ -125,11 +100,7 @@ func (s *Server) handleSyncIMAPProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no stored password — run a manual import once to seed it", http.StatusBadRequest)
 		return
 	}
-	go func() {
-		if err := s.RunIMAPSync(context.Background(), id); err != nil {
-			// Logging covered inside RunIMAPSync / runJob.
-			_ = err
-		}
-	}()
+	// RunIMAPSync logs its own failures; nothing is left to do with the error.
+	go s.RunIMAPSync(context.Background(), id)
 	w.WriteHeader(http.StatusAccepted)
 }

@@ -6,7 +6,7 @@ import { CircleHelp, Monitor } from 'lucide-vue-next'
 import { ConfigProvider } from 'reka-ui'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
-import { APP_NAME } from '@/lib/app'
+import { APP_NAME, pageTitle } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
@@ -23,7 +23,7 @@ const { session } = useSession()
 // library route or those steps would highlight nothing.
 async function replayTour() {
   if (route.name !== 'library') {
-    await router.push('/')
+    await router.push({ name: 'library' })
     await nextTick()
   }
   tour.start()
@@ -37,7 +37,7 @@ const nav = computed(() => [
   { to: '/settings', label: t('nav.settings'), tour: 'settings' },
 ])
 
-const pageTitle = computed(() => {
+const pageName = computed(() => {
   const key = route.meta.titleKey as string | undefined
   return key ? t(key) : ''
 })
@@ -45,7 +45,7 @@ const pageTitle = computed(() => {
 watchEffect(() => {
   // EmailDetail owns the title on the viewer route (it writes the subject).
   if (route.name === 'viewer') return
-  document.title = pageTitle.value ? `${APP_NAME} | ${pageTitle.value}` : APP_NAME
+  document.title = pageTitle(pageName.value)
 })
 </script>
 

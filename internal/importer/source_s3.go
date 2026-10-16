@@ -21,10 +21,63 @@ type S3Config struct {
 	Prefix          string
 }
 
+// S3Lister is the one call key listing needs; *s3.Client and test fakes
+// satisfy it.
+type S3Lister interface {
+	ListObjectsV2(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+}
+
 // s3API is the subset of *s3.Client used here; lets tests inject a fake.
 type s3API interface {
-	ListObjectsV2(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	S3Lister
 	GetObject(context.Context, *s3.GetObjectInput, ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+}
+
+// NewS3Client builds a client for cfg. Static keys win when given; otherwise
+// the SDK's usual credential chain (env, shared config, instance role) applies.
+func NewS3Client(ctx context.Context, cfg S3Config) (*s3.Client, error) {
+	var optFns []func(*config.LoadOptions) error
+	if cfg.Region != "" {
+		optFns = append(optFns, config.WithRegion(cfg.Region))
+	}
+	if cfg.AccessKeyID != "" {
+		optFns = append(optFns, config.WithCredentialsProvider(
+			credentials.NewStaticCredentialsProvider(
+				cfg.AccessKeyID, cfg.SecretAccessKey, cfg.SessionToken),
+		))
+	}
+	awsCfg, err := config.LoadDefaultConfig(ctx, optFns...)
+	if err != nil {
+		return nil, fmt.Errorf("aws config: %w", err)
+	}
+	return s3.NewFromConfig(awsCfg), nil
+}
+
+// ListKeys calls fn with every object key under bucket/prefix, following
+// continuation tokens until the listing is exhausted.
+func ListKeys(ctx context.Context, client S3Lister, bucket, prefix string, fn func(key string)) error {
+	var prefixArg *string
+	if prefix != "" {
+		prefixArg = aws.String(prefix)
+	}
+	var token *string
+	for {
+		page, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+			Bucket:            aws.String(bucket),
+			Prefix:            prefixArg,
+			ContinuationToken: token,
+		})
+		if err != nil {
+			return err
+		}
+		for _, obj := range page.Contents {
+			fn(aws.ToString(obj.Key))
+		}
+		if page.IsTruncated == nil || !*page.IsTruncated {
+			return nil
+		}
+		token = page.NextContinuationToken
+	}
 }
 
 type s3Source struct {
@@ -34,29 +87,22 @@ type s3Source struct {
 
 func NewS3Source(cfg S3Config) Source { return &s3Source{cfg: cfg} }
 
-func (s *s3Source) Label() string {
-	return fmt.Sprintf("s3://%s/%s", s.cfg.Bucket, s.cfg.Prefix)
+// Label names the destination the way the job list shows it.
+func (c S3Config) Label() string {
+	return fmt.Sprintf("s3://%s/%s", c.Bucket, c.Prefix)
 }
+
+func (s *s3Source) Label() string { return s.cfg.Label() }
 
 func (s *s3Source) ensureClient(ctx context.Context) error {
 	if s.client != nil {
 		return nil
 	}
-	var optFns []func(*config.LoadOptions) error
-	if s.cfg.Region != "" {
-		optFns = append(optFns, config.WithRegion(s.cfg.Region))
-	}
-	if s.cfg.AccessKeyID != "" {
-		optFns = append(optFns, config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(
-				s.cfg.AccessKeyID, s.cfg.SecretAccessKey, s.cfg.SessionToken),
-		))
-	}
-	awsCfg, err := config.LoadDefaultConfig(ctx, optFns...)
+	client, err := NewS3Client(ctx, s.cfg)
 	if err != nil {
-		return fmt.Errorf("aws config: %w", err)
+		return err
 	}
-	s.client = s3.NewFromConfig(awsCfg)
+	s.client = client
 	return nil
 }
 
@@ -68,47 +114,25 @@ func (s *s3Source) Scan(ctx context.Context) ([]Item, error) {
 	log := slog.Default().With(
 		slog.String("bucket", s.cfg.Bucket), slog.String("prefix", s.cfg.Prefix))
 
-	var prefix *string
-	if s.cfg.Prefix != "" {
-		prefix = aws.String(s.cfg.Prefix)
-	}
-
 	var items []Item
-	var token *string
-	pages := 0
 	scanned := 0
-	for {
-		out, err := s.client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-			Bucket:            aws.String(s.cfg.Bucket),
-			Prefix:            prefix,
-			ContinuationToken: token,
+	err := ListKeys(ctx, s.client, s.cfg.Bucket, s.cfg.Prefix, func(key string) {
+		scanned++
+		if !IsEML(key) {
+			return
+		}
+		items = append(items, Item{
+			Name: key,
+			Open: func(ctx context.Context) (io.ReadCloser, error) {
+				return s.getObject(ctx, key)
+			},
 		})
-		if err != nil {
-			log.Error("s3 list objects failed", slog.String("err", err.Error()))
-			return nil, fmt.Errorf("list objects: %w", err)
-		}
-		pages++
-		scanned += len(out.Contents)
-		for _, obj := range out.Contents {
-			key := aws.ToString(obj.Key)
-			if !isEML(key) {
-				continue
-			}
-			k := key
-			items = append(items, Item{
-				Name: k,
-				Open: func(ctx context.Context) (io.ReadCloser, error) {
-					return s.getObject(ctx, k)
-				},
-			})
-		}
-		if out.IsTruncated == nil || !*out.IsTruncated {
-			break
-		}
-		token = out.NextContinuationToken
+	})
+	if err != nil {
+		log.Error("s3 list objects failed", slog.String("err", err.Error()))
+		return nil, fmt.Errorf("list objects: %w", err)
 	}
-	log.Info("s3 scan complete",
-		slog.Int("pages", pages), slog.Int("objects", scanned), slog.Int("eml", len(items)))
+	log.Info("s3 scan complete", slog.Int("objects", scanned), slog.Int("eml", len(items)))
 	return items, nil
 }
 

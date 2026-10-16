@@ -62,9 +62,9 @@ func (s *Store) UpsertS3Profile(ctx context.Context, p S3Profile) (S3Profile, er
 	defer func() { _ = tx.Rollback() }()
 
 	now := time.Now().Unix()
-	prefixVal := nullableString(p.Prefix)
-	regionVal := nullableString(p.Region)
-	accessKeyVal := nullableString(p.AccessKeyID)
+	prefixVal := nullable(p.Prefix)
+	regionVal := nullable(p.Region)
+	accessKeyVal := nullable(p.AccessKeyID)
 
 	var existingID int64
 	var existingCreated int64
@@ -112,19 +112,13 @@ func (s *Store) DeleteS3Profile(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if n == 0 {
-		return ErrS3ProfileNotFound
-	}
-	return nil
+	return requireRow(res, ErrS3ProfileNotFound)
 }
 
-func nullableString(s *string) any {
-	if s == nil {
+// nullable binds an optional field as SQL NULL when it is unset.
+func nullable[T any](v *T) any {
+	if v == nil {
 		return nil
 	}
-	return *s
+	return *v
 }

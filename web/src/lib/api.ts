@@ -48,6 +48,20 @@ export interface Category {
   position: number
 }
 
+export interface EmailListParams {
+  q?: string
+  starred?: boolean
+  flagged?: boolean
+  category?: string
+  from?: string
+  to?: string
+  sort?: string
+  order?: 'asc' | 'desc'
+  limit?: number
+  offset?: number
+  group?: 'thread'
+}
+
 export interface EmailList {
   total: number
   limit: number
@@ -81,6 +95,12 @@ export interface ImportStatus {
   errors: number
   started_at: string
   finished_at: string
+}
+
+/** Response of every endpoint that queues a background job. */
+export interface JobStarted {
+  import_id: string
+  kind: string
 }
 
 export interface ImportEvent {
@@ -175,16 +195,6 @@ export interface RestoreSummary {
   s3_profiles: number
 }
 
-const BASE = ''
-
-async function jsonOrThrow<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}: ${text}`)
-  }
-  return (await res.json()) as T
-}
-
 async function okOrThrow(res: Response): Promise<void> {
   if (!res.ok) {
     const text = await res.text().catch(() => '')
@@ -192,268 +202,202 @@ async function okOrThrow(res: Response): Promise<void> {
   }
 }
 
+async function jsonOrThrow<T>(res: Response): Promise<T> {
+  await okOrThrow(res)
+  return res.json()
+}
+
+async function textOrThrow(res: Response): Promise<string> {
+  await okOrThrow(res)
+  return res.text()
+}
+
+function jsonBody(method: 'POST' | 'PUT', body: unknown): RequestInit {
+  return {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }
+}
+
 export const api = {
   getSession() {
-    return fetch(`${BASE}/api/session`).then(jsonOrThrow<SessionInfo>)
+    return fetch('/api/session').then(jsonOrThrow<SessionInfo>)
   },
 
-  async setTemporaryLaunches(enabled: boolean): Promise<void> {
-    await okOrThrow(await fetch(`${BASE}/api/session/temporary-launches`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled }),
-    }))
+  setTemporaryLaunches(enabled: boolean) {
+    return fetch('/api/session/temporary-launches', jsonBody('PUT', { enabled })).then(okOrThrow)
   },
 
   wipeData() {
-    return fetch(`${BASE}/api/data/wipe`, { method: 'POST' }).then(jsonOrThrow<{ emails: number }>)
+    return fetch('/api/data/wipe', { method: 'POST' }).then(jsonOrThrow<{ emails: number }>)
   },
 
-  listEmails(params: { q?: string; starred?: boolean; flagged?: boolean; category?: string; from?: string; to?: string; sort?: string; order?: 'asc' | 'desc'; limit?: number; offset?: number; group?: 'thread' } = {}) {
+  listEmails(params: EmailListParams = {}) {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
       if (v === undefined || v === '' || v === false) continue
       qs.set(k, v === true ? '1' : String(v))
     }
-    return fetch(`${BASE}/api/emails?${qs}`).then(jsonOrThrow<EmailList>)
+    return fetch(`/api/emails?${qs}`).then(jsonOrThrow<EmailList>)
   },
 
-  async setStarred(sha: string, starred: boolean): Promise<void> {
-    const res = await fetch(`${BASE}/api/emails/${sha}/star`, {
-      method: starred ? 'PUT' : 'DELETE',
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  setStarred(sha: string, starred: boolean) {
+    return fetch(`/api/emails/${sha}/star`, { method: starred ? 'PUT' : 'DELETE' }).then(okOrThrow)
   },
 
   /** Empty flag clears it. */
-  async setFlag(sha: string, flag: EmailFlag): Promise<void> {
-    const res = flag
-      ? await fetch(`${BASE}/api/emails/${sha}/flag`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ flag }),
-        })
-      : await fetch(`${BASE}/api/emails/${sha}/flag`, { method: 'DELETE' })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  setFlag(sha: string, flag: EmailFlag) {
+    const url = `/api/emails/${sha}/flag`
+    return fetch(url, flag ? jsonBody('PUT', { flag }) : { method: 'DELETE' }).then(okOrThrow)
   },
 
   getStats() {
-    return fetch(`${BASE}/api/stats`).then(jsonOrThrow<Stats>)
+    return fetch('/api/stats').then(jsonOrThrow<Stats>)
   },
 
   listCategories() {
-    return fetch(`${BASE}/api/categories`).then(jsonOrThrow<Category[]>)
+    return fetch('/api/categories').then(jsonOrThrow<Category[]>)
   },
 
   /** The only write: the palette is fixed, so a category can only be renamed. */
   renameCategory(id: number, name: string) {
-    return fetch(`${BASE}/api/categories/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    }).then(jsonOrThrow<Category>)
+    return fetch(`/api/categories/${id}`, jsonBody('PUT', { name })).then(jsonOrThrow<Category>)
   },
 
   setCategory(sha: string, categoryId: number | null) {
     const url = categoryId === null
-      ? `${BASE}/api/emails/${sha}/category`
-      : `${BASE}/api/emails/${sha}/category/${categoryId}`
+      ? `/api/emails/${sha}/category`
+      : `/api/emails/${sha}/category/${categoryId}`
     return fetch(url, { method: categoryId === null ? 'DELETE' : 'PUT' }).then(okOrThrow)
   },
 
   getEmail(sha: string) {
-    return fetch(`${BASE}/api/emails/${sha}`).then(jsonOrThrow<Email>)
+    return fetch(`/api/emails/${sha}`).then(jsonOrThrow<Email>)
   },
 
   getThread(sha: string) {
-    return fetch(`${BASE}/api/emails/${sha}/thread`).then(jsonOrThrow<{ items: Email[] }>)
+    return fetch(`/api/emails/${sha}/thread`).then(jsonOrThrow<{ items: Email[] }>)
   },
 
   deleteEmail(sha: string) {
-    return fetch(`${BASE}/api/emails/${sha}`, { method: 'DELETE' }).then(okOrThrow)
+    return fetch(`/api/emails/${sha}`, { method: 'DELETE' }).then(okOrThrow)
   },
 
   indexEmail(sha: string) {
-    return fetch(`${BASE}/api/emails/${sha}/index`, { method: 'POST' })
+    return fetch(`/api/emails/${sha}/index`, { method: 'POST' })
       .then(jsonOrThrow<{ sha256: string; email_id: number; duplicate: boolean }>)
   },
 
   getParts(sha: string) {
-    return fetch(`${BASE}/api/emails/${sha}/parts`).then(jsonOrThrow<PartsManifest>)
+    return fetch(`/api/emails/${sha}/parts`).then(jsonOrThrow<PartsManifest>)
   },
 
-  textURL: (sha: string) => `${BASE}/api/emails/${sha}/text`,
-  rawURL: (sha: string) => `${BASE}/api/emails/${sha}/raw`,
   htmlURL: (sha: string, remote = false, lang = 'en') =>
-    `${BASE}/api/emails/${sha}/html?lang=${encodeURIComponent(lang)}${remote ? '&remote=1' : ''}`,
-  attachmentURL: (sha: string, idx: number) => `${BASE}/api/emails/${sha}/attachments/${idx}`,
+    `/api/emails/${sha}/html?lang=${encodeURIComponent(lang)}${remote ? '&remote=1' : ''}`,
+  /** inline: serve for display in the page rather than as a download. */
+  attachmentURL: (sha: string, idx: number, inline = false) =>
+    `/api/emails/${sha}/attachments/${idx}${inline ? '?inline=1' : ''}`,
 
-  async getText(sha: string): Promise<string> {
-    const res = await fetch(api.textURL(sha))
-    if (!res.ok) throw new Error(`${res.status}`)
-    return res.text()
+  getText(sha: string) {
+    return fetch(`/api/emails/${sha}/text`).then(textOrThrow)
   },
 
-  async getRaw(sha: string): Promise<string> {
-    const res = await fetch(api.rawURL(sha))
-    if (!res.ok) throw new Error(`${res.status}`)
-    return res.text()
+  getRaw(sha: string) {
+    return fetch(`/api/emails/${sha}/raw`).then(textOrThrow)
   },
 
-  async upload(files: File[]): Promise<{ import_id: string; kind: string }> {
+  getAttachmentText(sha: string, idx: number) {
+    return fetch(api.attachmentURL(sha, idx, true)).then(textOrThrow)
+  },
+
+  upload(files: File[]) {
     const fd = new FormData()
     for (const f of files) fd.append('file', f, f.name)
-    const res = await fetch(`${BASE}/api/imports`, { method: 'POST', body: fd })
-    return jsonOrThrow(res)
+    return fetch('/api/imports', { method: 'POST', body: fd }).then(jsonOrThrow<JobStarted>)
   },
 
-  async uploadS3(cfg: S3ImportConfig): Promise<{ import_id: string; kind: string }> {
-    const res = await fetch(`${BASE}/api/imports/s3`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg),
-    })
-    return jsonOrThrow(res)
+  uploadS3(cfg: S3ImportConfig) {
+    return fetch('/api/imports/s3', jsonBody('POST', cfg)).then(jsonOrThrow<JobStarted>)
   },
 
-  async uploadImap(cfg: IMAPImportConfig): Promise<{ import_id: string; kind: string }> {
-    const res = await fetch(`${BASE}/api/imports/imap`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg),
-    })
-    return jsonOrThrow(res)
+  uploadImap(cfg: IMAPImportConfig) {
+    return fetch('/api/imports/imap', jsonBody('POST', cfg)).then(jsonOrThrow<JobStarted>)
   },
 
-  async resync(): Promise<{ import_id: string; kind: string; total: number }> {
-    const res = await fetch(`${BASE}/api/imports/resync`, { method: 'POST' })
-    return jsonOrThrow(res)
+  resync() {
+    return fetch('/api/imports/resync', { method: 'POST' }).then(jsonOrThrow<JobStarted & { total: number }>)
   },
 
   importStatus(id: string) {
-    return fetch(`${BASE}/api/imports/${id}`).then(jsonOrThrow<ImportStatus>)
+    return fetch(`/api/imports/${id}`).then(jsonOrThrow<ImportStatus>)
   },
 
   importEventSource(id: string): EventSource {
-    return new EventSource(`${BASE}/api/imports/${id}/events`)
+    return new EventSource(`/api/imports/${id}/events`)
   },
 
   listIMAPProfiles() {
-    return fetch(`${BASE}/api/imap/profiles`).then(jsonOrThrow<IMAPProfile[]>)
+    return fetch('/api/imap/profiles').then(jsonOrThrow<IMAPProfile[]>)
   },
 
-  async saveIMAPProfile(p: {
-    name: string
-    host: string
-    port?: number
-    username: string
-    folder?: string
-    sync_enabled?: boolean
-  }): Promise<IMAPProfile> {
-    const res = await fetch(`${BASE}/api/imap/profiles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(p),
-    })
-    return jsonOrThrow<IMAPProfile>(res)
+  saveIMAPProfile(p: Pick<IMAPProfile, 'name' | 'host' | 'port' | 'username' | 'folder'> & { sync_enabled?: boolean }) {
+    return fetch('/api/imap/profiles', jsonBody('POST', p)).then(jsonOrThrow<IMAPProfile>)
   },
 
-  async deleteIMAPProfile(id: number): Promise<void> {
-    const res = await fetch(`${BASE}/api/imap/profiles/${id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  deleteIMAPProfile(id: number) {
+    return fetch(`/api/imap/profiles/${id}`, { method: 'DELETE' }).then(okOrThrow)
   },
 
   getIMAPSyncInterval() {
-    return fetch(`${BASE}/api/imap/sync-interval`).then(jsonOrThrow<{ seconds: number }>)
+    return fetch('/api/imap/sync-interval').then(jsonOrThrow<{ seconds: number }>)
   },
 
-  async setIMAPSyncInterval(seconds: number): Promise<void> {
-    const res = await fetch(`${BASE}/api/imap/sync-interval`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ seconds }),
-    })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  setIMAPSyncInterval(seconds: number) {
+    return fetch('/api/imap/sync-interval', jsonBody('PUT', { seconds })).then(okOrThrow)
   },
 
-  async syncIMAPProfile(id: number): Promise<void> {
-    const res = await fetch(`${BASE}/api/imap/profiles/${id}/sync`, { method: 'POST' })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  syncIMAPProfile(id: number) {
+    return fetch(`/api/imap/profiles/${id}/sync`, { method: 'POST' }).then(okOrThrow)
   },
 
   listS3Profiles() {
-    return fetch(`${BASE}/api/s3/profiles`).then(jsonOrThrow<S3Profile[]>)
+    return fetch('/api/s3/profiles').then(jsonOrThrow<S3Profile[]>)
   },
 
-  async saveS3Profile(p: Omit<S3Profile, 'id'>): Promise<S3Profile> {
-    const res = await fetch(`${BASE}/api/s3/profiles`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(p),
-    })
-    return jsonOrThrow<S3Profile>(res)
+  saveS3Profile(p: Omit<S3Profile, 'id'>) {
+    return fetch('/api/s3/profiles', jsonBody('POST', p)).then(jsonOrThrow<S3Profile>)
   },
 
-  async deleteS3Profile(id: number): Promise<void> {
-    const res = await fetch(`${BASE}/api/s3/profiles/${id}`, { method: 'DELETE' })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+  deleteS3Profile(id: number) {
+    return fetch(`/api/s3/profiles/${id}`, { method: 'DELETE' }).then(okOrThrow)
   },
 
-  exportZipURL: () => `${BASE}/api/exports/zip`,
+  exportZipURL: () => '/api/exports/zip',
 
-  async restoreBackup(file: File): Promise<RestoreSummary> {
+  restoreBackup(file: File) {
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${BASE}/api/restore`, { method: 'POST', body: form })
-    return jsonOrThrow<RestoreSummary>(res)
+    return fetch('/api/restore', { method: 'POST', body: form }).then(jsonOrThrow<RestoreSummary>)
   },
 
-  async exportS3(cfg: S3ImportConfig): Promise<{ export_id: string; kind: string }> {
-    const res = await fetch(`${BASE}/api/exports/s3`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(cfg),
-    })
-    return jsonOrThrow(res)
+  exportS3(cfg: S3ImportConfig) {
+    return fetch('/api/exports/s3', jsonBody('POST', cfg)).then(jsonOrThrow<{ export_id: string; kind: string }>)
   },
 
-  async checkUpdate(force = false): Promise<UpdateStatus> {
-    const url = `${BASE}/api/update/check${force ? '?force=1' : ''}`
-    return fetch(url).then(jsonOrThrow<UpdateStatus>)
+  checkUpdate(force = false) {
+    return fetch(`/api/update/check${force ? '?force=1' : ''}`).then(jsonOrThrow<UpdateStatus>)
   },
 
-  async installUpdate(): Promise<{ status: string; from: string; to: string; restarting: boolean }> {
-    const res = await fetch(`${BASE}/api/update/install`, { method: 'POST' })
-    if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
-    return res.json()
+  installUpdate() {
+    return fetch('/api/update/install', { method: 'POST' })
+      .then(jsonOrThrow<{ status: string; from: string; to: string; restarting: boolean }>)
   },
 
   async cancelJob(id: string): Promise<void> {
-    const res = await fetch(`${BASE}/api/jobs/${id}`, { method: 'DELETE' })
-    if (!res.ok && res.status !== 404) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`${res.status} ${res.statusText}: ${text}`)
-    }
+    const res = await fetch(`/api/jobs/${id}`, { method: 'DELETE' })
+    // Already finished and forgotten: nothing left to cancel, not an error.
+    if (res.status === 404) return
+    await okOrThrow(res)
   },
 }

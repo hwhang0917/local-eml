@@ -1,6 +1,11 @@
 package store
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
+
+const topSendersLimit = 10
 
 type YearCount struct {
 	Year  string `json:"year"`
@@ -66,9 +71,9 @@ func (s *Store) Stats(ctx context.Context) (*Stats, error) {
 
 	// ponytail: groups by the raw From header, so "Alice <a@x>" and "a@x" count
 	// separately; normalize the address in SQL if that ever matters.
-	rows, err = s.DB.QueryContext(ctx, `
+	rows, err = s.DB.QueryContext(ctx, fmt.Sprintf(`
 		SELECT from_addr, COUNT(*) c FROM emails
-		WHERE from_addr != '' GROUP BY from_addr ORDER BY c DESC, from_addr LIMIT 10`)
+		WHERE from_addr != '' GROUP BY from_addr ORDER BY c DESC, from_addr LIMIT %d`, topSendersLimit))
 	if err != nil {
 		return nil, err
 	}

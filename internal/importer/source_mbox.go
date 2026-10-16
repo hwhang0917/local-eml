@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/emersion/go-mbox"
 )
@@ -52,11 +51,10 @@ func (s *mboxSource) Scan(_ context.Context) ([]Item, error) {
 	}
 	s.mr = mbox.NewReader(s.f)
 
-	base := filepath.Base(s.path)
 	items := make([]Item, n)
 	for i := range items {
 		items[i] = Item{
-			Name: fmt.Sprintf("%s#%05d.eml", base, i+1),
+			Name: archiveItemName(s.path, i+1),
 			// ponytail: each Open just advances the shared reader, so items must
 			// be opened in order — which is how the job driver works. Switch to
 			// byte-offset SectionReaders if a concurrent driver ever appears.

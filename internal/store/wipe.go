@@ -19,11 +19,7 @@ func (s *Store) WipeLibrary(ctx context.Context) (int64, error) {
 	defer func() { _ = tx.Rollback() }()
 
 	steps := []string{
-		// Same reset as disabling sync in UpsertIMAPProfile: no stored
-		// password, no cursor.
-		`UPDATE imap_profiles
-		 SET sync_enabled = 0, encrypted_password = NULL,
-		     uid_validity = NULL, last_uid = NULL, last_synced_at = NULL`,
+		`UPDATE imap_profiles SET ` + revokeIMAPSyncSet,
 		`DELETE FROM import_errors`,
 		`DELETE FROM imports`,
 		// emails_fts is contentless, so per-row deletes can't clear it (see

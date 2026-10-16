@@ -5,12 +5,9 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
-// PUT /api/emails/{sha}/flag  {"flag":"spam"|"phishing"|"safe"}
 func (s *Server) handleFlagEmail(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Flag string `json:"flag"`
@@ -22,25 +19,21 @@ func (s *Server) handleFlagEmail(w http.ResponseWriter, r *http.Request) {
 	s.setFlag(w, r, body.Flag)
 }
 
-// DELETE /api/emails/{sha}/flag
 func (s *Server) handleUnflagEmail(w http.ResponseWriter, r *http.Request) {
 	s.setFlag(w, r, "")
 }
 
 func (s *Server) setFlag(w http.ResponseWriter, r *http.Request, flag string) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	err := s.Store.SetEmailFlag(r.Context(), sha, flag)
 	switch {
 	case errors.Is(err, store.ErrInvalidFlag):
 		http.Error(w, err.Error(), http.StatusBadRequest)
-	case errors.Is(err, store.ErrEmailNotFound):
-		http.Error(w, "email not found", http.StatusNotFound)
 	case err != nil:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeStoreErr(w, err, store.ErrEmailNotFound)
 	default:
 		w.WriteHeader(http.StatusNoContent)
 	}

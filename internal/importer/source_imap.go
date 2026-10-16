@@ -13,6 +13,16 @@ import (
 	"github.com/emersion/go-imap/v2/imapclient"
 )
 
+// DefaultIMAPFolder is selected when a config names none.
+const DefaultIMAPFolder = "INBOX"
+
+// Well-known IMAP ports: implicit TLS, and the plaintext port upgraded with
+// STARTTLS.
+const (
+	imapsPort        = 993
+	imapStartTLSPort = 143
+)
+
 type IMAPConfig struct {
 	Host     string
 	Port     int
@@ -29,6 +39,14 @@ type IMAPConfig struct {
 	SinceUID            uint32
 }
 
+// Mailbox is the folder to select: the configured one, else DefaultIMAPFolder.
+func (c IMAPConfig) Mailbox() string {
+	if c.Folder == "" {
+		return DefaultIMAPFolder
+	}
+	return c.Folder
+}
+
 // SyncResult captures what the source observed during Scan: the current
 // UIDVALIDITY of the selected mailbox and the highest UID known to it. The
 // caller persists these values so the next run can be incremental.
@@ -38,7 +56,8 @@ type SyncResult struct {
 }
 
 // SyncReporter is satisfied by Sources that can report a SyncResult after
-// Scan returns. The importer Job calls it via a post-run hook (see runJob).
+// Scan returns. The server reads it once the job finishes and persists the
+// cursor on the profile.
 type SyncReporter interface {
 	SyncResult() (SyncResult, bool)
 }
@@ -64,15 +83,8 @@ func NewIMAPSource(cfg IMAPConfig) SourceCloser {
 	return &imapSource{cfg: cfg, dial: newIMAPSession}
 }
 
-func (s *imapSource) folder() string {
-	if s.cfg.Folder == "" {
-		return "INBOX"
-	}
-	return s.cfg.Folder
-}
-
 func (s *imapSource) Label() string {
-	return fmt.Sprintf("imap://%s@%s/%s", s.cfg.Username, s.cfg.Host, s.folder())
+	return fmt.Sprintf("imap://%s@%s/%s", s.cfg.Username, s.cfg.Host, s.cfg.Mailbox())
 }
 
 func (s *imapSource) Scan(_ context.Context) ([]Item, error) {
@@ -149,7 +161,7 @@ type imapClientSession struct {
 func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 	port := cfg.Port
 	if port == 0 {
-		port = 993
+		port = imapsPort
 	}
 	addr := net.JoinHostPort(cfg.Host, strconv.Itoa(port))
 	log := slog.Default().With(slog.String("addr", addr), slog.String("user", cfg.Username))
@@ -158,7 +170,7 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 		c   *imapclient.Client
 		err error
 	)
-	if port == 143 {
+	if port == imapStartTLSPort {
 		log.Info("imap dial starttls")
 		c, err = imapclient.DialStartTLS(addr, nil)
 	} else {
@@ -177,10 +189,7 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 	}
 	log.Info("imap logged in")
 
-	folder := cfg.Folder
-	if folder == "" {
-		folder = "INBOX"
-	}
+	folder := cfg.Mailbox()
 	selectData, err := c.Select(folder, &imap.SelectOptions{ReadOnly: true}).Wait()
 	if err != nil {
 		log.Error("imap select failed",

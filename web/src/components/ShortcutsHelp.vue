@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useEventListener } from '@vueuse/core'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
+import { cn, dialogClass } from '@/lib/utils'
 import Button from '@/components/ui/Button.vue'
 
 const { t } = useI18n()
@@ -23,15 +25,14 @@ function onKeydown(e: KeyboardEvent) {
   dialog.value?.showModal()
 }
 
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+useEventListener(window, 'keydown', onKeydown)
 </script>
 
 <template>
   <dialog
     ref="dialog"
     aria-labelledby="shortcuts-title"
-    class="m-auto w-[90vw] max-w-sm rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50"
+    :class="cn(dialogClass, 'max-w-sm')"
   >
     <div class="space-y-3 p-5">
       <h2 id="shortcuts-title" class="font-semibold">{{ t('shortcuts.title') }}</h2>

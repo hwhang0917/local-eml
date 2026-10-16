@@ -10,8 +10,7 @@ import (
 )
 
 // localFilesSource reads files already on disk (multipart temp files).
-// filterEML drops non-.eml names (used for directory uploads); single-file
-// uploads pass filterEML=false so the chosen file is always imported.
+// filterEML drops non-.eml names.
 type localFilesSource struct {
 	label     string
 	paths     []string
@@ -19,8 +18,16 @@ type localFilesSource struct {
 	filterEML bool
 }
 
-func NewLocalSource(label string, paths, names []string, filterEML bool) Source {
-	return &localFilesSource{label: label, paths: paths, names: names, filterEML: filterEML}
+// NewLocalSource imports every listed file: a single upload is taken at its
+// word whatever its name.
+func NewLocalSource(label string, paths, names []string) Source {
+	return &localFilesSource{label: label, paths: paths, names: names}
+}
+
+// NewLocalEMLSource imports only the .eml files among the listed ones, which
+// is what a folder drop wants.
+func NewLocalEMLSource(label string, paths, names []string) Source {
+	return &localFilesSource{label: label, paths: paths, names: names, filterEML: true}
 }
 
 func (s *localFilesSource) Label() string { return s.label }
@@ -28,7 +35,7 @@ func (s *localFilesSource) Label() string { return s.label }
 func (s *localFilesSource) Scan(_ context.Context) ([]Item, error) {
 	items := make([]Item, 0, len(s.names))
 	for i, name := range s.names {
-		if s.filterEML && !isEML(name) {
+		if s.filterEML && !IsEML(name) {
 			continue
 		}
 		p := s.paths[i]
@@ -59,7 +66,7 @@ func (s *zipSource) Scan(_ context.Context) ([]Item, error) {
 	s.zr = zr
 	var items []Item
 	for _, f := range zr.File {
-		if f.FileInfo().IsDir() || !isEML(f.Name) {
+		if f.FileInfo().IsDir() || !IsEML(f.Name) {
 			continue
 		}
 		ze := f

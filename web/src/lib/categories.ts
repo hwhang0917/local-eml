@@ -2,7 +2,7 @@
 // server and thereafter only renamed, the way Finder's colour tags work.
 // Mirrors CategoryColors in internal/store/categories.go — that list is the
 // authority; keep these two in step.
-export const CATEGORY_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'grey'] as const
+const CATEGORY_COLORS = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'grey'] as const
 
 export type CategoryColor = (typeof CATEGORY_COLORS)[number]
 

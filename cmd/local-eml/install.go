@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/kardianos/service"
+
+	"github.com/hwhang0917/local-eml/internal/server"
 )
 
 type stubProgram struct{}
@@ -55,7 +57,7 @@ func serveArgs(port int) []string {
 
 func newService(port int) (service.Service, error) {
 	cfg := &service.Config{
-		Name:        "local-eml",
+		Name:        server.ServiceName,
 		DisplayName: "Local Eml",
 		Description: "Local EML viewer (loopback-only HTTP server)",
 		Arguments:   serveArgs(port),
@@ -89,11 +91,11 @@ func describePath() string {
 	}
 	switch runtime.GOOS {
 	case "linux":
-		return filepath.Join(home, ".config", "systemd", "user", "local-eml.service")
+		return filepath.Join(home, ".config", "systemd", "user", server.ServiceName+".service")
 	case "darwin":
-		return filepath.Join(home, "Library", "LaunchAgents", "local-eml.plist")
+		return filepath.Join(home, "Library", "LaunchAgents", server.ServiceName+".plist")
 	case "windows":
-		return `Windows Service Control Manager: "local-eml"`
+		return `Windows Service Control Manager: "` + server.ServiceName + `"`
 	default:
 		return ""
 	}
@@ -141,7 +143,7 @@ func runInstall(args []string) int {
 
 	fmt.Println("Install Local Eml as a background service:")
 	fmt.Println("  Platform:    ", describePlatform())
-	fmt.Println("  Service name: local-eml")
+	fmt.Println("  Service name:", server.ServiceName)
 	fmt.Println("  Binary path: ", exe)
 	fmt.Println("  Service file:", describePath())
 	fmt.Println("  Command:      local-eml", strings.Join(serveArgs(port), " "))

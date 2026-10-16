@@ -43,9 +43,13 @@ func (l *syncLocks) release(id int64) {
 	l.mu.Unlock()
 }
 
+// firstSyncDelay is how soon after startup the first poll fires, so
+// existing-but-stale state catches up without waiting a whole interval.
+const firstSyncDelay = 5 * time.Second
+
 // RunIMAPSync performs a single incremental fetch for the given profile,
-// blocking until the underlying import job finishes. Idempotent under
-// concurrent callers — a second concurrent invocation returns ErrSyncSkipped.
+// blocking until the underlying import job finishes. Runs are exclusive per
+// profile: a second concurrent invocation returns ErrSyncSkipped.
 func (s *Server) RunIMAPSync(ctx context.Context, profileID int64) error {
 	if !imapSyncLocks.tryAcquire(profileID) {
 		return fmt.Errorf("%w: already running", ErrSyncSkipped)
@@ -74,39 +78,13 @@ func (s *Server) RunIMAPSync(ctx context.Context, profileID int64) error {
 		return fmt.Errorf("decrypt password: %w", err)
 	}
 
-	cfg := importer.IMAPConfig{
-		Host:     profile.Host,
-		Username: profile.Username,
-		Password: string(plain),
-	}
-	if profile.Port != nil {
-		cfg.Port = *profile.Port
-	}
-	if profile.Folder != nil {
-		cfg.Folder = *profile.Folder
-	}
-	if profile.UIDValidity != nil && profile.LastUID != nil {
-		cfg.Incremental = true
-		cfg.ExpectedUIDValidity = *profile.UIDValidity
-		cfg.SinceUID = *profile.LastUID
-	}
-
-	folder := cfg.Folder
-	if folder == "" {
-		folder = "INBOX"
-	}
-	importID := newImportID()
-	sourceName := fmt.Sprintf("imap://%s@%s/%s (sync)", cfg.Username, cfg.Host, folder)
-	if err := s.Store.CreateImport(ctx, store.Import{
-		ID:         importID,
-		SourceKind: "imap-sync",
-		SourceName: sourceName,
-		Status:     "queued",
-	}); err != nil {
-		return fmt.Errorf("create import: %w", err)
-	}
-
+	cfg := profileDefaults(importer.IMAPConfig{Password: string(plain)}, profile)
+	cfg = withSyncCursor(cfg, profile)
 	src := importer.NewIMAPSource(cfg)
+	importID, err := s.queueJob(ctx, kindIMAPSync, src.Label()+" (sync)")
+	if err != nil {
+		return err
+	}
 	slog.Info("imap sync running",
 		slog.Int64("profile_id", profile.ID),
 		slog.String("import_id", importID),
@@ -115,10 +93,38 @@ func (s *Server) RunIMAPSync(ctx context.Context, profileID int64) error {
 		slog.Uint64("since_uid", uint64(cfg.SinceUID)),
 	)
 
-	s.runJob(importID, "imap-sync", src, func() {}, func() {
+	s.runJob(importID, kindIMAPSync, src, nil, func() {
 		s.persistIMAPSyncState(profile.ID, src)
 	})
 	return nil
+}
+
+// profileDefaults fills whatever cfg left blank from the saved profile.
+func profileDefaults(cfg importer.IMAPConfig, p *store.IMAPProfile) importer.IMAPConfig {
+	if cfg.Host == "" {
+		cfg.Host = p.Host
+	}
+	if cfg.Port == 0 && p.Port != nil {
+		cfg.Port = *p.Port
+	}
+	if cfg.Username == "" {
+		cfg.Username = p.Username
+	}
+	if cfg.Folder == "" && p.Folder != nil {
+		cfg.Folder = *p.Folder
+	}
+	return cfg
+}
+
+// withSyncCursor turns on incremental fetching when the profile carries a
+// cursor from a previous run.
+func withSyncCursor(cfg importer.IMAPConfig, p *store.IMAPProfile) importer.IMAPConfig {
+	if p.UIDValidity != nil && p.LastUID != nil {
+		cfg.Incremental = true
+		cfg.ExpectedUIDValidity = *p.UIDValidity
+		cfg.SinceUID = *p.LastUID
+	}
+	return cfg
 }
 
 // RunDueIMAPSyncs walks every sync-enabled profile and triggers a sync. It
@@ -160,9 +166,7 @@ func (s *Server) StartIMAPSyncer(ctx context.Context, interval time.Duration) {
 		} else {
 			slog.Info("imap syncer paused (interval off)")
 		}
-		// First fire lands shortly after startup so existing-but-stale state
-		// catches up without waiting a whole interval.
-		timer := time.NewTimer(5 * time.Second)
+		timer := time.NewTimer(firstSyncDelay)
 		defer timer.Stop()
 		if interval <= 0 {
 			timer.Stop()

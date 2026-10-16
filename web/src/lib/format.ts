@@ -1,5 +1,6 @@
 import { useStorage } from '@vueuse/core'
 import { i18n } from '@/i18n'
+import type { Email, PartInfo, RiskReason } from '@/lib/api'
 
 export function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`
@@ -17,6 +18,12 @@ export const weekStartsOn = useStorage<WeekStart>('settings-week-start', 0)
 /** Show the phishing-heuristics warning banner and library icon. */
 export const riskWarnings = useStorage('settings-risk-warnings', true)
 
+// Heuristic findings are shown until the user flags the message either way
+// (the flag banner takes over, or "safe" vetoes it) or turns warnings off.
+export function riskFor(email: Email): RiskReason[] {
+  return riskWarnings.value && !email.flag ? email.risk ?? [] : []
+}
+
 export function formatDate(iso: string | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
@@ -25,20 +32,27 @@ export function formatDate(iso: string | undefined): string {
   return absoluteShort(d)
 }
 
+const ABSOLUTE_LONG: Intl.DateTimeFormatOptions = {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  weekday: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  timeZoneName: 'short',
+}
+
 export function formatDateAbsolute(iso: string | undefined): string {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime()) || d.getFullYear() < 2) return ''
-  return d.toLocaleString(i18n.global.locale.value, {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    timeZoneName: 'short',
-  })
+  return d.toLocaleString(i18n.global.locale.value, ABSOLUTE_LONG)
+}
+
+/** Unix seconds (the IMAP profile's last_synced_at) in the long absolute form. */
+export function formatEpoch(ts: number): string {
+  return new Date(ts * 1000).toLocaleString(i18n.global.locale.value, ABSOLUTE_LONG)
 }
 
 function absoluteShort(d: Date): string {
@@ -72,6 +86,11 @@ function formatRelative(d: Date, locale: string): string {
 
 export function shortSHA(s: string): string {
   return s.slice(0, 8)
+}
+
+/** Attachments without a filename are named by their part index. */
+export function attachmentName(a: PartInfo): string {
+  return a.filename || i18n.global.t('viewer.attachment_fallback', { index: a.index })
 }
 
 const SENDER_MAX_CHARS = 10

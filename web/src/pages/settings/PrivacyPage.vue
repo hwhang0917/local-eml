@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
+import { dialogClass } from '@/lib/utils'
 import { useSession } from '@/composables/useSession'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
@@ -108,8 +109,7 @@ async function wipe_() {
 
     <p class="text-xs text-muted-foreground">{{ t('privacy.disk_note') }}</p>
 
-    <dialog ref="enableDialog" aria-labelledby="enable-dialog-title"
-      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+    <dialog ref="enableDialog" aria-labelledby="enable-dialog-title" :class="dialogClass">
       <div class="space-y-3 p-5">
         <h2 id="enable-dialog-title" class="font-semibold">{{ t('privacy.enable_title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('privacy.enable_body') }}</p>
@@ -128,8 +128,7 @@ async function wipe_() {
       </div>
     </dialog>
 
-    <dialog ref="wipeDialog" aria-labelledby="wipe-dialog-title"
-      class="m-auto w-[90vw] max-w-md rounded-lg border bg-background p-0 text-foreground backdrop:bg-black/50">
+    <dialog ref="wipeDialog" aria-labelledby="wipe-dialog-title" :class="dialogClass">
       <form class="space-y-3 p-5" @submit.prevent="wipeConfirmed && wipe_()">
         <h2 id="wipe-dialog-title" class="font-semibold">{{ t('privacy.wipe_confirm_title') }}</h2>
         <p class="text-sm text-muted-foreground">{{ t('privacy.wipe_confirm_body', { word: t('privacy.wipe_word') }) }}</p>

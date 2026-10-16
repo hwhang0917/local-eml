@@ -10,7 +10,6 @@ const RESTART_WATCH_MS = 5 * 60_000
 const RELOADED_KEY = 'reloaded-for-version'
 
 const online = ref(true)
-const lastChecked = ref<Date | null>(null)
 const checking = ref(false)
 
 let timer: number | null = null
@@ -45,7 +44,6 @@ async function probe() {
     online.value = false
   } finally {
     window.clearTimeout(t)
-    lastChecked.value = new Date()
     checking.value = false
     schedule()
   }
@@ -76,5 +74,5 @@ export function useHealth() {
       timer = null
     }
   })
-  return { online, lastChecked, checking, retry: probe }
+  return { online, checking, retry: probe }
 }

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
+import { ref, watch, onBeforeUpdate, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, MessagesSquare, RotateCcw, Star, TriangleAlert, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
@@ -16,11 +17,12 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from 'reka-ui'
-import { api, type Email, type PartInfo } from '@/lib/api'
-import { dateFormat, formatBytes, formatDate, formatDateAbsolute, riskWarnings, senderName, shortSHA } from '@/lib/format'
-import { useDebounceFn, useStorage } from '@vueuse/core'
+import { api, type Email, type EmailListParams, type PartInfo } from '@/lib/api'
+import { attachmentName, dateFormat, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
+import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
-import { useCategories } from '@/composables/useCategories'
+import { ANY_CATEGORY, NO_CATEGORY, parseCategoryValue, useCategories } from '@/composables/useCategories'
+import { useEmailActions } from '@/composables/useEmailActions'
 import { useListContext } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import Input from '@/components/ui/Input.vue'
@@ -29,16 +31,19 @@ import Card from '@/components/ui/Card.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
+import Highlight from '@/components/ui/Highlight.vue'
 import PageNav from '@/components/ui/PageNav.vue'
+import SortHeader from '@/components/ui/SortHeader.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 // 500 is the server's ceiling; anything larger is silently clamped back to 50.
 const PAGE_SIZES = [10, 25, 50, 100, 200, 500] as const
 type PageSize = (typeof PAGE_SIZES)[number]
 const DEFAULT_PAGE_SIZE: PageSize = 50
+const SEARCH_DEBOUNCE_MS = 250
 
 type SortCol = 'sent_at' | 'from_addr' | 'subject' | 'size_bytes'
-type Order = 'asc' | 'desc'
+type Order = NonNullable<EmailListParams['order']>
 
 const route = useRoute()
 const router = useRouter()
@@ -91,7 +96,7 @@ let lastPushedQ: string | null = null
 const debouncedPushSearch = useDebounceFn((val: string) => {
   lastPushedQ = val
   pushQuery({ q: val || undefined, offset: undefined })
-}, 250)
+}, SEARCH_DEBOUNCE_MS)
 watch(searchInput, (val) => debouncedPushSearch(val))
 watch(q, (val) => {
   if (val === lastPushedQ) return
@@ -114,24 +119,28 @@ function pushQuery(patch: Record<string, string | undefined>) {
   router.push({ query: mergeQuery(patch) })
 }
 
+// Filter and sort only; the page (limit/offset) is added where it matters, so
+// the viewer's prev/next can re-run the same query around any index.
+const listParams = computed<EmailListParams>(() => ({
+  q: q.value || undefined,
+  starred: starredOnly.value || undefined,
+  category: category.value || undefined,
+  from: from.value || undefined,
+  to: to.value || undefined,
+  sort: sort.value,
+  order: order.value,
+  group: groupThreads.value ? 'thread' : undefined,
+}))
+
 async function load() {
   loading.value = true
   expandedThreads.value.clear()
   try {
-    const r = await api.listEmails({
-      q: q.value || undefined,
-      starred: starredOnly.value || undefined,
-      category: category.value || undefined,
-      from: from.value || undefined,
-      to: to.value || undefined,
-      sort: sort.value,
-      order: order.value,
-      limit: limit.value,
-      offset: offset.value,
-      group: groupThreads.value ? 'thread' : undefined,
-    })
+    const r = await api.listEmails({ ...listParams.value, limit: limit.value, offset: offset.value })
     items.value = r.items
     total.value = r.total
+  } catch (e) {
+    toast.error(t('library.load_error'), { description: String(e) })
   } finally {
     loading.value = false
   }
@@ -169,9 +178,8 @@ const tour = useTour()
 onMounted(() => {
   load()
   tour.startIfFirstVisit()
-  window.addEventListener('keydown', onKeydown)
 })
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+useEventListener(window, 'keydown', onKeydown)
 
 // j/k moves real focus across the subject links: screen readers announce the
 // row, Enter opens natively, and the focus-visible ring is the cursor.
@@ -239,16 +247,7 @@ function searchInputEl(): HTMLInputElement | null {
 const listCtx = useListContext()
 function rememberPosition(rowIndex: number) {
   listCtx.set({
-    params: {
-      q: q.value || undefined,
-      starred: starredOnly.value || undefined,
-      category: category.value || undefined,
-      from: from.value || undefined,
-      to: to.value || undefined,
-      sort: sort.value,
-      order: order.value,
-      group: groupThreads.value ? 'thread' : undefined,
-    },
+    params: listParams.value,
     index: offset.value + rowIndex,
     total: total.value,
   })
@@ -306,7 +305,7 @@ function resetFilters() {
 }
 
 function setCategoryFilter(v: string) {
-  pushQuery({ category: v === 'any' ? undefined : v, offset: undefined })
+  pushQuery({ category: v === ANY_CATEGORY ? undefined : v, offset: undefined })
 }
 
 function setDateRange(range: { from: string; to: string }) {
@@ -343,59 +342,41 @@ function openEmailAux(sha: string, ev: MouseEvent) {
   window.open(emailHref(sha), '_blank', 'noopener')
 }
 
-async function toggleStar(e: Email) {
-  const next = !e.starred
-  e.starred = next
-  try {
-    await api.setStarred(e.sha256, next)
-    if (starredOnly.value && !next) {
-      items.value = items.value.filter((x) => x.sha256 !== e.sha256)
-      total.value = Math.max(0, total.value - 1)
-    }
-  } catch {
-    e.starred = !next
-  }
+const actions = useEmailActions()
+
+// A row that no longer matches the active filter has to leave, or the list
+// shows a lie until the next fetch.
+function dropRow(e: Email) {
+  items.value = items.value.filter((x) => x.sha256 !== e.sha256)
+  total.value = Math.max(0, total.value - 1)
 }
 
-const { categories, byId, labelFor, load: loadCategories } = useCategories()
+async function toggleStar(e: Email) {
+  const next = !e.starred
+  if (await actions.toggleStar(e) && starredOnly.value && !next) dropRow(e)
+}
+
+const { byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
 onMounted(loadCategories)
 
-// "any" and "none" are sentinels rather than ids, so they survive the round trip
-// through the URL alongside a numeric category id.
 const filterOptions = computed<CategoryOption[]>(() => [
-  { value: 'any', label: t('library.category_any') },
-  { value: 'none', label: t('library.category_none') },
-  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
-])
-const assignOptions = computed<CategoryOption[]>(() => [
-  { value: 'none', label: t('library.category_none') },
-  ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
+  { value: ANY_CATEGORY, label: t('library.category_any') },
+  ...assignOptions.value,
 ])
 const filterLabel = computed(
-  () => filterOptions.value.find((o) => o.value === (category.value || 'any'))?.label ?? '',
+  () => filterOptions.value.find((o) => o.value === (category.value || ANY_CATEGORY))?.label ?? '',
 )
 const filterColor = computed(
   () => filterOptions.value.find((o) => o.value === category.value)?.color,
 )
 
 async function setCategory(e: Email, value: string) {
-  const next = value === 'none' ? null : Number(value)
-  const prev = e.category_id
-  e.category_id = next ?? undefined
-  try {
-    await api.setCategory(e.sha256, next)
-    // Same as toggleStar: a row that no longer matches the active filter has to
-    // leave, or the list shows a lie until the next fetch.
-    const stillMatches =
-      category.value === '' ||
-      (category.value === 'none' ? next === null : String(next) === category.value)
-    if (!stillMatches) {
-      items.value = items.value.filter((x) => x.sha256 !== e.sha256)
-      total.value = Math.max(0, total.value - 1)
-    }
-  } catch {
-    e.category_id = prev
-  }
+  if (!await actions.setCategory(e, value)) return
+  const next = parseCategoryValue(value)
+  const stillMatches =
+    category.value === '' ||
+    (category.value === NO_CATEGORY ? next === null : String(next) === category.value)
+  if (!stillMatches) dropRow(e)
 }
 
 // Attachment names aren't in the list response (the DB only stores a boolean),
@@ -456,7 +437,7 @@ const pageInfo = computed(() => {
       </Button>
       <DateRangePicker :from="from" :to="to" @change="setDateRange" />
       <CategoryMenu
-        :model-value="category || 'any'"
+        :model-value="category || ANY_CATEGORY"
         :options="filterOptions"
         @select="setCategoryFilter"
       >
@@ -570,10 +551,10 @@ const pageInfo = computed(() => {
             <th v-if="colShown('category')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.category') }}</span>
             </th>
-            <Th v-if="colShown('date')" :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
-            <Th v-if="colShown('from')" :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
-            <Th :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
-            <Th v-if="colShown('size')" :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
+            <SortHeader v-if="colShown('date')" :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
+            <SortHeader v-if="colShown('from')" :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
+            <SortHeader :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
+            <SortHeader v-if="colShown('size')" :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
           </tr>
         </thead>
         <tbody>
@@ -585,7 +566,7 @@ const pageInfo = computed(() => {
               <template v-if="starredOnly">{{ t('library.no_starred') }}</template>
               <template v-else>
                 {{ t('library.no_emails') }}
-                <RouterLink to="/import" class="underline">{{ t('library.import_some') }}</RouterLink>
+                <RouterLink :to="{ name: 'import' }" class="underline">{{ t('library.import_some') }}</RouterLink>
               </template>
             </td>
           </tr>
@@ -628,7 +609,7 @@ const pageInfo = computed(() => {
                             :key="a.index"
                             class="flex items-center gap-2"
                           >
-                            <span class="truncate">{{ a.filename || `attachment-${a.index}` }}</span>
+                            <span class="truncate">{{ attachmentName(a) }}</span>
                             <span class="shrink-0 text-muted-foreground">{{ formatBytes(a.size) }}</span>
                           </li>
                         </ul>
@@ -642,7 +623,7 @@ const pageInfo = computed(() => {
             </td>
             <td v-if="colShown('category')" class="px-3 py-2">
               <CategoryMenu
-                :model-value="e.category_id ? String(e.category_id) : 'none'"
+                :model-value="e.category_id ? String(e.category_id) : NO_CATEGORY"
                 :options="assignOptions"
                 @select="(v) => setCategory(e, v)"
               >
@@ -689,10 +670,10 @@ const pageInfo = computed(() => {
                 {{ e.thread_count }}
               </button>
               <span
-                v-if="riskWarnings && !e.flag && e.risk?.length"
+                v-if="riskFor(e).length"
                 role="img"
                 :aria-label="t('risk.title')"
-                :title="t('risk.title') + '\n' + e.risk.map((r) => '• ' + t(`risk.${r.code}`)).join('\n')"
+                :title="t('risk.title') + '\n' + riskFor(e).map((r) => '• ' + t(`risk.${r.code}`)).join('\n')"
                 class="mr-1.5 inline-flex align-middle text-amber-600 dark:text-amber-400"
               >
                 <TriangleAlert class="h-3.5 w-3.5" />
@@ -762,63 +743,3 @@ const pageInfo = computed(() => {
   </section>
 </template>
 
-<script lang="ts">
-import { defineComponent, h } from 'vue'
-import { highlightSegments } from '@/lib/highlight'
-
-// <mark> is the element the platform already has for "matched here", so
-// find-in-page styling and assistive tech get it for free.
-export const Highlight = defineComponent({
-  props: {
-    text: { type: String, required: true },
-    query: { type: String, default: '' },
-  },
-  setup(props) {
-    return () =>
-      highlightSegments(props.text, props.query).map((seg) =>
-        seg.match
-          ? h('mark', { class: 'rounded-xs bg-amber-200 text-inherit dark:bg-amber-400/30' }, seg.text)
-          : seg.text,
-      )
-  },
-})
-
-export const Th = defineComponent({
-  props: {
-    label: { type: String, required: true },
-    col: { type: String, required: true },
-    sort: { type: String, required: true },
-    order: { type: String, required: true },
-    align: { type: String, default: 'left' },
-  },
-  emits: ['sort'],
-  setup(props, { emit }) {
-    return () => {
-      const active = props.sort === props.col
-      const arrow = active ? (props.order === 'asc' ? ' ↑' : ' ↓') : ''
-      // A bare <th onClick> is invisible to keyboards and screen readers. The
-      // standard sortable-header pattern is a real button inside the th, with
-      // aria-sort carrying the state the arrow shows visually.
-      return h(
-        'th',
-        {
-          scope: 'col',
-          'aria-sort': active ? (props.order === 'asc' ? 'ascending' : 'descending') : 'none',
-          class: ['px-3 py-2 select-none',
-            props.align === 'right' ? 'text-right' : 'text-left'],
-        },
-        h(
-          'button',
-          {
-            type: 'button',
-            class: ['uppercase cursor-pointer hover:text-foreground rounded-xs',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'],
-            onClick: () => emit('sort', props.col),
-          },
-          [props.label, h('span', { 'aria-hidden': 'true' }, arrow)],
-        ),
-      )
-    }
-  },
-})
-</script>

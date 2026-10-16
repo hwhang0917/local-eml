@@ -27,14 +27,7 @@ func TestResolveUsesUserHome(t *testing.T) {
 }
 
 func TestEnsureDirsCreatesAll(t *testing.T) {
-	tmp := t.TempDir()
-	p := Paths{
-		Base: tmp,
-		EML:  filepath.Join(tmp, "eml"),
-		DB:   filepath.Join(tmp, "db"),
-		Logs: filepath.Join(tmp, "logs"),
-		Keys: filepath.Join(tmp, "keys"),
-	}
+	p := At(t.TempDir())
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatalf("EnsureDirs: %v", err)
 	}
@@ -54,14 +47,7 @@ func TestEnsureDirsArePrivate(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("unix permission bits are not meaningful on Windows")
 	}
-	tmp := t.TempDir()
-	p := Paths{
-		Base: tmp,
-		EML:  filepath.Join(tmp, "eml"),
-		DB:   filepath.Join(tmp, "db"),
-		Logs: filepath.Join(tmp, "logs"),
-		Keys: filepath.Join(tmp, "keys"),
-	}
+	p := At(t.TempDir())
 	// Stand in for an install created before the default tightened: MkdirAll
 	// alone would leave these world-readable.
 	for _, d := range []string{p.EML, p.DB} {

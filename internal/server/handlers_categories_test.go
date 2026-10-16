@@ -30,12 +30,7 @@ func listCategories(t *testing.T, s *Server) []store.Category {
 func renameCategory(t *testing.T, s *Server, id int64, name string) int {
 	t.Helper()
 	b, _ := json.Marshal(map[string]string{"name": name})
-	rec := httptest.NewRecorder()
-	req := newLoopbackRequest(http.MethodPut,
-		"/api/categories/"+strconv.FormatInt(id, 10), bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
-	s.Router().ServeHTTP(rec, req)
-	return rec.Code
+	return doJSON(t, s, http.MethodPut, "/api/categories/"+strconv.FormatInt(id, 10), string(b)).Code
 }
 
 func TestCategoriesHandlerListsSeededPalette(t *testing.T) {

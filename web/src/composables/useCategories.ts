@@ -1,6 +1,17 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api, type Category } from '@/lib/api'
+import type { CategoryOption } from '@/components/ui/CategoryMenu.vue'
+
+// "any" and "none" are sentinels rather than ids, so they survive the round trip
+// through the URL alongside a numeric category id.
+export const NO_CATEGORY = 'none'
+export const ANY_CATEGORY = 'any'
+
+/** Menu value to what the API takes: null clears the category. */
+export function parseCategoryValue(v: string): number | null {
+  return v === NO_CATEGORY ? null : Number(v)
+}
 
 // Module scope, like useHealth: the library rows, the viewer, the filter and the
 // settings page all read the same list, and a rename has to repaint every dot at
@@ -36,10 +47,17 @@ export function useCategories() {
   const labelFor = (c: Category | undefined) =>
     c ? c.name || t(`settings.color.${c.color}`) : ''
 
+  /** Assignment menu: "none" first, then the palette. The filter prepends "any". */
+  const options = computed<CategoryOption[]>(() => [
+    { value: NO_CATEGORY, label: t('library.category_none') },
+    ...categories.value.map((c) => ({ value: String(c.id), label: labelFor(c), color: c.color })),
+  ])
+
   return {
     categories,
     byId,
     labelFor,
+    options,
     load,
     reload: () => load(true),
   }
