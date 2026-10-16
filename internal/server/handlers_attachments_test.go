@@ -3,13 +3,10 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hwhang0917/local-eml/internal/importer"
-	"github.com/hwhang0917/local-eml/internal/paths"
 )
 
 const attachmentFixture = `From: sender@example.com
@@ -42,26 +39,15 @@ Content-Disposition: attachment; filename="=?UTF-8?B?67aA7ISc67Cw7LmYLnBkZg==?="
 
 func newAttachmentTestServer(t *testing.T) (*Server, string) {
 	t.Helper()
-	dir := t.TempDir()
-	p := paths.Paths{Base: dir, EML: filepath.Join(dir, "eml"), DB: filepath.Join(dir, "db"),
-		Logs: filepath.Join(dir, "logs"), Keys: filepath.Join(dir, "keys")}
-	if err := p.EnsureDirs(); err != nil {
-		t.Fatalf("ensure dirs: %v", err)
-	}
+	p := newTestPaths(t)
 	sha := strings.Repeat("b", 64)
-	if err := os.WriteFile(p.BlobFor(sha), []byte(attachmentFixture), 0o600); err != nil {
-		t.Fatalf("write blob: %v", err)
-	}
+	writeBlobAs(t, p, sha, attachmentFixture)
 	return &Server{Importer: &importer.Importer{Paths: p}}, sha
 }
 
 func TestAttachmentInlineOnlyForSafeTypes(t *testing.T) {
 	s, sha := newAttachmentTestServer(t)
-	get := func(path string) *httptest.ResponseRecorder {
-		rec := httptest.NewRecorder()
-		s.Router().ServeHTTP(rec, newLoopbackRequest(http.MethodGet, path, nil))
-		return rec
-	}
+	get := func(path string) *httptest.ResponseRecorder { return doJSON(t, s, http.MethodGet, path, "") }
 
 	// Without inline=1 the image stays a download.
 	if d := get("/api/emails/" + sha + "/attachments/0").Header().Get("Content-Disposition"); !strings.HasPrefix(d, "attachment") {

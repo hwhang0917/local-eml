@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,14 +26,28 @@ Content-Type: text/plain
 body of the drifted message
 `
 
-func newDriftServer(t *testing.T) (*Server, paths.Paths) {
+// newTestPaths lays out an empty data folder for one test.
+func newTestPaths(t *testing.T) paths.Paths {
 	t.Helper()
-	dir := t.TempDir()
-	p := paths.Paths{Base: dir, EML: filepath.Join(dir, "eml"), DB: filepath.Join(dir, "db"),
-		Logs: filepath.Join(dir, "logs"), Keys: filepath.Join(dir, "keys")}
+	p := paths.At(t.TempDir())
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatalf("dirs: %v", err)
 	}
+	return p
+}
+
+// writeBlobAs puts content in the blob store under sha, bypassing the
+// importer and the database.
+func writeBlobAs(t *testing.T, p paths.Paths, sha, content string) {
+	t.Helper()
+	if err := os.WriteFile(p.BlobFor(sha), []byte(content), 0o600); err != nil {
+		t.Fatalf("write blob: %v", err)
+	}
+}
+
+func newDriftServer(t *testing.T) (*Server, paths.Paths) {
+	t.Helper()
+	p := newTestPaths(t)
 	st, err := store.Open(context.Background(), "file:"+p.DBFile())
 	if err != nil {
 		t.Fatalf("store: %v", err)
@@ -49,9 +62,7 @@ func writeBlob(t *testing.T, p paths.Paths) string {
 	t.Helper()
 	sum := sha256.Sum256([]byte(driftEML))
 	sha := hex.EncodeToString(sum[:])
-	if err := os.WriteFile(p.BlobFor(sha), []byte(driftEML), 0o600); err != nil {
-		t.Fatalf("write blob: %v", err)
-	}
+	writeBlobAs(t, p, sha, driftEML)
 	return sha
 }
 
@@ -169,9 +180,7 @@ func TestIndexOrphanedBlob(t *testing.T) {
 func TestIndexRefusesMisnamedBlob(t *testing.T) {
 	s, p := newDriftServer(t)
 	sha := strings.Repeat("d", 64)
-	if err := os.WriteFile(p.BlobFor(sha), []byte(driftEML), 0o600); err != nil {
-		t.Fatalf("write blob: %v", err)
-	}
+	writeBlobAs(t, p, sha, driftEML)
 
 	rec := httptest.NewRecorder()
 	s.Router().ServeHTTP(rec, newLoopbackRequest(http.MethodPost, "/api/emails/"+sha+"/index", nil))

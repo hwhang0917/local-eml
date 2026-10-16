@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -28,13 +28,13 @@ func (s *Server) handleGetSyncInterval(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handlePutSyncInterval(w http.ResponseWriter, r *http.Request) {
 	var p syncIntervalPayload
-	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+	if !decodeJSON(w, r, &p) {
 		return
 	}
 	d := time.Duration(p.Seconds) * time.Second
 	if p.Seconds != 0 && (d < minSyncInterval || d > maxSyncInterval) {
-		http.Error(w, "seconds must be 0 (off) or between 60 and 86400", http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("seconds must be 0 (off) or between %d and %d",
+			int(minSyncInterval.Seconds()), int(maxSyncInterval.Seconds())), http.StatusBadRequest)
 		return
 	}
 	if err := s.Store.SetSetting(r.Context(), SyncIntervalSettingKey, strconv.Itoa(p.Seconds)); err != nil {

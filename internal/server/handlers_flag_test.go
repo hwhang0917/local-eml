@@ -14,24 +14,11 @@ import (
 // what the UI asks for; plain text and metadata stay available.
 func TestFlaggedEmailIsPlainTextOnly(t *testing.T) {
 	s, _ := newDriftServer(t) // has Store and Importer, so blob checks work
-	r := s.Router()
 	sha := strings.Repeat("d", 64)
 	if _, err := s.Store.InsertEmail(context.Background(), store.EmailRow{Email: store.Email{SHA256: sha}}); err != nil {
 		t.Fatal(err)
 	}
-	do := func(method, path, body string) *httptest.ResponseRecorder {
-		var rd *strings.Reader
-		if body != "" {
-			rd = strings.NewReader(body)
-		} else {
-			rd = strings.NewReader("")
-		}
-		req := newLoopbackRequest(method, path, rd)
-		req.Header.Set("Content-Type", "application/json")
-		rec := httptest.NewRecorder()
-		r.ServeHTTP(rec, req)
-		return rec
-	}
+	do := func(method, path, body string) *httptest.ResponseRecorder { return doJSON(t, s, method, path, body) }
 
 	if rec := do(http.MethodPut, "/api/emails/"+sha+"/flag", `{"flag":"bogus"}`); rec.Code != http.StatusBadRequest {
 		t.Fatalf("bogus flag: %d %s", rec.Code, rec.Body)

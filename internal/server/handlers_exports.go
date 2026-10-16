@@ -2,11 +2,9 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/hwhang0917/local-eml/internal/importer"
@@ -28,61 +26,18 @@ func (s *Server) handleExportZip(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleExportS3(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		AccessKeyID     string `json:"accessKeyId"`
-		SecretAccessKey string `json:"secretAccessKey"`
-		SessionToken    string `json:"sessionToken"`
-		Region          string `json:"region"`
-		Bucket          string `json:"bucket"`
-		Prefix          string `json:"prefix"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "decode body: "+err.Error(), http.StatusBadRequest)
+	cfg, ok := decodeS3Config(w, r)
+	if !ok {
 		return
 	}
-	body.Bucket = strings.TrimSpace(body.Bucket)
-	body.Prefix = strings.TrimSpace(body.Prefix)
-	if body.Bucket == "" {
-		http.Error(w, "bucket is required", http.StatusBadRequest)
+	id, err := s.queueJob(r.Context(), kindS3Export, cfg.Label())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	exportID := newImportID()
-	sourceName := fmt.Sprintf("s3://%s/%s", body.Bucket, body.Prefix)
-	if err := s.Store.CreateImport(r.Context(), store.Import{
-		ID:         exportID,
-		SourceKind: "s3-export",
-		SourceName: sourceName,
-		Status:     "queued",
-	}); err != nil {
-		http.Error(w, "create export: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	cfg := importer.S3Config{
-		AccessKeyID:     body.AccessKeyID,
-		SecretAccessKey: body.SecretAccessKey,
-		SessionToken:    body.SessionToken,
-		Region:          body.Region,
-		Bucket:          body.Bucket,
-		Prefix:          body.Prefix,
-	}
-
-	slog.Info("export requested",
-		slog.String("export_id", exportID),
-		slog.String("kind", "s3"),
-		slog.String("bucket", body.Bucket),
-		slog.String("prefix", body.Prefix),
-		slog.String("region", body.Region),
-		slog.Bool("static_creds", body.AccessKeyID != ""),
-	)
-
-	go s.runExport(exportID, cfg)
-
-	writeJSON(w, http.StatusAccepted, map[string]any{
-		"export_id": exportID,
-		"kind":      "s3-export",
-	})
+	s3Logger(cfg).Info("export requested", slog.String("export_id", id), slog.String("kind", kindS3Export))
+	go s.runExport(id, cfg)
+	writeJobAccepted(w, "export_id", id, kindS3Export, nil)
 }
 
 func (s *Server) runExport(id string, cfg importer.S3Config) {
@@ -90,20 +45,9 @@ func (s *Server) runExport(id string, cfg importer.S3Config) {
 	defer release()
 	_ = s.Store.UpdateImportStatus(ctx, id, store.ImportRunning)
 
-	log := slog.Default().With(
-		slog.String("export_id", id), slog.String("kind", "s3-export"))
-
 	job := s.Exporter.NewS3Job(id, cfg)
-	job.Logger = log
-
-	defer func() {
-		if rec := recover(); rec != nil {
-			log.Error("export job panic", slog.Any("panic", rec))
-			_ = s.Store.UpdateImportStatus(context.Background(), id, store.ImportError)
-			s.Hub.Publish(id, importer.Event{Type: "error", Message: fmt.Sprint(rec)})
-			s.Hub.Close(id)
-		}
-	}()
+	job.Logger = slog.Default().With(slog.String("export_id", id), slog.String("kind", kindS3Export))
+	defer s.failJobOnPanic(&job.Job)
 
 	job.Run(ctx)
 }

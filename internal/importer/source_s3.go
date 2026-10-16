@@ -87,9 +87,12 @@ type s3Source struct {
 
 func NewS3Source(cfg S3Config) Source { return &s3Source{cfg: cfg} }
 
-func (s *s3Source) Label() string {
-	return fmt.Sprintf("s3://%s/%s", s.cfg.Bucket, s.cfg.Prefix)
+// Label names the destination the way the job list shows it.
+func (c S3Config) Label() string {
+	return fmt.Sprintf("s3://%s/%s", c.Bucket, c.Prefix)
 }
+
+func (s *s3Source) Label() string { return s.cfg.Label() }
 
 func (s *s3Source) ensureClient(ctx context.Context) error {
 	if s.client != nil {

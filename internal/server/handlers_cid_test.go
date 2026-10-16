@@ -3,13 +3,10 @@ package server
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/hwhang0917/local-eml/internal/importer"
-	"github.com/hwhang0917/local-eml/internal/paths"
 )
 
 const cidFixture = `From: sender@example.com
@@ -39,16 +36,9 @@ iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAA
 
 func newCIDTestServer(t *testing.T) (*Server, string) {
 	t.Helper()
-	dir := t.TempDir()
-	p := paths.Paths{Base: dir, EML: filepath.Join(dir, "eml"), DB: filepath.Join(dir, "db"),
-		Logs: filepath.Join(dir, "logs"), Keys: filepath.Join(dir, "keys")}
-	if err := p.EnsureDirs(); err != nil {
-		t.Fatalf("ensure dirs: %v", err)
-	}
+	p := newTestPaths(t)
 	sha := strings.Repeat("a", 64)
-	if err := os.WriteFile(p.BlobFor(sha), []byte(cidFixture), 0o600); err != nil {
-		t.Fatalf("write blob: %v", err)
-	}
+	writeBlobAs(t, p, sha, cidFixture)
 	return &Server{Importer: &importer.Importer{Paths: p}}, sha
 }
 

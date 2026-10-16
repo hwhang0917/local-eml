@@ -20,16 +20,15 @@ const sqliteMagic = "SQLite format 3\x00"
 // zip containing one — into the live database. Synchronous: a metadata merge
 // is small even for large libraries, so no job/SSE machinery.
 func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
-	if err := r.ParseMultipartForm(multipartMemBytes); err != nil {
-		http.Error(w, "parse multipart: "+err.Error(), http.StatusBadRequest)
+	files, ok := uploadedFiles(w, r)
+	if !ok {
 		return
 	}
-	if r.MultipartForm == nil || len(r.MultipartForm.File["file"]) != 1 {
-		http.Error(w, "exactly one 'file' field required", http.StatusBadRequest)
+	if len(files) != 1 {
+		http.Error(w, "exactly one '"+uploadField+"' field required", http.StatusBadRequest)
 		return
 	}
-	hdr := r.MultipartForm.File["file"][0]
+	hdr := files[0]
 
 	upload, err := saveOne(hdr)
 	if err != nil {
@@ -97,20 +96,7 @@ func extractSnapshot(upload string) (string, error) {
 			return "", err
 		}
 		defer src.Close()
-		dst, err := os.CreateTemp("", "local-eml-restore-*.db")
-		if err != nil {
-			return "", err
-		}
-		if _, err := io.Copy(dst, src); err != nil {
-			dst.Close()
-			os.Remove(dst.Name())
-			return "", err
-		}
-		if err := dst.Close(); err != nil {
-			os.Remove(dst.Name())
-			return "", err
-		}
-		return dst.Name(), nil
+		return copyToTemp(src, "local-eml-restore-*.db")
 	}
 	return "", fmt.Errorf("zip has no %s entry — was it exported by an older version?", filepath.Base(exporter.DBObjectName))
 }

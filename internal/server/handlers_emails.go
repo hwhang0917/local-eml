@@ -3,7 +3,6 @@ package server
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -30,7 +29,7 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 		FlaggedOnly:  q.Get("flagged") == "1",
 		Sort:         q.Get("sort"),
 		Order:        q.Get("order"),
-		Limit:        intParam(q.Get("limit"), 50),
+		Limit:        store.ClampPageSize(intParam(q.Get("limit"), store.DefaultPageSize)),
 		Offset:       intParam(q.Get("offset"), 0),
 		From:         dayBound(q.Get("from"), false),
 		To:           dayBound(q.Get("to"), true),
@@ -60,9 +59,8 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 // handleEmailThread lists the conversation the message belongs to, oldest
 // first. A message with no thread id is a conversation of one.
 func (s *Server) handleEmailThread(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	e, err := s.Store.GetEmailBySHA(r.Context(), sha)
@@ -91,9 +89,8 @@ type emailResponse struct {
 }
 
 func (s *Server) handleGetEmail(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	onDisk := s.blobExists(sha)
@@ -170,9 +167,8 @@ func (s *Server) parseBlobMetadata(sha string) (*store.Email, error) {
 // refuses while the file is still there: this is a repair for dangling
 // metadata, not a way to delete mail.
 func (s *Server) handleDeleteEmail(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	if s.blobExists(sha) {
@@ -180,11 +176,7 @@ func (s *Server) handleDeleteEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.Store.DeleteEmailBySHA(r.Context(), sha); err != nil {
-		if errors.Is(err, store.ErrEmailNotFound) {
-			http.Error(w, "not found", http.StatusNotFound)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeStoreErr(w, err, store.ErrEmailNotFound)
 		return
 	}
 	slog.Info("deleted email with missing blob", slog.String("sha256", sha))
@@ -195,9 +187,8 @@ func (s *Server) handleDeleteEmail(w http.ResponseWriter, r *http.Request) {
 // hashes, de-duplicates, parses and inserts, and its copy step is a no-op when
 // the source is already the blob it would write.
 func (s *Server) handleIndexEmail(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	path := s.Importer.Paths.BlobFor(sha)
@@ -232,9 +223,8 @@ func (s *Server) handleIndexEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEmailRaw(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if !validSHA(sha) {
-		http.Error(w, "invalid sha", http.StatusBadRequest)
+	sha, ok := shaParam(w, r)
+	if !ok {
 		return
 	}
 	f, err := os.Open(s.Importer.Paths.BlobFor(sha))
@@ -256,7 +246,11 @@ type partInfo struct {
 }
 
 func (s *Server) handleEmailParts(w http.ResponseWriter, r *http.Request) {
-	env, err := s.openEnvelope(chi.URLParam(r, "sha"))
+	sha, ok := shaParam(w, r)
+	if !ok {
+		return
+	}
+	env, err := s.openEnvelope(sha)
 	if err != nil {
 		httpEnvErr(w, err)
 		return
@@ -274,7 +268,7 @@ func partsManifest(parts []*enmime.Part) []partInfo {
 	for i, p := range parts {
 		out = append(out, partInfo{
 			Index:       i,
-			ContentID:   strings.Trim(p.Header.Get("Content-ID"), "<>"),
+			ContentID:   contentID(p),
 			ContentType: p.ContentType,
 			Filename:    p.FileName,
 			Size:        len(p.Content),
@@ -284,7 +278,11 @@ func partsManifest(parts []*enmime.Part) []partInfo {
 }
 
 func (s *Server) handleEmailText(w http.ResponseWriter, r *http.Request) {
-	env, err := s.openEnvelope(chi.URLParam(r, "sha"))
+	sha, ok := shaParam(w, r)
+	if !ok {
+		return
+	}
+	env, err := s.openEnvelope(sha)
 	if err != nil {
 		httpEnvErr(w, err)
 		return
@@ -294,8 +292,8 @@ func (s *Server) handleEmailText(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleEmailHTML(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	if s.refuseIfFlagged(w, r, sha) {
+	sha, ok := shaParam(w, r)
+	if !ok || s.refuseIfFlagged(w, r, sha) {
 		return
 	}
 	env, err := s.openEnvelope(sha)
@@ -337,9 +335,8 @@ func csp(showRemote bool) string {
 }
 
 func (s *Server) handleEmailCID(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
-	cid := chi.URLParam(r, "cid")
-	if s.refuseIfFlagged(w, r, sha) {
+	sha, ok := shaParam(w, r)
+	if !ok || s.refuseIfFlagged(w, r, sha) {
 		return
 	}
 	env, err := s.openEnvelope(sha)
@@ -347,7 +344,7 @@ func (s *Server) handleEmailCID(w http.ResponseWriter, r *http.Request) {
 		httpEnvErr(w, err)
 		return
 	}
-	part := findPartByCID(env, cid)
+	part := findPartByCID(env, chi.URLParam(r, "cid"))
 	if part == nil {
 		http.Error(w, "cid not found", http.StatusNotFound)
 		return
@@ -358,24 +355,27 @@ func (s *Server) handleEmailCID(w http.ResponseWriter, r *http.Request) {
 	// image in new tab" is an unsandboxed top-level navigation — stored XSS
 	// with full API access. This endpoint only ever backs <img src="cid:...">,
 	// so images are the only thing worth serving.
-	mediaType, _, err := mime.ParseMediaType(part.ContentType)
-	if err != nil || !strings.HasPrefix(mediaType, "image/") {
+	mt := mediaType(part.ContentType)
+	if !strings.HasPrefix(mt, "image/") {
 		http.Error(w, "cid part is not an image", http.StatusUnsupportedMediaType)
 		return
 	}
-	w.Header().Set("Content-Type", mediaType)
+	w.Header().Set("Content-Type", mt)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Content-Disposition", "inline")
 	// image/svg+xml is a legitimate image that can also carry <script>. The
 	// sandbox directive makes it inert if navigated to directly, without
 	// breaking it as an <img> source.
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
+	w.Header().Set("Content-Security-Policy", sandboxCSP)
 	w.Header().Set("Cache-Control", "private, max-age=300")
 	_, _ = w.Write(part.Content)
 }
 
 func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
-	sha := chi.URLParam(r, "sha")
+	sha, ok := shaParam(w, r)
+	if !ok {
+		return
+	}
 	idx, err := strconv.Atoi(chi.URLParam(r, "idx"))
 	if err != nil {
 		http.Error(w, "invalid index", http.StatusBadRequest)
@@ -404,15 +404,9 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 	// Inline rendering is opt-in and only for types a browser can display but
 	// never execute in our origin. Anything else (HTML, SVG with scripts, …)
 	// stays a download no matter what the query says.
-	if r.URL.Query().Get("inline") == "1" && inlineSafe(p.ContentType) {
+	if mt := mediaType(p.ContentType); r.URL.Query().Get("inline") == "1" && inlineSafe(mt) {
 		disposition = "inline"
-		// Same lockdown as the cid endpoint. PDFs skip the sandbox directive —
-		// it disables Chrome's PDF viewer, which is the whole point of inline.
-		if strings.HasPrefix(strings.ToLower(p.ContentType), "application/pdf") {
-			w.Header().Set("Content-Security-Policy", "default-src 'none'")
-		} else {
-			w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-		}
+		w.Header().Set("Content-Security-Policy", inlineCSP(mt))
 	}
 	// FormatMediaType RFC 2231-encodes non-ASCII names (filename*=utf-8''…);
 	// writing raw UTF-8 into the header made browsers save Korean filenames
@@ -422,14 +416,42 @@ func (s *Server) handleEmailAttachment(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(p.Content)
 }
 
-func inlineSafe(contentType string) bool {
-	ct := strings.ToLower(strings.TrimSpace(strings.Split(contentType, ";")[0]))
-	if strings.HasPrefix(ct, "image/") {
-		// SVG executes scripts when navigated to directly — never inline it.
-		return !strings.Contains(ct, "svg")
+// sandboxCSP makes a part inert when navigated to directly, without breaking
+// it as an <img> or <embed> source.
+const sandboxCSP = "default-src 'none'; sandbox"
+
+// inlineCSP is the lockdown for a part served inline. PDFs skip the sandbox
+// directive — it disables Chrome's PDF viewer, which is the whole point of
+// inline.
+func inlineCSP(mt string) string {
+	if mt == "application/pdf" {
+		return "default-src 'none'"
 	}
-	return strings.HasPrefix(ct, "audio/") || strings.HasPrefix(ct, "video/") ||
-		ct == "application/pdf" || ct == "text/plain"
+	return sandboxCSP
+}
+
+// mediaType is the lowercased type/subtype of a Content-Type header, or ""
+// when the header does not parse.
+func mediaType(contentType string) string {
+	mt, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return ""
+	}
+	return strings.ToLower(mt)
+}
+
+// contentID is a part's Content-ID without the angle brackets.
+func contentID(p *enmime.Part) string {
+	return strings.Trim(p.Header.Get("Content-ID"), "<>")
+}
+
+func inlineSafe(mt string) bool {
+	if strings.HasPrefix(mt, "image/") {
+		// SVG executes scripts when navigated to directly — never inline it.
+		return !strings.Contains(mt, "svg")
+	}
+	return strings.HasPrefix(mt, "audio/") || strings.HasPrefix(mt, "video/") ||
+		mt == "application/pdf" || mt == "text/plain"
 }
 
 type envErr struct {
@@ -439,10 +461,9 @@ type envErr struct {
 
 func (e *envErr) Error() string { return e.err.Error() }
 
+// openEnvelope parses the blob for sha, which the caller has already
+// validated with shaParam.
 func (s *Server) openEnvelope(sha string) (*enmime.Envelope, error) {
-	if !validSHA(sha) {
-		return nil, &envErr{status: http.StatusBadRequest, err: fmt.Errorf("invalid sha")}
-	}
 	f, err := os.Open(s.Importer.Paths.BlobFor(sha))
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -468,36 +489,14 @@ func httpEnvErr(w http.ResponseWriter, err error) {
 
 func findPartByCID(env *enmime.Envelope, cid string) *enmime.Part {
 	target := strings.ToLower(strings.Trim(cid, "<>"))
-	check := func(parts []*enmime.Part) *enmime.Part {
+	for _, parts := range [][]*enmime.Part{env.Inlines, env.OtherParts, env.Attachments} {
 		for _, p := range parts {
-			id := strings.ToLower(strings.Trim(p.Header.Get("Content-ID"), "<>"))
-			if id == target {
+			if strings.ToLower(contentID(p)) == target {
 				return p
 			}
 		}
-		return nil
-	}
-	if p := check(env.Inlines); p != nil {
-		return p
-	}
-	if p := check(env.OtherParts); p != nil {
-		return p
-	}
-	if p := check(env.Attachments); p != nil {
-		return p
 	}
 	return nil
-}
-
-func intParam(s string, def int) int {
-	if s == "" {
-		return def
-	}
-	n, err := strconv.Atoi(s)
-	if err != nil {
-		return def
-	}
-	return n
 }
 
 // dayBound turns a YYYY-MM-DD filter value into a unix second. The dates come
@@ -519,16 +518,4 @@ func dayBound(v string, endOfDay bool) int64 {
 		d = d.AddDate(0, 0, 1).Add(-time.Second)
 	}
 	return d.Unix()
-}
-
-func validSHA(s string) bool {
-	if len(s) != 64 {
-		return false
-	}
-	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-			return false
-		}
-	}
-	return true
 }
