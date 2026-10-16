@@ -22,6 +22,10 @@ type Server struct {
 	Canceller *importer.Canceller
 	Secret    *secret.Encryptor
 	Version   string
+	// Token is the session token every API request must present; see auth.go.
+	// Port is the port this server listens on, which names the cookie.
+	Token string
+	Port  int
 	// RunningInteractive is true when this process was launched from a terminal
 	// rather than by a service manager. Self-update needs the service manager
 	// to bring us back up after we exit, so it is gated on this flag.
@@ -39,14 +43,19 @@ type Server struct {
 }
 
 func (s *Server) Router() http.Handler {
+	if s.Token == "" {
+		panic("server: Token must be set; an API without one is open to every local process")
+	}
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
 	r.Use(loopbackGuard)
 
 	r.Get("/healthz", s.handleHealth)
+	r.Get(AuthPath, s.handleAuth)
 
 	r.Route("/api", func(api chi.Router) {
+		api.Use(s.requireToken)
 		api.Post("/imports", s.handleImportUpload)
 		api.Post("/imports/s3", s.handleImportS3)
 		api.Post("/imports/imap", s.handleImportImap)

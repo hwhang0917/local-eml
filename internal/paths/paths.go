@@ -65,6 +65,12 @@ func (p Paths) PrefsFile() string {
 	return filepath.Join(p.Base, "prefs.json")
 }
 
+// TokenFile holds the session token the API requires; see server/auth.go.
+// Like the key, it lives in the owner-only folder and survives a wipe.
+func (p Paths) TokenFile() string {
+	return filepath.Join(p.Base, "session-token")
+}
+
 func (p Paths) KeyFile() string {
 	return filepath.Join(p.Keys, "secret.key")
 }
