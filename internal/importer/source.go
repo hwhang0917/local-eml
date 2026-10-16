@@ -2,7 +2,9 @@ package importer
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"path/filepath"
 )
 
 // Item is one importable object. Open is lazy so bodies stream one at a time.
@@ -17,6 +19,12 @@ type Source interface {
 	Label() string
 	// Scan returns candidate items already filtered to .eml.
 	Scan(ctx context.Context) ([]Item, error)
+}
+
+// archiveItemName names the i-th (1-based) message of a single-file archive
+// so progress and error lists can point at it: "<file>#00042.eml".
+func archiveItemName(path string, i int) string {
+	return fmt.Sprintf("%s#%05d.eml", filepath.Base(path), i)
 }
 
 // SourceCloser is a Source that holds a resource (e.g. an open archive) which

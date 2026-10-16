@@ -39,7 +39,7 @@ func TestLocalFilesSourceFiltersEMLWhenRequested(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	src := NewLocalSource("2 files", []string{good, bad}, []string{"a.eml", "notes.txt"}, true)
+	src := NewLocalEMLSource("2 files", []string{good, bad}, []string{"a.eml", "notes.txt"})
 	items, err := src.Scan(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -61,7 +61,7 @@ func TestLocalFilesSourceKeepsNonEMLWhenFilterOff(t *testing.T) {
 	if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	src := NewLocalSource("upload", []string{p}, []string{"single.eml"}, false)
+	src := NewLocalSource("upload", []string{p}, []string{"single.eml"})
 	items, err := src.Scan(context.Background())
 	if err != nil {
 		t.Fatal(err)
@@ -137,14 +137,7 @@ func (s stubSource) Scan(context.Context) ([]Item, error) { return s.items, nil 
 
 func newTestPaths(t *testing.T) paths.Paths {
 	t.Helper()
-	base := t.TempDir()
-	p := paths.Paths{
-		Base: base,
-		EML:  filepath.Join(base, "eml"),
-		DB:   filepath.Join(base, "db"),
-		Logs: filepath.Join(base, "logs"),
-		Keys: filepath.Join(base, "keys"),
-	}
+	p := paths.At(t.TempDir())
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatal(err)
 	}

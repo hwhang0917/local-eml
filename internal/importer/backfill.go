@@ -5,21 +5,28 @@ import (
 	"os"
 
 	"github.com/hwhang0917/local-eml/internal/parser"
-	"github.com/hwhang0917/local-eml/internal/risk"
 )
 
-// attachmentCountVersion marks the one-time re-count of attachment_count after
-// inline cid: images stopped counting as attachments. Bump only if stored
-// attachment data ever has to be recomputed from the blobs again.
-const attachmentCountVersion = 1
+// One-time data repairs that need the blobs re-parsed, each gated on PRAGMA
+// user_version so it runs once per database. All are safe to interrupt: an
+// unfinished run simply repeats on the next start.
+const (
+	// attachmentCountVersion marks the re-count of attachment_count after
+	// inline cid: images stopped counting as attachments.
+	attachmentCountVersion = 1
+	// threadIDVersion marks the derivation of thread_id for rows imported
+	// before conversations existed.
+	threadIDVersion = 2
+	// riskVersion marks the phishing assessment of rows imported before the
+	// heuristics existed.
+	riskVersion = 3
+)
 
 // BackfillAttachmentCounts re-parses every stored blob whose recorded
 // attachment count predates the inline/attachment split and rewrites the two
-// derived columns. Runs once per database, tracked via PRAGMA user_version;
-// safe to interrupt — an unfinished run simply repeats on the next start.
+// derived columns.
 func (im *Importer) BackfillAttachmentCounts(ctx context.Context) (int, error) {
-	v, err := im.Store.UserVersion(ctx)
-	if err != nil || v >= attachmentCountVersion {
+	if due, err := im.due(ctx, attachmentCountVersion); !due {
 		return 0, err
 	}
 	rows, err := im.Store.ListEmailAttachmentCounts(ctx)
@@ -31,35 +38,22 @@ func (im *Importer) BackfillAttachmentCounts(ctx context.Context) (int, error) {
 		if err := ctx.Err(); err != nil {
 			return updated, err
 		}
-		f, err := os.Open(im.Paths.BlobFor(r.SHA256))
-		if err != nil {
-			continue // missing blob: the drift-repair flow owns that case
+		parsed, ok := im.parseBlob(r.SHA256)
+		if !ok || parsed.AttachmentCount == r.AttachmentCount {
+			continue
 		}
-		env, err := parser.Open(f)
-		f.Close()
-		if err != nil {
-			continue // unparseable blob keeps its old count
+		if err := im.Store.SetEmailAttachmentCount(ctx, r.ID, parsed.AttachmentCount); err != nil {
+			return updated, err
 		}
-		if n := len(env.Attachments); n != r.AttachmentCount {
-			if err := im.Store.SetEmailAttachmentCount(ctx, r.ID, n); err != nil {
-				return updated, err
-			}
-			updated++
-		}
+		updated++
 	}
 	return updated, im.Store.SetUserVersion(ctx, attachmentCountVersion)
 }
 
-// threadIDVersion marks the one-time derivation of thread_id for rows imported
-// before conversations existed.
-const threadIDVersion = 2
-
 // BackfillThreadIDs re-parses blobs for rows that have no thread_id yet and
-// writes the derived key. Same contract as BackfillAttachmentCounts: runs once
-// per database via PRAGMA user_version, safe to interrupt.
+// writes the derived key.
 func (im *Importer) BackfillThreadIDs(ctx context.Context) (int, error) {
-	v, err := im.Store.UserVersion(ctx)
-	if err != nil || v >= threadIDVersion {
+	if due, err := im.due(ctx, threadIDVersion); !due {
 		return 0, err
 	}
 	rows, err := im.Store.ListEmailsMissingThreadID(ctx)
@@ -71,14 +65,9 @@ func (im *Importer) BackfillThreadIDs(ctx context.Context) (int, error) {
 		if err := ctx.Err(); err != nil {
 			return updated, err
 		}
-		f, err := os.Open(im.Paths.BlobFor(r.SHA256))
-		if err != nil {
-			continue // missing blob: the drift-repair flow owns that case
-		}
-		parsed, err := parser.Parse(f)
-		f.Close()
-		if err != nil || parsed.ThreadID == "" {
-			continue // unparseable, or nothing to derive a thread from
+		parsed, ok := im.parseBlob(r.SHA256)
+		if !ok || parsed.ThreadID == "" {
+			continue // nothing to derive a thread from
 		}
 		if err := im.Store.SetEmailThreadID(ctx, r.ID, parsed.ThreadID); err != nil {
 			return updated, err
@@ -88,16 +77,10 @@ func (im *Importer) BackfillThreadIDs(ctx context.Context) (int, error) {
 	return updated, im.Store.SetUserVersion(ctx, threadIDVersion)
 }
 
-// riskVersion marks the one-time phishing assessment of rows imported before
-// the heuristics existed.
-const riskVersion = 3
-
 // BackfillRisk runs the phishing heuristics over every row that has never
-// been assessed (risk IS NULL). Same contract as the other backfills: once
-// per database via PRAGMA user_version, safe to interrupt.
+// been assessed (risk IS NULL).
 func (im *Importer) BackfillRisk(ctx context.Context) (int, error) {
-	v, err := im.Store.UserVersion(ctx)
-	if err != nil || v >= riskVersion {
+	if due, err := im.due(ctx, riskVersion); !due {
 		return 0, err
 	}
 	rows, err := im.Store.ListEmailsMissingRisk(ctx)
@@ -109,19 +92,39 @@ func (im *Importer) BackfillRisk(ctx context.Context) (int, error) {
 		if err := ctx.Err(); err != nil {
 			return updated, err
 		}
-		f, err := os.Open(im.Paths.BlobFor(r.SHA256))
-		if err != nil {
-			continue // missing blob: the drift-repair flow owns that case
+		parsed, ok := im.parseBlob(r.SHA256)
+		if !ok {
+			continue
 		}
-		env, err := parser.Open(f)
-		f.Close()
-		if err != nil {
-			continue // unparseable blob stays unassessed
-		}
-		if err := im.Store.SetEmailRisk(ctx, r.ID, risk.Assess(env)); err != nil {
+		if err := im.Store.SetEmailRisk(ctx, r.ID, parsed.Risk); err != nil {
 			return updated, err
 		}
 		updated++
 	}
 	return updated, im.Store.SetUserVersion(ctx, riskVersion)
+}
+
+// due reports whether the repair tagged version has not run on this database.
+func (im *Importer) due(ctx context.Context, version int) (bool, error) {
+	v, err := im.Store.UserVersion(ctx)
+	if err != nil {
+		return false, err
+	}
+	return v < version, nil
+}
+
+// parseBlob re-reads a stored message. A missing blob is the drift-repair
+// flow's case and an unparseable one keeps whatever it has, so both report
+// false rather than an error.
+func (im *Importer) parseBlob(sha string) (*parser.Parsed, bool) {
+	f, err := os.Open(im.Paths.BlobFor(sha))
+	if err != nil {
+		return nil, false
+	}
+	defer f.Close()
+	parsed, err := parser.Parse(f)
+	if err != nil {
+		return nil, false
+	}
+	return parsed, true
 }

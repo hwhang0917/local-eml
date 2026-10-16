@@ -2,6 +2,18 @@ package importer
 
 import "sync"
 
+// Event types, as the SPA reads them off the stream.
+const (
+	EventStep  = "step"  // a new phase began
+	EventItem  = "item"  // one message processed (or failed, with Message set)
+	EventError = "error" // the job stopped early
+	EventDone  = "done"  // the job finished
+)
+
+// hubBuffer is how many events a slow subscriber may fall behind before
+// Publish starts dropping for it; see Publish.
+const hubBuffer = 64
+
 type Event struct {
 	Type      string `json:"type"`
 	Phase     string `json:"phase,omitempty"`
@@ -23,7 +35,7 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) Subscribe(importID string) (<-chan Event, func()) {
-	ch := make(chan Event, 64)
+	ch := make(chan Event, hubBuffer)
 	h.mu.Lock()
 	h.subs[importID] = append(h.subs[importID], ch)
 	h.mu.Unlock()
@@ -51,6 +63,8 @@ func (h *Hub) Subscribe(importID string) (<-chan Event, func()) {
 	return ch, cancel
 }
 
+// Publish fans ev out to every subscriber without blocking: a subscriber
+// whose buffer is full misses the event rather than stalling the job.
 func (h *Hub) Publish(importID string, ev Event) {
 	h.mu.Lock()
 	subs := append([]chan Event{}, h.subs[importID]...)

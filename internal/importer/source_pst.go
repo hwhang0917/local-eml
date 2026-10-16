@@ -9,7 +9,6 @@ import (
 	"maps"
 	"net/textproto"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -67,11 +66,10 @@ func (s *pstSource) Scan(_ context.Context) ([]Item, error) {
 		return nil, fmt.Errorf("scan pst: %w", err)
 	}
 
-	base := filepath.Base(s.path)
 	items := make([]Item, len(ids))
 	for i, id := range ids {
 		items[i] = Item{
-			Name: fmt.Sprintf("%s#%05d.eml", base, i+1),
+			Name: archiveItemName(s.path, i+1),
 			Open: func(context.Context) (io.ReadCloser, error) {
 				m, err := pf.GetMessage(id)
 				if err != nil {

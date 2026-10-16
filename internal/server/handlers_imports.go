@@ -78,9 +78,9 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 	case "pst":
 		src = importer.NewPstSource(paths[0])
 	case "file":
-		src = importer.NewLocalSource(sourceName, paths, names, false)
+		src = importer.NewLocalSource(sourceName, paths, names)
 	default: // "dir"
-		src = importer.NewLocalSource(sourceName, paths, names, true)
+		src = importer.NewLocalEMLSource(sourceName, paths, names)
 	}
 
 	slog.Info("import requested",
@@ -165,7 +165,7 @@ func (s *Server) handleResync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	src := importer.NewLocalSource("library resync", paths, names, true)
+	src := importer.NewLocalEMLSource("library resync", paths, names)
 
 	slog.Info("resync requested",
 		slog.String("import_id", importID),

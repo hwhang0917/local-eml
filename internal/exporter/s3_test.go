@@ -3,7 +3,6 @@ package exporter
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -62,14 +61,7 @@ func (f *fakeS3) PutObject(_ context.Context, in *s3.PutObjectInput, _ ...func(*
 
 func newExporterFixture(t *testing.T, entries []store.EmailRow) (*Exporter, *importer.Hub, string) {
 	t.Helper()
-	tmp := t.TempDir()
-	p := paths.Paths{
-		Base: tmp,
-		EML:  filepath.Join(tmp, "eml"),
-		DB:   filepath.Join(tmp, "db"),
-		Logs: filepath.Join(tmp, "logs"),
-		Keys: filepath.Join(tmp, "keys"),
-	}
+	p := paths.At(t.TempDir())
 	if err := p.EnsureDirs(); err != nil {
 		t.Fatal(err)
 	}
@@ -101,10 +93,11 @@ func newExporterFixture(t *testing.T, entries []store.EmailRow) (*Exporter, *imp
 
 func runWithFake(t *testing.T, exp *Exporter, importID, prefix string, fake *fakeS3) (uploaded []string, dups, errs int) {
 	t.Helper()
-	job := exp.NewS3Job(importID, S3Config{Bucket: "b", Prefix: prefix})
-	job.newClient = func(context.Context, S3Config) (s3UploadAPI, error) { return fake, nil }
+	job := exp.NewS3Job(importID, importer.S3Config{Bucket: "b", Prefix: prefix})
+	job.newClient = func(context.Context, importer.S3Config) (s3UploadAPI, error) { return fake, nil }
 
-	// Drain SSE so Publish doesn't block the job goroutine on a full buffer.
+	// Drain SSE so the assertions below see every event rather than the ones
+	// that fit in the subscriber buffer.
 	ch, cancel := exp.Hub.Subscribe(importID)
 	done := make(chan struct{})
 	go func() {

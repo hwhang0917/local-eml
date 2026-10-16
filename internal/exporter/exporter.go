@@ -41,6 +41,13 @@ func (e *Exporter) snapshotDB(ctx context.Context) (string, func(), error) {
 	return p, func() { os.RemoveAll(dir) }, nil
 }
 
+// SHA-256 hex lengths: the full digest that names an S3 object, and the
+// prefix that disambiguates zip entries.
+const (
+	shaHexLen   = 64
+	shortSHALen = 8
+)
+
 // zipObjectName returns a flat, collision-resistant name for ZIP entries:
 // "<sha[:8]>_<sanitized-basename>". Inside a zip archive we lose any directory
 // structure anyway, so the short-SHA prefix guarantees two emails sharing a
@@ -48,12 +55,12 @@ func (e *Exporter) snapshotDB(ctx context.Context) (string, func(), error) {
 func zipObjectName(sha, originalName string) string {
 	clean := sanitizeFilename(originalName)
 	if clean == "" {
-		return fmt.Sprintf("%s.eml", sha[:short(sha)])
+		return fmt.Sprintf("%s.eml", shortSHA(sha))
 	}
-	if !strings.HasSuffix(strings.ToLower(clean), ".eml") {
+	if !importer.IsEML(clean) {
 		clean += ".eml"
 	}
-	return fmt.Sprintf("%s_%s", sha[:short(sha)], clean)
+	return fmt.Sprintf("%s_%s", shortSHA(sha), clean)
 }
 
 // s3ObjectName returns a deterministic, content-addressed S3 object key for an
@@ -65,11 +72,8 @@ func s3ObjectName(sha string) string {
 	return sha + ".eml"
 }
 
-func short(s string) int {
-	if len(s) < 8 {
-		return len(s)
-	}
-	return 8
+func shortSHA(sha string) string {
+	return sha[:min(len(sha), shortSHALen)]
 }
 
 func sanitizeFilename(name string) string {

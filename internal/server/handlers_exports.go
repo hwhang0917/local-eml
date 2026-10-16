@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hwhang0917/local-eml/internal/exporter"
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
@@ -60,7 +59,7 @@ func (s *Server) handleExportS3(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := exporter.S3Config{
+	cfg := importer.S3Config{
 		AccessKeyID:     body.AccessKeyID,
 		SecretAccessKey: body.SecretAccessKey,
 		SessionToken:    body.SessionToken,
@@ -86,7 +85,7 @@ func (s *Server) handleExportS3(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) runExport(id string, cfg exporter.S3Config) {
+func (s *Server) runExport(id string, cfg importer.S3Config) {
 	ctx, release := s.Canceller.Register(context.Background(), id)
 	defer release()
 	_ = s.Store.UpdateImportStatus(ctx, id, store.ImportRunning)

@@ -9,81 +9,73 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
-type S3Config struct {
-	AccessKeyID     string
-	SecretAccessKey string
-	SessionToken    string
-	Region          string
-	Bucket          string
-	Prefix          string
-}
-
 // s3UploadAPI is the subset of *s3.Client used here; lets tests inject a fake.
 type s3UploadAPI interface {
-	ListObjectsV2(context.Context, *s3.ListObjectsV2Input, ...func(*s3.Options)) (*s3.ListObjectsV2Output, error)
+	importer.S3Lister
 	PutObject(context.Context, *s3.PutObjectInput, ...func(*s3.Options)) (*s3.PutObjectOutput, error)
 }
 
+// S3Job uploads the library to a bucket. It embeds the importer's Job for the
+// shared progress stream and status bookkeeping; Job.Importer stays nil.
 type S3Job struct {
+	importer.Job
 	Exporter *Exporter
-	ID       string
-	Cfg      S3Config
-	Logger   *slog.Logger
+	Cfg      importer.S3Config
 
-	newClient func(context.Context, S3Config) (s3UploadAPI, error)
+	newClient func(context.Context, importer.S3Config) (s3UploadAPI, error)
 }
 
-func (e *Exporter) NewS3Job(id string, cfg S3Config) *S3Job {
-	return &S3Job{Exporter: e, ID: id, Cfg: cfg, newClient: defaultS3UploadClient}
-}
-
-func (j *S3Job) logger() *slog.Logger {
-	if j.Logger != nil {
-		return j.Logger
+func (e *Exporter) NewS3Job(id string, cfg importer.S3Config) *S3Job {
+	return &S3Job{
+		Job:       importer.Job{Hub: e.Hub, Store: e.Store, ID: id},
+		Exporter:  e,
+		Cfg:       cfg,
+		newClient: newS3UploadClient,
 	}
-	return slog.Default()
+}
+
+func newS3UploadClient(ctx context.Context, cfg importer.S3Config) (s3UploadAPI, error) {
+	return importer.NewS3Client(ctx, cfg)
 }
 
 func (j *S3Job) Run(ctx context.Context) {
-	defer j.Exporter.Hub.Close(j.ID)
-	log := j.logger().With(
+	defer j.Hub.Close(j.ID)
+	log := j.Log().With(
 		slog.String("bucket", j.Cfg.Bucket), slog.String("prefix", j.Cfg.Prefix))
 	start := time.Now()
 	log.Info("s3 export started")
 
 	client, err := j.newClient(ctx, j.Cfg)
 	if err != nil {
-		j.fail(ctx, "aws config", err)
+		j.fail("aws config", err)
 		return
 	}
 
-	j.publish(importer.Event{Type: "step", Phase: "Listing existing objects in destination"})
+	j.Publish(importer.Event{Type: importer.EventStep, Phase: "Listing existing objects in destination"})
 	dedup, err := buildDedup(ctx, client, j.Cfg.Bucket, j.Cfg.Prefix)
 	if err != nil {
-		j.fail(ctx, "list destination", err)
+		j.fail("list destination", err)
 		return
 	}
 	log.Info("destination scan complete",
 		slog.Int("full_keys", dedup.fullCount()),
 		slog.Int("legacy_short_shas", dedup.legacyCount()))
 
-	j.publish(importer.Event{Type: "step", Phase: "Listing local emails"})
+	j.Publish(importer.Event{Type: importer.EventStep, Phase: "Listing local emails"})
 	entries, err := j.Exporter.Store.AllExportEntries(ctx)
 	if err != nil {
-		j.fail(ctx, "list emails", err)
+		j.fail("list emails", err)
 		return
 	}
 	total := len(entries)
-	_ = j.Exporter.Store.SetImportTotal(ctx, j.ID, total)
-	j.publish(importer.Event{Type: "step",
+	_ = j.Store.SetImportTotal(ctx, j.ID, total)
+	j.Publish(importer.Event{Type: importer.EventStep,
 		Phase: fmt.Sprintf("Uploading %d emails", total), Total: total})
 
 	var uploaded, duplicates, errs int
@@ -95,48 +87,34 @@ func (j *S3Job) Run(ctx context.Context) {
 			break
 		}
 		key := j.Cfg.Prefix + s3ObjectName(em.SHA256)
-		dup := dedup.has(em.SHA256)
 		idx := i + 1
-		if dup {
+		if dedup.has(em.SHA256) {
 			duplicates++
-			_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 1, 1, 0)
-			j.publish(importer.Event{Type: "item", Path: key, SHA256: em.SHA256,
-				Duplicate: true, Processed: idx, Total: total})
+			j.RecordItem(ctx, key, em.SHA256, true, idx, total)
 			continue
 		}
 		if err := j.uploadOne(ctx, client, em, key); err != nil {
 			errs++
-			_ = j.Exporter.Store.RecordImportError(ctx, j.ID, key, err.Error())
-			_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 1, 0, 1)
-			j.publish(importer.Event{Type: "item", Path: key, Message: err.Error(),
-				Processed: idx, Total: total})
+			j.RecordItemError(ctx, key, err, idx, total)
 			log.Warn("upload failed",
 				slog.String("key", key), slog.String("err", err.Error()))
 			continue
 		}
 		uploaded++
-		_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 1, 0, 0)
-		j.publish(importer.Event{Type: "item", Path: key, SHA256: em.SHA256,
-			Processed: idx, Total: total})
+		j.RecordItem(ctx, key, em.SHA256, false, idx, total)
 	}
 
-	finalCtx := context.Background()
 	if cancelled {
-		j.publish(importer.Event{Type: "step", Phase: "Cancelled"})
-		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportError)
-		j.publish(importer.Event{Type: "error", Phase: "Cancelled",
-			Message: "cancelled", Processed: uploaded + duplicates + errs, Total: total})
+		j.MarkCancelled(uploaded+duplicates+errs, total)
 	} else {
-		j.publish(importer.Event{Type: "step", Phase: "Uploading database snapshot"})
+		j.Publish(importer.Event{Type: importer.EventStep, Phase: "Uploading database snapshot"})
 		if err := j.uploadDB(ctx, client); err != nil {
 			errs++
-			_ = j.Exporter.Store.RecordImportError(ctx, j.ID, j.Cfg.Prefix+DBObjectName, err.Error())
-			_ = j.Exporter.Store.IncImportCounters(ctx, j.ID, 0, 0, 1)
+			_ = j.Store.RecordImportError(ctx, j.ID, j.Cfg.Prefix+DBObjectName, err.Error())
+			_ = j.Store.IncImportCounters(ctx, j.ID, 0, 0, 1)
 			log.Warn("db snapshot upload failed", slog.String("err", err.Error()))
 		}
-		j.publish(importer.Event{Type: "step", Phase: "Finalizing"})
-		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportDone)
-		j.publish(importer.Event{Type: "done", Processed: total, Total: total})
+		j.MarkDone(total)
 	}
 	log.Info("s3 export finished",
 		slog.Int("uploaded", uploaded), slog.Int("duplicates", duplicates),
@@ -183,14 +161,9 @@ func (j *S3Job) uploadDB(ctx context.Context, client s3UploadAPI) error {
 	return err
 }
 
-func (j *S3Job) publish(ev importer.Event) {
-	j.Exporter.Hub.Publish(j.ID, ev)
-}
-
-func (j *S3Job) fail(ctx context.Context, phase string, cause error) {
-	_ = j.Exporter.Store.UpdateImportStatus(ctx, j.ID, store.ImportError)
-	j.publish(importer.Event{Type: "error", Phase: phase, Message: cause.Error()})
-	j.logger().Error("s3 export failed",
+func (j *S3Job) fail(phase string, cause error) {
+	j.Fail(phase, cause)
+	j.Log().Error("s3 export failed",
 		slog.String("phase", phase), slog.String("err", cause.Error()))
 }
 
@@ -214,49 +187,34 @@ func (d *s3Dedup) has(sha string) bool {
 	if d.full[sha] {
 		return true
 	}
-	if len(sha) >= 8 && d.legacy[sha[:8]] {
-		return true
-	}
-	return false
+	return len(sha) >= shortSHALen && d.legacy[sha[:shortSHALen]]
 }
 
 func (d *s3Dedup) fullCount() int   { return len(d.full) }
 func (d *s3Dedup) legacyCount() int { return len(d.legacy) }
 
-func buildDedup(ctx context.Context, client s3UploadAPI, bucket, prefix string) (*s3Dedup, error) {
+func buildDedup(ctx context.Context, client importer.S3Lister, bucket, prefix string) (*s3Dedup, error) {
 	d := &s3Dedup{full: map[string]bool{}, legacy: map[string]bool{}}
-	var token *string
-	for {
-		page, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-			Bucket:            aws.String(bucket),
-			Prefix:            nilIfEmpty(prefix),
-			ContinuationToken: token,
-		})
-		if err != nil {
-			return nil, err
-		}
-		for _, obj := range page.Contents {
-			indexKey(d, aws.ToString(obj.Key), prefix)
-		}
-		if page.IsTruncated == nil || !*page.IsTruncated {
-			break
-		}
-		token = page.NextContinuationToken
+	err := importer.ListKeys(ctx, client, bucket, prefix, func(key string) {
+		indexKey(d, key, prefix)
+	})
+	if err != nil {
+		return nil, err
 	}
 	return d, nil
 }
 
 func indexKey(d *s3Dedup, key, prefix string) {
 	rel := strings.TrimPrefix(key, prefix)
-	if !strings.HasSuffix(strings.ToLower(rel), ".eml") {
+	if !importer.IsEML(rel) {
 		return
 	}
 	base := rel[:len(rel)-len(".eml")]
 	switch {
-	case len(base) == 64 && isHexLower(base):
+	case len(base) == shaHexLen && isHexLower(base):
 		d.full[base] = true
-	case len(base) > 9 && base[8] == '_' && isHexLower(base[:8]):
-		d.legacy[base[:8]] = true
+	case len(base) > shortSHALen+1 && base[shortSHALen] == '_' && isHexLower(base[:shortSHALen]):
+		d.legacy[base[:shortSHALen]] = true
 	}
 }
 
@@ -268,29 +226,4 @@ func isHexLower(s string) bool {
 		}
 	}
 	return true
-}
-
-func nilIfEmpty(s string) *string {
-	if strings.TrimSpace(s) == "" {
-		return nil
-	}
-	return aws.String(s)
-}
-
-func defaultS3UploadClient(ctx context.Context, cfg S3Config) (s3UploadAPI, error) {
-	var optFns []func(*config.LoadOptions) error
-	if cfg.Region != "" {
-		optFns = append(optFns, config.WithRegion(cfg.Region))
-	}
-	if cfg.AccessKeyID != "" {
-		optFns = append(optFns, config.WithCredentialsProvider(
-			credentials.NewStaticCredentialsProvider(
-				cfg.AccessKeyID, cfg.SecretAccessKey, cfg.SessionToken),
-		))
-	}
-	awsCfg, err := config.LoadDefaultConfig(ctx, optFns...)
-	if err != nil {
-		return nil, fmt.Errorf("aws config: %w", err)
-	}
-	return s3.NewFromConfig(awsCfg), nil
 }
