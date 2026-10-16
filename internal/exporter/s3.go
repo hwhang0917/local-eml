@@ -123,7 +123,7 @@ func (j *S3Job) Run(ctx context.Context) {
 	finalCtx := context.Background()
 	if cancelled {
 		j.publish(importer.Event{Type: "step", Phase: "Cancelled"})
-		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, "error", true)
+		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportError)
 		j.publish(importer.Event{Type: "error", Phase: "Cancelled",
 			Message: "cancelled", Processed: uploaded + duplicates + errs, Total: total})
 	} else {
@@ -135,7 +135,7 @@ func (j *S3Job) Run(ctx context.Context) {
 			log.Warn("db snapshot upload failed", slog.String("err", err.Error()))
 		}
 		j.publish(importer.Event{Type: "step", Phase: "Finalizing"})
-		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, "done", true)
+		_ = j.Exporter.Store.UpdateImportStatus(finalCtx, j.ID, store.ImportDone)
 		j.publish(importer.Event{Type: "done", Processed: total, Total: total})
 	}
 	log.Info("s3 export finished",
@@ -188,7 +188,7 @@ func (j *S3Job) publish(ev importer.Event) {
 }
 
 func (j *S3Job) fail(ctx context.Context, phase string, cause error) {
-	_ = j.Exporter.Store.UpdateImportStatus(ctx, j.ID, "error", true)
+	_ = j.Exporter.Store.UpdateImportStatus(ctx, j.ID, store.ImportError)
 	j.publish(importer.Event{Type: "error", Phase: phase, Message: cause.Error()})
 	j.logger().Error("s3 export failed",
 		slog.String("phase", phase), slog.String("err", cause.Error()))
@@ -294,4 +294,3 @@ func defaultS3UploadClient(ctx context.Context, cfg S3Config) (s3UploadAPI, erro
 	}
 	return s3.NewFromConfig(awsCfg), nil
 }
-

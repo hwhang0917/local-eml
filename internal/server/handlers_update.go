@@ -179,4 +179,3 @@ func (s *Server) installBlocker() string {
 func (s *Server) canSelfInstall() bool { return s.installBlocker() == "" }
 
 func (s *Server) installNote() string { return s.installBlocker() }
-
