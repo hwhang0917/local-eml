@@ -281,6 +281,13 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	// PRAGMA user_version; run in the background so a large library doesn't
 	// delay startup.
 	go func() {
+		// A blob the parser chokes on would otherwise crash every start, since
+		// the version gate only advances after a full pass.
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("backfill panic", "panic", rec)
+			}
+		}()
 		if n, err := imp.BackfillAttachmentCounts(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			slog.Warn("attachment count backfill", "err", err)
 		} else if n > 0 {

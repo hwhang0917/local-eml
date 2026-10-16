@@ -69,13 +69,20 @@ func (s *zipSource) Scan(_ context.Context) ([]Item, error) {
 		if f.FileInfo().IsDir() || !IsEML(f.Name) {
 			continue
 		}
-		ze := f
-		items = append(items, Item{
-			Name: filepath.Base(ze.Name),
-			Open: func(context.Context) (io.ReadCloser, error) { return ze.Open() },
-		})
+		items = append(items, zipItem(f))
 	}
 	return items, nil
+}
+
+// zipItem wraps one archive entry. The header's size is checked before
+// inflating: a tiny entry can expand to many gigabytes, and the spool would
+// see all of it before the cap.
+func zipItem(ze *zip.File) Item {
+	open := func(context.Context) (io.ReadCloser, error) { return ze.Open() }
+	if ze.UncompressedSize64 > MaxMessageBytes {
+		open = func(context.Context) (io.ReadCloser, error) { return nil, ErrMessageTooLarge }
+	}
+	return Item{Name: filepath.Base(ze.Name), Open: open}
 }
 
 func (s *zipSource) Close() error {

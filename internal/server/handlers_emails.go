@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -311,6 +312,10 @@ func (s *Server) handleEmailHTML(w http.ResponseWriter, r *http.Request) {
 		ShowRemote: showRemote,
 		Lang:       r.URL.Query().Get("lang"),
 	})
+	if errors.Is(err, sanitize.ErrBadMarkup) {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

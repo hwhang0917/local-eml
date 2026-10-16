@@ -21,6 +21,15 @@ type Importer struct {
 	Paths paths.Paths
 }
 
+// MaxMessageBytes caps a single message. Every part of a message is held in
+// memory while it is parsed, and an archive entry or a hostile server can
+// claim to be any size, so the cap is what keeps one item from taking the
+// process down. Mail servers reject messages well below this.
+const MaxMessageBytes = 64 << 20
+
+// ErrMessageTooLarge is reported for an item over MaxMessageBytes.
+var ErrMessageTooLarge = fmt.Errorf("message exceeds %d MiB", MaxMessageBytes>>20)
+
 type Result struct {
 	SHA256    string `json:"sha256"`
 	Duplicate bool   `json:"duplicate"`
@@ -34,12 +43,17 @@ func (im *Importer) ImportReader(ctx context.Context, r io.Reader, originalName 
 	}
 	tmpName := tmp.Name()
 	defer os.Remove(tmpName)
-	if _, err := io.Copy(tmp, r); err != nil {
+	// One byte past the cap tells an oversized item apart from an exact fit.
+	n, err := io.Copy(tmp, io.LimitReader(r, MaxMessageBytes+1))
+	if err != nil {
 		tmp.Close()
 		return nil, fmt.Errorf("buffer: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
 		return nil, err
+	}
+	if n > MaxMessageBytes {
+		return nil, ErrMessageTooLarge
 	}
 	return im.ImportFile(ctx, tmpName, originalName)
 }
