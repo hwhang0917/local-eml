@@ -7,6 +7,7 @@
 | **About** | Version, update check, and in-place update for service installs |
 | **Categories** | Name the fixed set of colour categories |
 | **Locale** | Interface language, and absolute or relative dates |
+| **Reading** | Read tracking: off by default. When on, unread subjects are bold, opening a message marks it read, and the list gets an **Unread** filter and a per-row toggle. The first time you turn it on you choose whether existing mail starts read or unread; **Mark all as read** catches up after a big import |
 | **Restore from backup** | Read stars, categories, settings and profiles back from an exported `.zip` |
 | **Spam & phishing** | Flagged messages, and the switch for phishing warnings |
 | **Privacy** | Temporary sessions and Delete all data |

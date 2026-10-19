@@ -81,6 +81,7 @@
       "subject": "Subject",
       "size": "Size",
       "starred": "Starred",
+      "read": "Read",
       "attachments": "Attachments",
       "category": "Category"
     },
@@ -94,6 +95,11 @@
     "show_starred": "Show starred only",
     "show_all": "Show all",
     "no_starred": "No starred emails.",
+    "unread": "Unread",
+    "show_unread": "Show unread only",
+    "no_unread": "No unread emails.",
+    "mark_read": "Mark as read",
+    "mark_unread": "Mark as unread",
     "per_page": "per page",
     "reset": "Reset",
     "date_from": "From date",
@@ -110,6 +116,7 @@
     "category_none": "No category",
     "load_error": "Couldn't load emails",
     "star_error": "Couldn't update the star",
+    "read_error": "Couldn't update the read state",
     "category_error": "Couldn't change the category",
     "set_category": "Set category",
     "no_category_matches": "No emails in this category.",
@@ -171,6 +178,8 @@
     "position": "{index} of {total}",
     "conversation": "Conversation ({count})",
     "toggle_details": "Show or hide details",
+    "mark_read": "Mark as read",
+    "mark_unread": "Mark as unread",
     "toggle_thread": "Show or hide the conversation"
   },
   "import": {
@@ -297,6 +306,7 @@
     "section": {
       "about": "About",
       "locale": "Locale",
+      "reading": "Reading",
       "attributions": "Attributions",
       "categories": "Categories",
       "restore": "Restore from backup",
@@ -411,6 +421,24 @@
     "sender_mismatch": "Display name embeds an address on another site",
     "dangerous_attachment": "Executable or script attachment",
     "credential_form": "Body asks for credentials"
+  },
+  "reading": {
+    "title": "Read tracking",
+    "help": "Keep track of which messages you have opened. Unread subjects are shown in bold, opening a message marks it read, and you can flip the state from the list or the viewer. Off by default; nothing changes until you turn it on.",
+    "toggle": "Track read and unread mail",
+    "toggle_help": "Newly imported messages start unread.",
+    "on": "Read tracking turned on",
+    "off": "Read tracking turned off",
+    "error": "Couldn't change the setting",
+    "existing_title": "How should your existing mail start?",
+    "existing_body": "Choose a starting state for everything already in your library. New messages arrive unread either way. You are only asked this once.",
+    "existing_read": "Mark all as read",
+    "existing_unread": "Leave all unread",
+    "mark_all": "Mark all as read",
+    "mark_all_help": "Useful after importing an archive or syncing a mailbox you had already read elsewhere.",
+    "mark_all_confirm": "Every message in your library will be marked read. Messages imported later still start unread.",
+    "mark_all_done": "All messages marked as read",
+    "cancel": "Cancel"
   },
   "privacy": {
     "temp_title": "Temporary sessions",
