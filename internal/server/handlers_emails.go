@@ -26,6 +26,7 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	opts := store.ListOptions{
 		Query:        q.Get("q"),
 		StarredOnly:  q.Get("starred") == "1",
+		UnreadOnly:   q.Get("unread") == "1",
 		FlaggedOnly:  q.Get("flagged") == "1",
 		Sort:         q.Get("sort"),
 		Order:        q.Get("order"),
