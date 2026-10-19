@@ -44,16 +44,18 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 	}
 	defer conn.ExecContext(context.WithoutCancel(ctx), "DETACH DATABASE backup")
 
-	// Snapshots from before the spam/phishing flag existed lack the column;
-	// referencing it would fail the whole emails step.
-	var hasFlag int
-	if err := conn.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM backup.pragma_table_info('emails') WHERE name = 'flag'`).Scan(&hasFlag); err != nil {
-		return sum, fmt.Errorf("inspect backup schema: %w", err)
-	}
-	flagCol := ""
-	if hasFlag > 0 {
-		flagCol = "flag = b.flag,"
+	// Snapshots from before a column existed lack it; referencing it would
+	// fail the whole emails step, so later columns are copied only when present.
+	optionalCols := ""
+	for _, col := range []string{"flag", "read"} {
+		var n int
+		if err := conn.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM backup.pragma_table_info('emails') WHERE name = ?`, col).Scan(&n); err != nil {
+			return sum, fmt.Errorf("inspect backup schema: %w", err)
+		}
+		if n > 0 {
+			optionalCols += col + " = b." + col + ","
+		}
 	}
 
 	steps := []struct {
@@ -70,7 +72,7 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 		// row ids are seeded and should match, but colors are the contract.
 		{&sum.Emails, "emails",
 			`UPDATE emails SET
-			   starred = b.starred, ` + flagCol + `
+			   starred = b.starred, ` + optionalCols + `
 			   category_id = (SELECT c.id FROM categories c
 			                  JOIN backup.categories bc ON bc.color = c.color
 			                  WHERE bc.id = b.category_id)
