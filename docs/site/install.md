@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-The installer downloads the latest release, verifies its checksum, and registers Local Eml as a background service that starts automatically. Then open <http://localhost:7878>.
+The installer downloads the latest release, verifies its checksum, and registers Local Eml as a background service that starts automatically. Then open <http://localhost:7878>. The first time, the page asks for a session token: `local-eml token` prints it. Double-clicking the program instead opens the window already signed in. See [session token](./settings-cli#session-token).
 
 To use a different port, set `LOCAL_EML_PORT` before running the installer, for example `LOCAL_EML_PORT=9000 curl … | sh`, or `$env:LOCAL_EML_PORT=9000` in PowerShell. Whatever the port, it only listens on your own machine.
 

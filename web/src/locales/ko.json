@@ -8,6 +8,13 @@
     "server_checking": "확인 중…",
     "temporary_banner": "임시 세션입니다. 이 창을 닫으면 아무것도 남지 않습니다."
   },
+  "auth": {
+    "title": "Local Eml에 로그인",
+    "body": "이 브라우저에는 이 포트의 서버 세션이 없습니다. 실행 파일로 Local Eml을 열거나, 아래 명령이 출력하는 토큰을 붙여 넣으세요.",
+    "placeholder": "세션 토큰",
+    "submit": "열기",
+    "hint": "토큰 출력 명령:"
+  },
   "nav": {
     "library": "라이브러리",
     "import": "가져오기",

@@ -23,7 +23,7 @@ func newTestServer(t *testing.T) *Server {
 		t.Fatalf("open: %v", err)
 	}
 	t.Cleanup(func() { _ = s.Close() })
-	return &Server{Store: s}
+	return &Server{Store: s, Token: testToken}
 }
 
 func TestIMAPProfilesHandler_SaveListDelete(t *testing.T) {

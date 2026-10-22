@@ -121,6 +121,8 @@ func main() {
 		os.Exit(runInstall(os.Args[2:]))
 	case "uninstall":
 		os.Exit(runUninstall(os.Args[2:]))
+	case "token":
+		os.Exit(runToken())
 	case "version", "-V", "--version":
 		fmt.Printf("local-eml v%s\n", version)
 	case "-h", "--help":
@@ -142,6 +144,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  install [-y|--yes] [--port 7878]")
 	fmt.Fprintln(os.Stderr, "                             register as a background service (systemd/launchd/svc)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
+	fmt.Fprintln(os.Stderr, "  token                      print the session token the API and a browser need")
 	fmt.Fprintln(os.Stderr, "  version | -V | --version")
 }
 
@@ -171,10 +174,43 @@ func runApp(args []string) int {
 	// A temporary session must never attach to a running server: that would
 	// be the service, working on the real library.
 	if !temporary && probeExisting(defaultPort) {
-		openWindow(fmt.Sprintf("http://127.0.0.1:%d", defaultPort))
+		openWindow(existingServerURL(defaultPort))
 		return 0
 	}
 	return serve(serveOptions{appMode: true, temporary: temporary})
+}
+
+// existingServerURL signs the browser in to the server already running on
+// port. Its token is readable when it belongs to the same user; otherwise the
+// app asks for it.
+func existingServerURL(port int) string {
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+	p, err := paths.Resolve()
+	if err != nil {
+		return base
+	}
+	token, err := os.ReadFile(p.TokenFile())
+	if err != nil {
+		return base
+	}
+	return server.AuthURL(base, strings.TrimSpace(string(token)))
+}
+
+// runToken prints the library's session token for scripts and for signing a
+// browser in by hand.
+func runToken() int {
+	p, err := paths.Resolve()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	token, err := os.ReadFile(p.TokenFile())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "no session token yet: start local-eml once first")
+		return 1
+	}
+	fmt.Println(strings.TrimSpace(string(token)))
+	return 0
 }
 
 // temporaryLaunchesPref reads the "double-click sessions are temporary"
@@ -263,6 +299,11 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		slog.Error("open secret store", "err", err)
 		return 1
 	}
+	token, err := server.LoadOrCreateToken(p.TokenFile())
+	if err != nil {
+		slog.Error("session token", "err", err)
+		return 1
+	}
 	imp := &importer.Importer{Store: st, Paths: p}
 	hub := importer.NewHub()
 	exp := &exporter.Exporter{Store: st, Paths: p, Hub: hub}
@@ -271,6 +312,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		Store: st, Importer: imp, Exporter: exp,
 		Hub: hub, Canceller: canc, Secret: sec,
 		Version:            version,
+		Token:              token,
 		RunningInteractive: service.Interactive(),
 		TemporarySession:   opts.temporary,
 		PrefsFile:          prefsFile,
@@ -281,6 +323,13 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	// PRAGMA user_version; run in the background so a large library doesn't
 	// delay startup.
 	go func() {
+		// A blob the parser chokes on would otherwise crash every start, since
+		// the version gate only advances after a full pass.
+		defer func() {
+			if rec := recover(); rec != nil {
+				slog.Error("backfill panic", "panic", rec)
+			}
+		}()
 		if n, err := imp.BackfillAttachmentCounts(ctx); err != nil && !errors.Is(err, context.Canceled) {
 			slog.Warn("attachment count backfill", "err", err)
 		} else if n > 0 {
@@ -304,6 +353,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		return 1
 	}
 	url := "http://" + ln.Addr().String()
+	srv.Port = ln.Addr().(*net.TCPAddr).Port
 
 	handler := http.Handler(srv.Router())
 	httpSrv := &http.Server{
@@ -334,7 +384,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		lastSeen.Store(time.Now().UnixNano())
 		httpSrv.Handler = touchHealth(handler, lastSeen)
 		go watchIdle(ctx, lastSeen, shutdown)
-		go openWindow(url)
+		go openWindow(server.AuthURL(url, token))
 	}
 
 	sigCh := make(chan os.Signal, 1)

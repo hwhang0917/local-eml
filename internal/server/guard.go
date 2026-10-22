@@ -13,7 +13,9 @@ import (
 // library. CSRF — a cross-site POST with a CORS-safelisted content type needs
 // no preflight, so /api/exports/s3 ships the archive to an attacker bucket
 // while the browser merely hides the response. Pinning Host closes the first,
-// pinning Origin the second.
+// pinning Origin the second. Origin has to match Host exactly, port included:
+// another loopback port is another program, and cookies don't tell them
+// apart.
 func loopbackGuard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !isLoopbackHost(r.Host) {
@@ -24,7 +26,7 @@ func loopbackGuard(next http.Handler) http.Handler {
 		// means a non-browser client (curl, the updater), which CSRF can't use.
 		if origin := r.Header.Get("Origin"); origin != "" {
 			u, err := url.Parse(origin)
-			if err != nil || !isLoopbackHost(u.Host) {
+			if err != nil || u.Host != r.Host {
 				http.Error(w, "cross-origin request blocked", http.StatusForbidden)
 				return
 			}

@@ -23,12 +23,23 @@ local-eml <command> [flags]
   install [-y|--yes] [--port 7878]
                            register as a background service (systemd/launchd/Windows Service)
   uninstall [-y|--yes]     stop and unregister the background service
+  token                    print the session token the API and a browser need
   version | -V | --version
 ```
 
 Running the executable with no arguments is the same as `app`; that's what a double-click does.
 
 `install` and `uninstall` ask for confirmation. `--yes` skips the prompt for scripts.
+
+## Session token
+
+The server only listens on your own machine, but every program and every user account on that machine can reach it, so the address alone isn't enough. Each library has a random token in `session-token` inside its data folder, readable only by its owner.
+
+- **Double-click** opens the window already signed in: the launcher passes the token and the browser keeps it as a cookie for that port.
+- **A browser you open yourself** shows a sign-in page the first time. Paste the output of `local-eml token`.
+- **Scripts** send it as a header: `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`.
+
+A [temporary session](./privacy#temporary-sessions) has its own token, and the launcher handles it the same way.
 
 ## Environment variables
 

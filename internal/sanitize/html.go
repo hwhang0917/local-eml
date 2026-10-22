@@ -3,6 +3,7 @@ package sanitize
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 	"strings"
@@ -45,6 +46,12 @@ func blockedPlaceholder(lang string) string {
 	return "data:image/svg+xml;base64," + base64.StdEncoding.EncodeToString([]byte(svg))
 }
 
+// ErrBadMarkup wraps a parse failure. The one the parser actually reports is
+// markup nested past its open-element limit, which is also what keeps the
+// recursive render below off a runaway stack; the message is the sender's
+// problem, not the server's.
+var ErrBadMarkup = errors.New("html could not be parsed")
+
 func Sanitize(htmlSrc string, opts Options) (string, error) {
 	rewritten, err := rewriteImages(htmlSrc, opts)
 	if err != nil {
@@ -66,7 +73,7 @@ func policy() *bluemonday.Policy {
 func rewriteImages(htmlSrc string, opts Options) (string, error) {
 	doc, err := html.Parse(strings.NewReader(htmlSrc))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("%w: %v", ErrBadMarkup, err)
 	}
 	walk(doc, func(n *html.Node) {
 		if n.Type != html.ElementNode || n.Data != "img" {

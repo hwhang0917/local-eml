@@ -94,6 +94,8 @@ func scanHTML(src string, add func(code, detail string)) {
 	}
 	doc, err := html.Parse(strings.NewReader(src))
 	if err != nil {
+		// Includes markup nested past the parser's open-element limit, which
+		// is what keeps the recursive walks below off a runaway stack.
 		return
 	}
 	var walk func(*html.Node)

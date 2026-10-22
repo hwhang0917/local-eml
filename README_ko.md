@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-그다음 <http://localhost:7878> 을 여세요. 포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
+그다음 <http://localhost:7878> 을 열고 `local-eml token`이 출력하는 토큰을 붙여 넣거나, 실행 파일을 더블클릭해 로그인된 창을 여세요. 포트 변경, 내려받은 파일 검증, 제거, 업데이트는 [설치 가이드](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
 
 ## 더 알아보기
 

@@ -39,7 +39,7 @@ func newCIDTestServer(t *testing.T) (*Server, string) {
 	p := newTestPaths(t)
 	sha := strings.Repeat("a", 64)
 	writeBlobAs(t, p, sha, cidFixture)
-	return &Server{Importer: &importer.Importer{Paths: p}}, sha
+	return &Server{Importer: &importer.Importer{Paths: p}, Token: testToken}, sha
 }
 
 // A crafted message can declare an inline part as text/html. Serving it with

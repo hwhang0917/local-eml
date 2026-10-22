@@ -1,3 +1,4 @@
+import { locked } from '@/lib/auth'
 export type EmailFlag = '' | 'spam' | 'phishing' | 'safe'
 // Spam and phishing hide the message and strip it to text; safe only mutes
 // the phishing heuristic.
@@ -196,6 +197,7 @@ export interface RestoreSummary {
 }
 
 async function okOrThrow(res: Response): Promise<void> {
+  if (res.status === 401) locked.value = true
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(`${res.status} ${res.statusText}: ${text}`)

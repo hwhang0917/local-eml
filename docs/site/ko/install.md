@@ -36,7 +36,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-설치 스크립트가 최신 릴리스를 내려받아 체크섬을 확인한 뒤, 자동으로 시작되는 백그라운드 서비스로 등록합니다. 그다음 <http://localhost:7878> 을 여세요.
+설치 스크립트가 최신 릴리스를 내려받아 체크섬을 확인한 뒤, 자동으로 시작되는 백그라운드 서비스로 등록합니다. 그다음 <http://localhost:7878> 을 여세요. 처음 한 번은 세션 토큰을 묻는데, `local-eml token`이 출력해 줍니다. 대신 실행 파일을 더블클릭하면 로그인된 창이 바로 열립니다. [세션 토큰](./settings-cli#세션-토큰)을 보세요.
 
 다른 포트를 쓰려면 설치 전에 `LOCAL_EML_PORT`를 지정하세요. 예: `LOCAL_EML_PORT=9000 curl … | sh`, PowerShell에서는 `$env:LOCAL_EML_PORT=9000`. 어느 포트든 내 PC에서만 접속할 수 있습니다.
 

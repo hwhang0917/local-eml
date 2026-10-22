@@ -53,7 +53,7 @@ func newDriftServer(t *testing.T) (*Server, paths.Paths) {
 		t.Fatalf("store: %v", err)
 	}
 	t.Cleanup(func() { _ = st.Close() })
-	return &Server{Store: st, Importer: &importer.Importer{Store: st, Paths: p}}, p
+	return &Server{Store: st, Importer: &importer.Importer{Store: st, Paths: p}, Token: testToken}, p
 }
 
 // writeBlob puts a message in the blob store without touching the database,

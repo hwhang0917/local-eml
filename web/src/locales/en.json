@@ -8,6 +8,13 @@
     "server_checking": "Checking…",
     "temporary_banner": "Temporary session: nothing is kept after you close this window."
   },
+  "auth": {
+    "title": "Sign in to Local Eml",
+    "body": "This browser has no session for the server on this port. Open Local Eml from its launcher, or paste the token the command below prints.",
+    "placeholder": "Session token",
+    "submit": "Unlock",
+    "hint": "Print the token with"
+  },
   "nav": {
     "library": "Library",
     "import": "Import",

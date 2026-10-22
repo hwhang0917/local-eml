@@ -353,7 +353,11 @@ func (s *Server) resolveIMAPConfig(ctx context.Context, profileID int64, cfg imp
 		}
 		profile = p
 		cfg = profileDefaults(cfg, p)
-		if cfg.Password == "" && p.SyncEnabled && p.HasPassword {
+		// The stored password only ever goes to the server it was saved for.
+		// A request that names another host, port or user must bring its own,
+		// or anyone who can reach the API could point the profile at a server
+		// they control and collect the secret.
+		if cfg.Password == "" && p.SyncEnabled && p.HasPassword && sameIMAPServer(cfg, p) {
 			cfg.Password = s.storedIMAPPassword(ctx, p.ID)
 		}
 		// A first sync fetches everything once; the cursor only exists after.
@@ -365,6 +369,15 @@ func (s *Server) resolveIMAPConfig(ctx context.Context, profileID int64, cfg imp
 		return cfg, profile, fmt.Errorf("host, username and password are required")
 	}
 	return cfg, profile, nil
+}
+
+// sameIMAPServer reports whether cfg logs in to the profile's own server.
+func sameIMAPServer(cfg importer.IMAPConfig, p *store.IMAPProfile) bool {
+	port := 0
+	if p.Port != nil {
+		port = *p.Port
+	}
+	return cfg.Host == p.Host && cfg.Port == port && cfg.Username == p.Username
 }
 
 // storedIMAPPassword decrypts the profile's saved password. It returns ""
