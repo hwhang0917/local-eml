@@ -25,7 +25,7 @@ func TestRestoreMetadata_MergesStarsProfilesAndScrubsPasswords(t *testing.T) {
 	if _, err := src.InsertEmail(ctx, row); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := src.DB.ExecContext(ctx, `UPDATE emails SET starred = 1 WHERE sha256 = ?`, sha); err != nil {
+	if _, err := src.DB.ExecContext(ctx, `UPDATE emails SET starred = 1, read = 1 WHERE sha256 = ?`, sha); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := src.DB.ExecContext(ctx,
@@ -53,13 +53,13 @@ func TestRestoreMetadata_MergesStarsProfilesAndScrubsPasswords(t *testing.T) {
 		t.Fatalf("summary=%+v, want 1 email and 1 imap profile", sum)
 	}
 
-	var starred int
+	var starred, read int
 	if err := dst.DB.QueryRowContext(ctx,
-		`SELECT starred FROM emails WHERE sha256 = ?`, sha).Scan(&starred); err != nil {
+		`SELECT starred, read FROM emails WHERE sha256 = ?`, sha).Scan(&starred, &read); err != nil {
 		t.Fatal(err)
 	}
-	if starred != 1 {
-		t.Errorf("starred=%d, want 1 restored", starred)
+	if starred != 1 || read != 1 {
+		t.Errorf("starred=%d read=%d, want both restored", starred, read)
 	}
 
 	var syncEnabled int

@@ -4,10 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, ShieldAlert, ShieldCheck, Star, TriangleAlert } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, ShieldAlert, ShieldCheck, Star, TriangleAlert } from 'lucide-vue-next'
 import { api, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { NO_CATEGORY, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
+import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { pageTitle } from '@/lib/app'
@@ -24,7 +25,8 @@ const TEXT_PREVIEW_MAX_BYTES = 512 * 1024
 const props = defineProps<{ sha: string }>()
 const { t, locale } = useI18n()
 const router = useRouter()
-const { toggleStar, setCategory: assignCategory } = useEmailActions()
+const { toggleStar, toggleRead, setCategory: assignCategory } = useEmailActions()
+const { enabled: readTracking } = useReadTracking()
 
 const email = ref<Email | null>(null)
 const parts = ref<PartsManifest | null>(null)
@@ -96,6 +98,8 @@ async function load() {
   try {
     const e = await api.getEmail(props.sha)
     email.value = e
+    // Opening a message is what makes it read. Not awaited: the body matters more.
+    if (readTracking.value && !e.read && !e.not_indexed) void toggleRead(e)
     if (e.thread_id && !thread.value.some((m) => m.sha256 === e.sha256)) {
       // Moving within the already-loaded conversation keeps the card as-is —
       // clearing and refetching made it unmount and pop back, jolting the page.
@@ -387,6 +391,17 @@ async function togglePreview(a: PartInfo) {
           @click="toggleStar(email)"
         >
           <Star class="h-5 w-5" :fill="email.starred ? 'currentColor' : 'none'" />
+        </button>
+        <button
+          v-if="readTracking && !email.not_indexed"
+          type="button"
+          :title="email.read ? t('viewer.mark_unread') : t('viewer.mark_read')"
+          :aria-label="email.read ? t('viewer.mark_unread') : t('viewer.mark_read')"
+          :class="['inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0',
+            email.read ? 'text-muted-foreground hover:text-foreground' : 'text-primary']"
+          @click="toggleRead(email)"
+        >
+          <component :is="email.read ? MailOpen : Mail" class="h-5 w-5" />
         </button>
         <button
           type="button"

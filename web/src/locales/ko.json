@@ -88,6 +88,7 @@
       "subject": "제목",
       "size": "크기",
       "starred": "별표",
+      "read": "읽음",
       "attachments": "첨부파일",
       "category": "분류"
     },
@@ -101,6 +102,11 @@
     "show_starred": "별표 표시한 메일만 보기",
     "show_all": "전체 보기",
     "no_starred": "별표 표시한 메일이 없습니다.",
+    "unread": "안 읽음",
+    "show_unread": "안 읽은 메일만 보기",
+    "no_unread": "안 읽은 메일이 없습니다.",
+    "mark_read": "읽음으로 표시",
+    "mark_unread": "안 읽음으로 표시",
     "per_page": "페이지당",
     "reset": "초기화",
     "date_from": "시작 날짜",
@@ -117,6 +123,7 @@
     "category_none": "분류 없음",
     "load_error": "메일 목록을 불러오지 못했습니다",
     "star_error": "별표를 변경하지 못했습니다",
+    "read_error": "읽음 상태를 변경하지 못했습니다",
     "category_error": "분류를 변경하지 못했습니다",
     "set_category": "분류 지정",
     "no_category_matches": "이 분류에 해당하는 메일이 없습니다.",
@@ -178,6 +185,8 @@
     "position": "{total}개 중 {index}번째",
     "conversation": "대화 ({count}건)",
     "toggle_details": "상세 정보 접기/펼치기",
+    "mark_read": "읽음으로 표시",
+    "mark_unread": "안 읽음으로 표시",
     "toggle_thread": "대화 접기/펼치기"
   },
   "import": {
@@ -304,6 +313,7 @@
     "section": {
       "about": "정보",
       "locale": "로케일",
+      "reading": "읽음 표시",
       "attributions": "오픈소스 라이선스",
       "categories": "분류",
       "restore": "백업 복원",
@@ -418,6 +428,24 @@
     "sender_mismatch": "표시 이름에 다른 사이트의 주소가 들어 있습니다",
     "dangerous_attachment": "실행 파일 또는 스크립트 첨부",
     "credential_form": "본문에서 비밀번호 등 자격 증명을 요구합니다"
+  },
+  "reading": {
+    "title": "읽음 표시",
+    "help": "어떤 메일을 열어 봤는지 기억합니다. 안 읽은 메일의 제목은 굵게 표시되고, 메일을 열면 읽음으로 바뀌며, 목록이나 뷰어에서 직접 바꿀 수도 있습니다. 기본은 꺼짐이며, 켜기 전까지는 아무것도 달라지지 않습니다.",
+    "toggle": "읽음/안 읽음 상태 기록",
+    "toggle_help": "새로 가져온 메일은 안 읽음으로 시작합니다.",
+    "on": "읽음 표시를 켰습니다",
+    "off": "읽음 표시를 껐습니다",
+    "error": "설정을 변경하지 못했습니다",
+    "existing_title": "기존 메일은 어떤 상태로 시작할까요?",
+    "existing_body": "라이브러리에 이미 있는 메일의 시작 상태를 고르세요. 새 메일은 어느 쪽을 골라도 안 읽음으로 들어옵니다. 이 질문은 한 번만 합니다.",
+    "existing_read": "모두 읽음으로",
+    "existing_unread": "모두 안 읽음으로",
+    "mark_all": "모두 읽음으로 표시",
+    "mark_all_help": "다른 곳에서 이미 읽은 메일함을 동기화했거나 아카이브를 가져온 뒤에 유용합니다.",
+    "mark_all_confirm": "라이브러리의 모든 메일이 읽음으로 표시됩니다. 이후에 가져오는 메일은 여전히 안 읽음으로 시작합니다.",
+    "mark_all_done": "모든 메일을 읽음으로 표시했습니다",
+    "cancel": "취소"
   },
   "privacy": {
     "temp_title": "임시 세션",

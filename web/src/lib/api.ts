@@ -29,6 +29,8 @@ export interface Email {
   attachment_count: number
   imported_at: string
   starred: boolean
+  /** Meaningful only while read tracking is on; new messages start unread. */
+  read: boolean
   /** '' or 'spam' | 'phishing'. Flagged mail is hidden and plain-text only. */
   flag: EmailFlag
   /** Phishing heuristics' findings; empty when clean, null when not yet assessed. */
@@ -52,6 +54,7 @@ export interface Category {
 export interface EmailListParams {
   q?: string
   starred?: boolean
+  unread?: boolean
   flagged?: boolean
   category?: string
   from?: string
@@ -188,6 +191,14 @@ export interface SessionInfo {
   temporary_launches: boolean
 }
 
+export interface ReadTracking {
+  enabled: boolean
+  /** False until the user has turned it on once and chosen what existing mail becomes. */
+  configured: boolean
+}
+
+export type ReadTrackingExisting = 'read' | 'unread'
+
 export interface RestoreSummary {
   emails: number
   categories: number
@@ -246,6 +257,19 @@ export const api = {
 
   setStarred(sha: string, starred: boolean) {
     return fetch(`/api/emails/${sha}/star`, { method: starred ? 'PUT' : 'DELETE' }).then(okOrThrow)
+  },
+
+  setRead(sha: string, read: boolean) {
+    return fetch(`/api/emails/${sha}/read`, { method: read ? 'PUT' : 'DELETE' }).then(okOrThrow)
+  },
+
+  getReadTracking() {
+    return fetch('/api/read-tracking').then(jsonOrThrow<ReadTracking>)
+  },
+
+  /** `existing` relabels every current message; only sent on the first enable. */
+  setReadTracking(enabled: boolean, existing?: ReadTrackingExisting) {
+    return fetch('/api/read-tracking', jsonBody('PUT', { enabled, existing })).then(jsonOrThrow<ReadTracking>)
   },
 
   /** Empty flag clears it. */

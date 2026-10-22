@@ -28,6 +28,8 @@ type Email struct {
 	AttachmentCount int       `json:"attachment_count"`
 	ImportedAt      time.Time `json:"imported_at"`
 	Starred         bool      `json:"starred"`
+	// Read is only shown by the SPA while read tracking is on; new rows are unread.
+	Read bool `json:"read"`
 	// Flag is "" or one of FlagSpam / FlagPhishing / FlagSafe.
 	Flag string `json:"flag"`
 	// Risk lists phishing findings (see internal/risk); nil until assessed.
@@ -272,9 +274,25 @@ func (s *Store) SetEmailStarred(ctx context.Context, sha string, starred bool) e
 	return requireRow(res, ErrEmailNotFound)
 }
 
+func (s *Store) SetEmailRead(ctx context.Context, sha string, read bool) error {
+	res, err := s.DB.ExecContext(ctx,
+		`UPDATE emails SET read = ? WHERE sha256 = ?`, read, sha)
+	if err != nil {
+		return err
+	}
+	return requireRow(res, ErrEmailNotFound)
+}
+
+// SetAllEmailsRead applies the first-time read-tracking choice to every row.
+func (s *Store) SetAllEmailsRead(ctx context.Context, read bool) error {
+	_, err := s.DB.ExecContext(ctx, `UPDATE emails SET read = ?`, read)
+	return err
+}
+
 type ListOptions struct {
 	Query       string
 	StarredOnly bool
+	UnreadOnly  bool
 	// FlaggedOnly lists spam/phishing instead of hiding it (settings page).
 	FlaggedOnly bool
 	Sort        string
@@ -315,11 +333,11 @@ func ClampPageSize(limit int) int {
 // against the subquery by name (emailColNames).
 const emailCols = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 	message_id, COALESCE(thread_id, '') AS thread_id, sent_at, received_at, size_bytes,
-	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
+	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk, read`
 
 const emailColNames = `id, sha256, filename, subject, from_addr, to_addrs, cc_addrs,
 	message_id, thread_id, sent_at, received_at, size_bytes,
-	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk`
+	has_attachments, attachment_count, imported_at, starred, category_id, flag, risk, read`
 
 func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int, error) {
 	opts.Limit = ClampPageSize(opts.Limit)
@@ -400,6 +418,9 @@ func listWhere(opts ListOptions) (string, []any) {
 	if opts.StarredOnly {
 		conds = append(conds, `starred = 1`)
 	}
+	if opts.UnreadOnly {
+		conds = append(conds, `read = 0`)
+	}
 	// Flagged mail never mixes with the library; it only appears when asked for.
 	if opts.FlaggedOnly {
 		conds = append(conds, quarantined)
@@ -447,16 +468,17 @@ func scanEmail(rs rowScanner) (*Email, error) {
 	e := Email{}
 	var to, cc string
 	var sentAt, recvAt, importedAt int64
-	var hasAtt, starred int
+	var hasAtt, starred, read int
 	var categoryID sql.NullInt64
 	var riskJSON sql.NullString
 	err := rs.Scan(&e.ID, &e.SHA256, &e.Filename, &e.Subject, &e.FromAddr,
 		&to, &cc, &e.MessageID, &e.ThreadID, &sentAt, &recvAt, &e.SizeBytes,
-		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID, &e.Flag, &riskJSON)
+		&hasAtt, &e.AttachmentCount, &importedAt, &starred, &categoryID, &e.Flag, &riskJSON, &read)
 	if err != nil {
 		return nil, err
 	}
 	e.Starred = starred != 0
+	e.Read = read != 0
 	if riskJSON.Valid {
 		_ = json.Unmarshal([]byte(riskJSON.String), &e.Risk)
 	}

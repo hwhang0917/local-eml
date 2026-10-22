@@ -3,7 +3,7 @@ import { ref, watch, onBeforeUpdate, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, MessagesSquare, RotateCcw, Star, TriangleAlert, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, Mail, MailOpen, MessagesSquare, RotateCcw, Star, TriangleAlert, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
 import { ANY_CATEGORY, NO_CATEGORY, parseCategoryValue, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
+import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import Input from '@/components/ui/Input.vue'
@@ -67,7 +68,9 @@ function toggleCol(c: HideableCol) {
 }
 // Counted from the whitelist, not hiddenCols.length, so a stale storage entry
 // can't skew the colspan.
-const colCount = computed(() => 1 + HIDEABLE_COLS.filter(colShown).length)
+// The read column is not in HIDEABLE_COLS: it exists only while read tracking is on.
+const { enabled: readTracking } = useReadTracking()
+const colCount = computed(() => 1 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
 
 function str(v: unknown, def = ''): string {
   return typeof v === 'string' ? v : def
@@ -79,6 +82,7 @@ function normalizePageSize(n: number): PageSize {
 
 const q = computed(() => str(route.query.q))
 const starredOnly = computed(() => str(route.query.starred) === '1')
+const unreadOnly = computed(() => str(route.query.unread) === '1')
 const category = computed(() => str(route.query.category))
 const from = computed(() => str(route.query.from))
 const to = computed(() => str(route.query.to))
@@ -124,6 +128,7 @@ function pushQuery(patch: Record<string, string | undefined>) {
 const listParams = computed<EmailListParams>(() => ({
   q: q.value || undefined,
   starred: starredOnly.value || undefined,
+  unread: unreadOnly.value || undefined,
   category: category.value || undefined,
   from: from.value || undefined,
   to: to.value || undefined,
@@ -172,7 +177,7 @@ async function toggleThread(e: Email) {
   }
 }
 
-watch([q, starredOnly, category, from, to, sort, order, offset, limit], load)
+watch([q, starredOnly, unreadOnly, category, from, to, sort, order, offset, limit], load)
 
 const tour = useTour()
 onMounted(() => {
@@ -277,10 +282,15 @@ function toggleStarredFilter() {
   pushQuery({ starred: starredOnly.value ? undefined : '1', offset: undefined })
 }
 
+function toggleUnreadFilter() {
+  pushQuery({ unread: unreadOnly.value ? undefined : '1', offset: undefined })
+}
+
 const hasActiveFilters = computed(
   () =>
     q.value !== '' ||
     starredOnly.value ||
+    unreadOnly.value ||
     category.value !== '' ||
     from.value !== '' ||
     to.value !== '' ||
@@ -295,6 +305,7 @@ function resetFilters() {
   pushQuery({
     q: undefined,
     starred: undefined,
+    unread: undefined,
     category: undefined,
     from: undefined,
     to: undefined,
@@ -354,6 +365,11 @@ function dropRow(e: Email) {
 async function toggleStar(e: Email) {
   const next = !e.starred
   if (await actions.toggleStar(e) && starredOnly.value && !next) dropRow(e)
+}
+
+async function toggleRead(e: Email) {
+  const next = !e.read
+  if (await actions.toggleRead(e) && unreadOnly.value && next) dropRow(e)
 }
 
 const { byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
@@ -434,6 +450,18 @@ const pageInfo = computed(() => {
       >
         <Star class="h-4 w-4" :fill="starredOnly ? 'currentColor' : 'none'" />
         <span class="ml-1.5">{{ t('library.starred') }}</span>
+      </Button>
+      <Button
+        v-if="readTracking"
+        variant="outline"
+        size="sm"
+        :aria-pressed="unreadOnly"
+        :title="unreadOnly ? t('library.show_all') : t('library.show_unread')"
+        :class="unreadOnly ? 'text-primary border-primary' : ''"
+        @click="toggleUnreadFilter"
+      >
+        <Mail class="h-4 w-4" />
+        <span class="ml-1.5">{{ t('library.unread') }}</span>
       </Button>
       <DateRangePicker :from="from" :to="to" @change="setDateRange" />
       <CategoryMenu
@@ -545,6 +573,9 @@ const pageInfo = computed(() => {
             <th v-if="colShown('starred')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.starred') }}</span>
             </th>
+            <th v-if="readTracking" scope="col" class="text-left px-3 py-2 w-10">
+              <span class="sr-only">{{ t('library.col.read') }}</span>
+            </th>
             <th v-if="colShown('attachments')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.attachments') }}</span>
             </th>
@@ -564,6 +595,7 @@ const pageInfo = computed(() => {
           <tr v-else-if="items.length === 0">
             <td :colspan="colCount" class="px-3 py-6 text-center text-muted-foreground">
               <template v-if="starredOnly">{{ t('library.no_starred') }}</template>
+              <template v-else-if="unreadOnly">{{ t('library.no_unread') }}</template>
               <template v-else>
                 {{ t('library.no_emails') }}
                 <RouterLink :to="{ name: 'import' }" class="underline">{{ t('library.import_some') }}</RouterLink>
@@ -588,6 +620,19 @@ const pageInfo = computed(() => {
                 @auxclick.stop
               >
                 <Star class="h-4 w-4" :fill="e.starred ? 'currentColor' : 'none'" />
+              </button>
+            </td>
+            <td v-if="readTracking" class="px-3 py-2">
+              <button
+                type="button"
+                :title="e.read ? t('library.mark_unread') : t('library.mark_read')"
+                :aria-label="e.read ? t('library.mark_unread') : t('library.mark_read')"
+                :class="['inline-flex items-center justify-center h-6 w-6 rounded-sm hover:bg-accent',
+                  e.read ? 'text-muted-foreground hover:text-foreground' : 'text-primary']"
+                @click.stop="toggleRead(e)"
+                @auxclick.stop
+              >
+                <component :is="e.read ? MailOpen : Mail" class="h-4 w-4" />
               </button>
             </td>
             <td v-if="colShown('attachments')" class="px-3 py-2 text-muted-foreground">
@@ -681,7 +726,8 @@ const pageInfo = computed(() => {
               <RouterLink
                 :ref="(el) => setRowLink(el, i)"
                 :to="{ name: 'viewer', params: { sha: e.sha256 } }"
-                class="rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                :class="['rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  readTracking && !e.read ? 'font-semibold' : '']"
                 @click.stop="rememberPosition(i)"
               >
                 <Highlight v-if="e.subject" :text="e.subject" :query="q" />
@@ -702,6 +748,19 @@ const pageInfo = computed(() => {
             @mousedown.middle.prevent
           >
             <td v-if="colShown('starred')" class="px-3 py-2"></td>
+            <td v-if="readTracking" class="px-3 py-2">
+              <button
+                type="button"
+                :title="m.read ? t('library.mark_unread') : t('library.mark_read')"
+                :aria-label="m.read ? t('library.mark_unread') : t('library.mark_read')"
+                :class="['inline-flex items-center justify-center h-6 w-6 rounded-sm hover:bg-accent',
+                  m.read ? 'text-muted-foreground hover:text-foreground' : 'text-primary']"
+                @click.stop="actions.toggleRead(m)"
+                @auxclick.stop
+              >
+                <component :is="m.read ? MailOpen : Mail" class="h-4 w-4" />
+              </button>
+            </td>
             <td v-if="colShown('attachments')" class="px-3 py-2 text-muted-foreground">
               <span v-if="m.has_attachments" role="img" :aria-label="t('library.has_attachments')">📎</span>
             </td>
@@ -717,7 +776,8 @@ const pageInfo = computed(() => {
                 <CornerDownRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <RouterLink
                   :to="{ name: 'viewer', params: { sha: m.sha256 } }"
-                  class="truncate rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  :class="['truncate rounded-xs hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    readTracking && !m.read ? 'font-semibold' : '']"
                   @click.stop
                 >
                   {{ m.subject || t('library.no_subject') }}

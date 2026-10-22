@@ -75,6 +75,8 @@ func (s *Server) Router() http.Handler {
 		api.Post("/emails/{sha}/index", s.handleIndexEmail)
 		api.Put("/emails/{sha}/star", s.handleStarEmail)
 		api.Delete("/emails/{sha}/star", s.handleUnstarEmail)
+		api.Put("/emails/{sha}/read", s.handleReadEmail)
+		api.Delete("/emails/{sha}/read", s.handleUnreadEmail)
 		api.Put("/emails/{sha}/flag", s.handleFlagEmail)
 		api.Delete("/emails/{sha}/flag", s.handleUnflagEmail)
 		api.Put("/emails/{sha}/category/{id}", s.handleSetEmailCategory)
@@ -102,6 +104,8 @@ func (s *Server) Router() http.Handler {
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
 
+		api.Get("/read-tracking", s.handleGetReadTracking)
+		api.Put("/read-tracking", s.handlePutReadTracking)
 		api.Get("/session", s.handleSession)
 		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
 		api.Post("/data/wipe", s.handleWipeData)

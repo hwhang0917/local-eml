@@ -18,6 +18,7 @@ const sections = computed(() => [
   { name: 'settings-about', label: t('settings.section.about') },
   { name: 'settings-categories', label: t('settings.section.categories') },
   { name: 'settings-locale', label: t('settings.section.locale') },
+  { name: 'settings-reading', label: t('settings.section.reading') },
   { name: 'settings-restore', label: t('settings.section.restore') },
   { name: 'settings-flagged', label: t('settings.section.flagged') },
   { name: 'settings-privacy', label: t('settings.section.privacy') },

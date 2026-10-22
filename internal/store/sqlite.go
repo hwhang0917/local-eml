@@ -197,6 +197,15 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "chosung_text", "TEXT"); err != nil {
 		return err
 	}
+	// read: 0 until the message is opened. Only meaningful once read tracking
+	// is switched on; the partial index serves the "unread only" filter.
+	if err := s.ensureColumn(ctx, "emails", "read", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
+	if _, err := s.DB.ExecContext(ctx,
+		`CREATE INDEX IF NOT EXISTS idx_emails_unread ON emails(read) WHERE read = 0`); err != nil {
+		return err
+	}
 	// flag: '' | 'spam' | 'phishing' | 'safe'. Quarantined mail is hidden from
 	// listings and served as plain text only; the partial index serves the
 	// settings page.
