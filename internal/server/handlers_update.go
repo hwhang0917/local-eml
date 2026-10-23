@@ -108,7 +108,7 @@ func (s *Server) handleUpdateInstall(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "resolve current binary: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	tmp, err := updater.Download(r.Context(), binAsset.DownloadURL, expectedSHA, filepath.Dir(currentPath))
+	tmp, err := updater.Download(r.Context(), binAsset.DownloadURL, expectedSHA, binAsset.Size, filepath.Dir(currentPath))
 	if err != nil {
 		http.Error(w, "download: "+err.Error(), http.StatusBadGateway)
 		return
