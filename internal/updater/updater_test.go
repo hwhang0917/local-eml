@@ -108,7 +108,7 @@ func TestDownloadVerifiesChecksum(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	tmp, err := Download(ctx, srv.URL+"/bin", want, dir)
+	tmp, err := Download(ctx, srv.URL+"/bin", want, int64(len(payload)), dir)
 	if err != nil {
 		t.Fatalf("matching checksum rejected: %v", err)
 	}
@@ -116,8 +116,11 @@ func TestDownloadVerifiesChecksum(t *testing.T) {
 		t.Fatalf("verified file missing: %v", err)
 	}
 
-	if _, err := Download(ctx, srv.URL+"/bin", strings.Repeat("0", 64), dir); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
+	if _, err := Download(ctx, srv.URL+"/bin", strings.Repeat("0", 64), int64(len(payload)), dir); err == nil || !strings.Contains(err.Error(), "checksum mismatch") {
 		t.Fatalf("tampered download must be rejected, got err=%v", err)
+	}
+	if _, err := Download(ctx, srv.URL+"/bin", want, int64(len(payload))-1, dir); err == nil || !strings.Contains(err.Error(), "exceeds expected size") {
+		t.Fatalf("oversized download must be rejected, got err=%v", err)
 	}
 	left, _ := filepath.Glob(filepath.Join(dir, ".update-*"))
 	if len(left) != 1 {

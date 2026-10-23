@@ -34,6 +34,8 @@ const (
 	httpUserAgent  = "local-eml-updater"
 	httpListMaxAge = 30 * time.Second
 	httpDLTimeout  = 5 * time.Minute
+	// maxSmallBody caps httpGet responses; SHA256SUMS is a few hundred bytes.
+	maxSmallBody = 1 << 20
 )
 
 type Release struct {
@@ -164,10 +166,13 @@ func FetchChecksums(ctx context.Context, url string) (map[string]string, error) 
 	return out, nil
 }
 
-// Download fetches url into a temp file beside targetDir, verifies its SHA256
-// against expected (lowercase hex), and returns the path of the verified temp
-// file. The caller owns deletion on failure (Swap handles it on success).
-func Download(ctx context.Context, url, expectedSHA, targetDir string) (string, error) {
+// Download fetches url into a temp file beside targetDir, verifies its size
+// against expectedSize (the release API's Asset.Size) and its SHA256 against
+// expectedSHA (lowercase hex), and returns the path of the verified temp file.
+// The size cap stops an oversized response from filling the disk before the
+// hash check can reject it. The caller owns deletion on failure (Swap handles
+// it on success).
+func Download(ctx context.Context, url, expectedSHA string, expectedSize int64, targetDir string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
@@ -188,7 +193,11 @@ func Download(ctx context.Context, url, expectedSHA, targetDir string) (string, 
 	}
 	tmp := f.Name()
 	h := sha256.New()
-	if _, err := io.Copy(io.MultiWriter(f, h), res.Body); err != nil {
+	n, err := io.Copy(io.MultiWriter(f, h), io.LimitReader(res.Body, expectedSize+1))
+	if err == nil && n > expectedSize {
+		err = fmt.Errorf("download exceeds expected size of %d bytes", expectedSize)
+	}
+	if err != nil {
 		f.Close()
 		os.Remove(tmp)
 		return "", err
@@ -301,7 +310,14 @@ func httpGet(ctx context.Context, url string, timeout time.Duration) ([]byte, er
 	if res.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GET %s: %s", url, res.Status)
 	}
-	return io.ReadAll(res.Body)
+	body, err := io.ReadAll(io.LimitReader(res.Body, maxSmallBody+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxSmallBody {
+		return nil, fmt.Errorf("GET %s: response exceeds %d bytes", url, maxSmallBody)
+	}
+	return body, nil
 }
 
 // ErrNotInService is returned by Install handlers when the caller is running
