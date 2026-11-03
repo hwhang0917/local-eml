@@ -202,8 +202,11 @@ jobs:
       # microsoft/winget-pkgs from the owner's fork. The action only updates
       # packages that already exist there, and it needs WINGET_TOKEN, a classic
       # PAT with the public_repo scope, so it is skipped until both are set up.
+      # A winget failure (package not yet in winget-pkgs, moderation hiccup)
+      # must not mark the already-published release as failed; re-run the job.
       - name: Publish to winget
         if: env.WINGET_TOKEN != ''
+        continue-on-error: true
         uses: vedantmgoyal9/winget-releaser@v2
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
