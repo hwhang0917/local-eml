@@ -1,6 +1,6 @@
 module github.com/hwhang0917/local-eml
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.7
@@ -15,7 +15,7 @@ require (
 	github.com/kardianos/service v1.2.4
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/mooijtech/go-pst/v6 v6.0.2
-	golang.org/x/net v0.57.0
+	golang.org/x/net v0.62.0
 	modernc.org/sqlite v1.50.1
 )
 
@@ -56,8 +56,8 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	modernc.org/libc v1.72.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
