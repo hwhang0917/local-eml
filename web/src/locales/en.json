@@ -10,10 +10,22 @@
   },
   "auth": {
     "title": "Sign in to Local Eml",
-    "body": "This browser has no session for the server on this port. Open Local Eml from its launcher, or paste the token the command below prints.",
+    "body": "This browser has no session for the server on this port. Open Local Eml from its launcher, or get a session token with the steps below.",
     "placeholder": "Session token",
     "submit": "Unlock",
-    "hint": "Print the token with"
+    "help_title": "Don't have a token?",
+    "step_open": "Open {app}.",
+    "step_run": "Copy this command, paste it there, and press Enter.",
+    "step_paste": "Copy the token it prints and paste it into the box above.",
+    "app_windows": "Command Prompt",
+    "app_mac": "Terminal",
+    "app_other": "a terminal",
+    "open_windows": "Press the Windows key, type cmd, then press Enter.",
+    "open_mac": "Press ⌘ Space, type Terminal, then press Enter.",
+    "open_other": "",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copy_failed": "Couldn't copy. Select the command and copy it yourself."
   },
   "nav": {
     "library": "Library",

@@ -12,6 +12,7 @@ import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
+import TokenCommand from '@/components/TokenCommand.vue'
 import Button from '@/components/ui/Button.vue'
 import { fieldClass } from '@/lib/utils'
 import { locked, unlock } from '@/lib/auth'
@@ -76,7 +77,7 @@ watchEffect(() => {
       />
       <Button type="submit" :disabled="!token.trim()">{{ t('auth.submit') }}</Button>
     </form>
-    <p class="text-xs text-muted-foreground">{{ t('auth.hint') }} <code>local-eml token</code></p>
+    <TokenCommand />
   </div>
   <template v-else>
   <!-- Desktop only. The server is loopback-only so no phone ever reaches it;
