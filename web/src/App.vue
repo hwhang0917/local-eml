@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
@@ -11,6 +11,7 @@ import { APP_NAME, pageTitle } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
+import { startNewMailWatcher } from '@/composables/useNewMailNotifier'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
 import TokenCommand from '@/components/TokenCommand.vue'
 import Button from '@/components/ui/Button.vue'
@@ -24,6 +25,9 @@ const { online, checking, retry } = useHealth()
 const tour = useTour()
 const { session } = useSession()
 const token = ref('')
+
+// Polls for mail a background sync brought in; idle unless turned on.
+onMounted(startNewMailWatcher)
 
 // Two of the steps point at library controls, so the tour has to run from the
 // library route or those steps would highlight nothing.

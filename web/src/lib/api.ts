@@ -394,6 +394,12 @@ export const api = {
     return fetch(`/api/imap/profiles/${id}/sync`, { method: 'POST' }).then(okOrThrow)
   },
 
+  /** Jobs of one kind that finished at or after `since` (Unix seconds), oldest first. */
+  listFinishedImports(kind: string, since: number) {
+    const qs = new URLSearchParams({ kind, since: String(since) })
+    return fetch(`/api/imports?${qs}`).then(jsonOrThrow<ImportStatus[]>)
+  },
+
   listS3Profiles() {
     return fetch('/api/s3/profiles').then(jsonOrThrow<S3Profile[]>)
   },
