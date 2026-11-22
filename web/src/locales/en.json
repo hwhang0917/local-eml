@@ -128,7 +128,25 @@
     "set_category": "Set category",
     "no_category_matches": "No emails in this category.",
     "group_threads": "Group by conversation",
-    "expand_thread": "{count} messages in this conversation"
+    "expand_thread": "{count} messages in this conversation",
+    "select_row": "Select this email",
+    "select_page": "Select all on this page",
+    "bulk_actions": "Bulk actions",
+    "selected_count": "{count} selected",
+    "selected_threads_hint": "Actions apply to every message in the selected conversations.",
+    "bulk_mark_read": "Mark all as read",
+    "bulk_mark_unread": "Mark all as unread",
+    "bulk_delete": "Delete all",
+    "clear_selection": "Clear selection",
+    "bulk_read_done": "Marked {count} as read",
+    "bulk_unread_done": "Marked {count} as unread",
+    "bulk_delete_done": "Deleted {count} email | Deleted {count} emails",
+    "bulk_error": "Couldn't update the selected emails",
+    "bulk_delete_title": "Delete {count} selected email? | Delete {count} selected emails?",
+    "bulk_delete_title_threads": "Delete {count} selected conversation? | Delete {count} selected conversations?",
+    "bulk_delete_body": "The messages and their .eml files are removed from this computer. This can't be undone. A full resync of the original source may import them again.",
+    "bulk_delete_confirm": "Delete",
+    "bulk_delete_cancel": "Cancel"
   },
   "viewer": {
     "back": "← Back to library",
@@ -398,6 +416,7 @@
     "nav": "Move through the list",
     "open": "Open the selected email",
     "star": "Star / unstar the selected email",
+    "select": "Tick / untick the email for bulk actions",
     "search": "Focus the search box",
     "prev_next": "Previous / next email in the viewer",
     "escape": "Leave the search box",
@@ -470,7 +489,7 @@
     "wipe_confirm_body": "This can't be undone. Type \"{word}\" to confirm.",
     "wipe_word": "delete",
     "wipe_confirm": "Delete everything",
-    "wipe_done": "Deleted {count} emails",
+    "wipe_done": "Deleted {count} email | Deleted {count} emails",
     "wipe_error": "Couldn't delete the data",
     "disk_note": "These options delete files the ordinary way. They are not secure erasure: deleted data may still be recoverable, especially on SSDs, and Local Eml can't restore it either. Keep a backup of anything you need. Provided as is, without warranty."
   }

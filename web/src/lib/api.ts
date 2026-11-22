@@ -197,6 +197,8 @@ export interface ReadTracking {
   configured: boolean
 }
 
+export type BulkAction = 'read' | 'unread' | 'delete'
+
 export type ReadTrackingExisting = 'read' | 'unread'
 
 export interface RestoreSummary {
@@ -304,6 +306,11 @@ export const api = {
 
   getThread(sha: string) {
     return fetch(`/api/emails/${sha}/thread`).then(jsonOrThrow<{ items: Email[] }>)
+  },
+
+  bulkEmails(action: BulkAction, sha256s: string[], threads = false) {
+    return fetch('/api/emails/bulk', jsonBody('POST', { action, sha256s, threads }))
+      .then(jsonOrThrow<{ affected: number }>)
   },
 
   deleteEmail(sha: string) {

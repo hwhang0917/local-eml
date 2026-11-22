@@ -13,6 +13,7 @@ const rows = computed(() => [
   { keys: 'j / k', label: t('shortcuts.nav') },
   { keys: 'Enter', label: t('shortcuts.open') },
   { keys: 's', label: t('shortcuts.star') },
+  { keys: 'x', label: t('shortcuts.select') },
   { keys: '/', label: t('shortcuts.search') },
   { keys: '← / →', label: t('shortcuts.prev_next') },
   { keys: 'Esc', label: t('shortcuts.escape') },
