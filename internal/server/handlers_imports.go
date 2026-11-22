@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,6 +101,33 @@ func (s *Server) handleResync(w http.ResponseWriter, r *http.Request) {
 	// No cleanup: unlike uploads, these paths are the blobs themselves.
 	go s.runJob(id, kindResync, src, nil, nil)
 	writeJobAccepted(w, "import_id", id, kindResync, map[string]any{"total": len(paths)})
+}
+
+// maxFinishedImports caps one page of handleListFinishedImports. The SPA
+// polls every half minute, so even a burst of syncs fits easily.
+const maxFinishedImports = 50
+
+// handleListFinishedImports lists jobs of one kind that finished at or after
+// ?since= (Unix seconds). The SPA asks for kind=imap-sync to notice that a
+// background sync brought in new mail.
+func (s *Server) handleListFinishedImports(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	kind := q.Get("kind")
+	if kind == "" {
+		http.Error(w, "kind is required", http.StatusBadRequest)
+		return
+	}
+	since, err := strconv.ParseInt(q.Get("since"), 10, 64)
+	if err != nil || since < 0 {
+		http.Error(w, "invalid since", http.StatusBadRequest)
+		return
+	}
+	imports, err := s.Store.ListFinishedImports(r.Context(), kind, since, maxFinishedImports)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, imports)
 }
 
 func (s *Server) handleImportStatus(w http.ResponseWriter, r *http.Request) {
