@@ -1,43 +1,44 @@
 # Privacy and your data
 
-## Where your data lives
+## Where your data is kept
 
-Everything is in one folder: `~/.local-eml/` on Linux and macOS, `%USERPROFILE%\.local-eml\` on Windows.
+Everything is in one folder: `~/.local-eml/` on Linux and macOS, and `%USERPROFILE%\.local-eml\` on Windows.
 
-| Path | Contents |
+| Path | What it holds |
 |---|---|
-| `eml/` | Your messages as plain `.eml` files, named by content hash |
-| `db/local-eml.db` | The SQLite database: metadata, search index, profiles, settings |
-| `logs/local-eml.log` | The application log, which includes subjects and addresses |
-| `keys/secret.key` | The key that encrypts stored IMAP passwords |
-| `prefs.json` | Launch preferences, currently just the temporary-sessions switch |
+| `eml/` | Your messages, as ordinary `.eml` files |
+| `db/local-eml.db` | The database: message details, the search index, profiles and settings |
+| `logs/local-eml.log` | The log file. It includes subjects and email addresses |
+| `keys/secret.key` | The key used to encrypt saved IMAP passwords |
+| `session-token` | The password your browser uses to sign in. See [session token](./settings-cli#session-token) |
+| `prefs.json` | Launch preferences (for now, only the temporary sessions switch) |
 
-The folder and everything in it are created with permissions that keep other users on the machine out.
+The folder is created so that other user accounts on the same computer can't open it.
 
 ## Network
 
-Local Eml listens only on `127.0.0.1`. Nothing is reachable from your network, and requests from other websites are refused. The only outbound connections are the ones you ask for: IMAP and S3 imports or exports, and the update check under **Settings → About**.
+Local Eml only accepts connections from your own computer (`127.0.0.1`). Other devices on your network can't reach it, and other websites open in your browser can't talk to it. It only connects to the internet when you ask it to: IMAP and S3 imports and exports, and the update check under **Settings → About**.
 
-## Credentials
+## Passwords and keys
 
-- **S3 secret key and session token** are never saved.
-- **IMAP passwords** are not saved unless you turn on background sync for a profile. Then they're encrypted at rest; see [Receiving new mail](./sync#what-happens-to-your-password).
-- Host names, bucket names, usernames and access key IDs are saved in plain form, since they aren't secrets.
+- The S3 secret key and session token are never saved.
+- IMAP passwords are only saved if you turn on background sync for a profile, and then they're encrypted. See [Receiving new mail](./sync#what-happens-to-your-password).
+- Server names, bucket names, usernames and access key IDs are saved as plain text, since they aren't secret.
 
 ## Temporary sessions
 
-For when you just want to open a folder of `.eml` files, search it, and leave nothing behind.
+Use this when you want to open some `.eml` files, look through them, and leave nothing behind.
 
-Turn on **Settings → Privacy → Double-click sessions are temporary**. From the next launch, every double-click starts with an empty library in a throwaway folder under the system temp directory, and that folder is deleted when the app closes. If the app crashes, the leftovers are removed the next time it starts. A banner at the top of the page shows while a temporary session is running.
+Turn on **Settings → Privacy → Double-click sessions are temporary**. From the next launch, each double-click starts with an empty library in a temporary folder, and that folder is deleted when you close the app. If the app crashes, the leftover folder is deleted the next time it starts. A banner at the top of the page reminds you that the session is temporary.
 
-The only thing kept on disk is `prefs.json`, which remembers the switch. It contains no mail or credentials.
+The only file kept is `prefs.json`, which remembers that the switch is on. It holds no mail and no passwords.
 
-The switch is unavailable while the background service is running, because the service never closes. On those machines, stop the service, or start Local Eml with `--ephemeral` or `LOCAL_EML_EPHEMERAL=1`, which gives a temporary session that never touches the service's library.
+You can't use this switch while the background service is running, because the service never closes. On that computer, either stop the service, or start Local Eml with `--ephemeral` (or set `LOCAL_EML_EPHEMERAL=1`). That gives you a temporary session that doesn't touch the service's library.
 
 ## Deleting all data
 
-**Settings → Privacy → Delete all data now** removes every message, the search index, import history and logs, and turns off background sync so the library doesn't refill. Saved profiles without their passwords, categories, settings and the encryption key are kept. You type a confirmation word before it runs.
+**Settings → Privacy → Delete all data now** deletes every message, the search index, the import history and the logs. It also turns off background sync so the library doesn't fill up again. Your profiles (without passwords), categories, settings and the encryption key are kept. You have to type a confirmation word first.
 
 ::: warning No guarantees
-Temporary sessions and Delete all data remove files the ordinary way, the same as deleting them yourself. They are a convenience, not secure erasure: Local Eml does not guarantee that deleted data can't be recovered, and on SSDs and journaling file systems it often can be. Local Eml also can't bring deleted data back, so keep a backup of anything you need. Like the rest of Local Eml, these features are provided as is, without warranty of any kind, under the [GPL v3](https://github.com/hwhang0917/local-eml/blob/main/LICENSE).
+Temporary sessions and Delete all data delete files the normal way, the same as if you deleted them yourself. This is not secure erasure. Deleted files can often be recovered, especially on SSDs, and Local Eml does not promise otherwise. Local Eml also can't bring deleted data back, so keep a backup of anything you need. Like the rest of Local Eml, these features come with no warranty, under the [GPL v3](https://github.com/hwhang0917/local-eml/blob/main/LICENSE).
 :::

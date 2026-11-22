@@ -13,7 +13,7 @@ git clone https://github.com/hwhang0917/local-eml.git
 cd local-eml
 
 make install            # npm install (web/) + go mod download
-make build              # syncs VERSION → web/package.json, builds SPA, builds Go binary
+make build              # copies VERSION into web/package.json, builds the SPA, then the Go binary
 ./local-eml serve       # http://localhost:7878
 ```
 
@@ -35,8 +35,10 @@ local-eml <command> [flags]
   app [--ephemeral]        open in a browser window; stops when the window closes (default)
   serve [--port 7878] [--ephemeral]
                            run the local web server (loopback only)
-  install [-y|--yes]       register as a background service (systemd/launchd/svc)
+  install [-y|--yes] [--port 7878]
+                           register as a background service (systemd/launchd/Windows Service)
   uninstall [-y|--yes]     stop and unregister the background service
+  token                    print the session token the API and a browser need
   version | -V | --version
 ```
 
@@ -48,9 +50,11 @@ crashed sessions are swept on the next launch. It is ignored when running as a s
 
 ## Data layout
 
-- `~/.local-eml/eml/<sha256>.eml` — content-addressed raw blobs
-- `~/.local-eml/db/local-eml.db` — SQLite (with FTS5)
-- `~/.local-eml/logs/local-eml.log` — append-only log; mirrors stderr
+- `~/.local-eml/eml/<sha256>.eml`: raw messages, named by content hash
+- `~/.local-eml/db/local-eml.db`: SQLite with FTS5
+- `~/.local-eml/logs/local-eml.log`: append-only log, same as stderr
+- `~/.local-eml/keys/secret.key`: key for stored IMAP passwords
+- `~/.local-eml/session-token`: API session token
 
 `%USERPROFILE%\.local-eml\` on Windows.
 
@@ -104,11 +108,11 @@ Set `LOCAL_EML_LOG_LEVEL=debug|info|warn|error` in the service environment to tu
 
 ## Releasing
 
-`VERSION` at the repo root is the single source of truth. `scripts/release.sh` bumps it, propagates the new version into `web/package.json` and `web/package-lock.json` (via `npm version`), then creates a single `Release version vX.X.X` commit and a matching annotated tag — after a `[y/N]` confirmation. It does not push.
+`VERSION` at the repo root is the single source of truth. `scripts/release.sh` bumps it, propagates the new version into `web/package.json` and `web/package-lock.json` (via `npm version`), then asks `[y/N]` and creates a single `Release version vX.X.X` commit with a matching annotated tag. It does not push.
 
 ```bash
 scripts/release.sh patch       # 0.0.1 -> 0.0.2   (also: minor, major)
 git push --follow-tags         # push the commit + tag when ready
 ```
 
-GitHub Actions (`.github/workflows/release.yml`) cuts the release: cross-compiles six binaries (`linux|darwin|windows`-`amd64|arm64`), generates `SHA256SUMS`, and attaches everything to a Release whose body is auto-generated from PR titles since the previous tag.
+GitHub Actions (`.github/workflows/release.yml`) then builds the release: it cross-compiles six binaries (`linux|darwin|windows`-`amd64|arm64`), generates `SHA256SUMS`, and attaches everything to a Release whose body is auto-generated from PR titles since the previous tag.

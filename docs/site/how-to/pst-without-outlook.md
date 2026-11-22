@@ -1,24 +1,24 @@
 # How to open a .pst file without Outlook
 
-A `.pst` file is Outlook's own mailbox archive. Opening one normally needs Outlook installed and an account to attach it to. Local Eml reads `.pst` files directly, so you can browse an old archive on any computer, including macOS and Linux.
+A `.pst` file is an Outlook mailbox saved as a file. Normally you need Outlook installed to open one. Local Eml can read `.pst` files itself, so you can look through an old archive on any computer, including a Mac or a Linux machine.
 
 ## Where .pst files come from
 
-- Outlook's **File → Open & Export → Import/Export → Export to a file → Outlook Data File (.pst)**.
-- Archives created by Outlook's AutoArchive feature, usually in `Documents\Outlook Files`.
-- Mailbox exports handed over by an IT department or a previous employer.
+- Exporting from Outlook: **File → Open & Export → Import/Export → Export to a file → Outlook Data File (.pst)**.
+- Outlook's AutoArchive feature, which usually saves them in `Documents\Outlook Files`.
+- An IT department or former employer giving you a copy of your mailbox.
 
 ## Open it in Local Eml
 
 1. Open Local Eml and go to **Import**.
-2. Drag the `.pst` file onto the page, or pick it with the file chooser.
-3. Wait for the import to finish. Every message, with its attachments, becomes a plain `.eml` file in the library.
+2. Drag the `.pst` file onto the page, or click to choose it.
+3. Wait for the import to finish. Every message, with its attachments, is saved as an `.eml` file in your library.
 
-Folder structure inside the `.pst` isn't preserved as folders; messages are listed together, and you find them by search, date range, sender or by assigning categories.
+The folders inside the `.pst` aren't kept. All messages appear in one list, and you find them by searching, by date, or by sender. You can also sort them yourself with categories.
 
 ## What doesn't work
 
-- **`.ost` files** are Outlook's cache of a live mailbox, not an archive, and aren't supported. Export a `.pst` from Outlook instead.
-- **Outlook.com accounts over IMAP.** Microsoft no longer allows password sign-in to Outlook.com mailboxes, so Local Eml's IMAP import can't connect to them. Exporting a `.pst` from the Outlook desktop app is the reliable path.
+- **`.ost` files.** These are Outlook's temporary copy of a live mailbox, not an archive, and Local Eml can't read them. Export a `.pst` from Outlook instead.
+- **Outlook.com accounts over IMAP.** Microsoft no longer lets apps sign in to Outlook.com mailboxes with a password, so Local Eml's IMAP import can't connect. Export a `.pst` from the Outlook desktop app instead.
 
-If a `.pst` fails to import, open an [issue](https://github.com/hwhang0917/local-eml/issues) with the error from the import log; don't attach the file itself.
+If a `.pst` won't import, [open an issue](https://github.com/hwhang0917/local-eml/issues) with the error message from the import. Don't attach the file itself, since it contains your mail.

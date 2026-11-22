@@ -17,7 +17,7 @@ const howto = {
     { text: '.eml 파일 열기', link: '/ko/how-to/open-eml-files' },
     { text: 'Google 테이크아웃 .mbox 보기', link: '/ko/how-to/takeout-mbox' },
     { text: 'Outlook 없이 .pst 열기', link: '/ko/how-to/pst-without-outlook' },
-    { text: 'Gmail 용량 비우기', link: '/ko/how-to/free-up-gmail' },
+    { text: 'Gmail 용량 확보하기', link: '/ko/how-to/free-up-gmail' },
   ],
 }
 

@@ -1,19 +1,21 @@
 # Settings and command line
 
-## Settings pages
+## Settings
 
-| Page | What's there |
+| Page | What you can do there |
 |---|---|
-| **About** | Version, update check, and in-place update for service installs |
-| **Categories** | Name the fixed set of colour categories |
-| **Locale** | Interface language, and absolute or relative dates |
-| **Reading** | Read tracking: off by default. When on, unread subjects are bold, opening a message marks it read, and the list gets an **Unread** filter and a per-row toggle. The first time you turn it on you choose whether existing mail starts read or unread; **Mark all as read** catches up after a big import |
-| **Restore from backup** | Read stars, categories, settings and profiles back from an exported `.zip` |
-| **Spam & phishing** | Flagged messages, and the switch for phishing warnings |
-| **Privacy** | Temporary sessions and Delete all data |
-| **Attributions** | Licenses of the open-source libraries used |
+| **About** | See the version and check for updates. Background service installs can update from here. |
+| **Categories** | Name the colour categories. |
+| **Locale** | Choose the interface language, and whether dates show as "Mar 3, 2024" or "2 years ago". |
+| **Reading** | Turn on read tracking (off by default). Unread subjects then show in bold, opening a message marks it read, and the list gets an **Unread** filter and a read/unread button on each row. When you first turn it on, you choose whether your existing mail starts as read or unread. After a big import, **Mark all as read** clears the backlog. |
+| **Restore from backup** | Bring back stars, categories, settings and profiles from an exported `.zip`. |
+| **Spam & phishing** | See the messages you've marked, and turn phishing warnings on or off. |
+| **Privacy** | Temporary sessions, and Delete all data. |
+| **Attributions** | Licenses of the open-source libraries Local Eml uses. |
 
 ## Command line
+
+You don't need the command line for everyday use. It's here for the background service and for scripting.
 
 ```text
 local-eml <command> [flags]
@@ -28,31 +30,31 @@ local-eml <command> [flags]
   version | -V | --version
 ```
 
-Running the executable with no arguments is the same as `app`; that's what a double-click does.
+Running the program with no command is the same as `app`. That's what happens when you double-click it.
 
-`install` and `uninstall` ask for confirmation. `--yes` skips the prompt for scripts.
+`install` and `uninstall` ask you to confirm first. Add `--yes` to skip the question in scripts.
 
 ## Session token
 
-The server only listens on your own machine, but every program and every user account on that machine can reach it, so the address alone isn't enough. Each library has a random token in `session-token` inside its data folder, readable only by its owner.
+Only your own computer can connect to Local Eml, but that includes every program and every user account on it. So the server also asks for a token: a random password stored in a file called `session-token` in the data folder, which only you can read.
 
-- **Double-click** opens the window already signed in: the launcher passes the token and the browser keeps it as a cookie for that port.
-- **A browser you open yourself** shows a sign-in page the first time. Paste the output of `local-eml token`.
-- **Scripts** send it as a header: `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`.
+- Double-clicking signs you in automatically. The program hands the token to the browser, which remembers it.
+- If you open the address in a browser yourself, you'll see a sign-in page the first time. It shows how to open Command Prompt or Terminal and has a **Copy** button for the `local-eml token` command. Run it and paste the token it prints.
+- Scripts send it in a header: `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`.
 
-A [temporary session](./privacy#temporary-sessions) has its own token, and the launcher handles it the same way.
+A [temporary session](./privacy#temporary-sessions) gets its own token, and double-clicking handles it for you in the same way.
 
 ## Environment variables
 
-| Variable | Effect |
+| Variable | What it does |
 |---|---|
-| `LOCAL_EML_PORT` | Port for the installer scripts to register. Default `7878`. |
-| `LOCAL_EML_SYNC_INTERVAL` | IMAP background poll interval, e.g. `5m`, or `off`. The value saved in the app wins. |
-| `LOCAL_EML_EPHEMERAL` | `1` starts a [temporary session](./privacy#temporary-sessions). Ignored by the service. |
+| `LOCAL_EML_PORT` | The port the install script sets up. Default `7878`. |
+| `LOCAL_EML_SYNC_INTERVAL` | How often background sync checks for new IMAP mail, for example `5m`, or `off`. A value set in the app takes priority. |
+| `LOCAL_EML_EPHEMERAL` | `1` starts a [temporary session](./privacy#temporary-sessions). The background service ignores it. |
 | `LOCAL_EML_LOG_LEVEL` | `debug`, `info`, `warn` or `error`. Default `info`. |
 
-For a service, set these in the service's environment: the systemd unit, the LaunchAgent plist, or the Windows service configuration.
+For the background service, set these in the service's own configuration: the systemd unit on Linux, the LaunchAgent plist on macOS, or the Windows service settings.
 
 ## Desktop only
 
-The interface needs a window at least about 768 pixels wide. Below that it shows a notice asking for a wider window instead of a broken layout. Since the server only listens on your own machine, phones can't reach it anyway.
+The window needs to be at least about 768 pixels wide. If it's narrower, you'll see a message asking you to widen it. Phones can't connect anyway, since only your own computer can reach Local Eml.

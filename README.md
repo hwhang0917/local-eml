@@ -7,19 +7,19 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
-A private, local viewer for `.eml` files. Drop a folder, a `.zip`, an `.mbox`, a `.pst`, or pull from S3 / IMAP — search, browse, and read your mail offline. Everything stays on your machine.
+Local Eml keeps your old email on your own computer and lets you search and read it offline. You can give it `.eml` files, a folder, a `.zip`, an `.mbox` or an Outlook `.pst`, or pull mail from an IMAP account or an S3 bucket. Your mail never leaves your machine.
 
-**It is** a local archive for your email: pull old messages out of an overflowing mailbox, keep them as plain `.eml` files on your own disk, and search and read them any time.
+It's meant for archiving. If your mailbox is full, you can copy the old messages out, keep them as ordinary `.eml` files, and still find them later.
 
-**It isn't** an email client. You can't compose, send, or reply, and it never modifies your mailbox — IMAP access is strictly read-only. It's desktop only, and it listens on `127.0.0.1` alone.
+It is not an email client. You can't write, send or reply to mail, and it never changes anything in your mailbox: IMAP access is read-only. It runs on desktop computers only, and only your own computer can connect to it.
 
 ## Download
 
-Download the file for your OS from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own window; close the window and it shuts down. No installer, no account. The [install guide](https://hwhang0917.github.io/local-eml/docs/install) explains the first-run prompt on Windows and macOS.
+Get the file for your system from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own window and quits when you close it. There's no installer and no account. Windows and macOS warn you the first time you open it; the [install guide](https://hwhang0917.github.io/local-eml/docs/install) shows how to get past that.
 
-**winget:** `winget install hwhang0917.LocalEml` (listing pending review).
+On Windows you'll also be able to use `winget install hwhang0917.LocalEml` once the listing is approved.
 
-**Run it all the time instead?** One line installs it as a background service that starts on boot and keeps fetching new IMAP mail:
+If you'd rather have it running all the time, you can install it as a background service. It starts when the computer does and can keep fetching new mail from your IMAP accounts.
 
 ```bash
 # Linux / macOS
@@ -31,24 +31,22 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-Then open <http://localhost:7878> and paste the token that `local-eml token` prints, or double-click the program to open a signed-in window. Ports, verifying downloads, uninstalling and updating are in the [install guide](https://hwhang0917.github.io/local-eml/docs/install).
+Then go to <http://localhost:7878>. The first time, it asks for a session token, and the page shows how to get one with the `local-eml token` command. Double-clicking the program also works and signs you in for you. The [install guide](https://hwhang0917.github.io/local-eml/docs/install) covers changing the port, checking downloads, updating and uninstalling.
 
-## Learn more
+## Documentation
 
-Step-by-step: [open .eml files](https://hwhang0917.github.io/local-eml/docs/how-to/open-eml-files) · [view a Google Takeout .mbox](https://hwhang0917.github.io/local-eml/docs/how-to/takeout-mbox) · [open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook) · [free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
+Step-by-step guides:
 
-The **[documentation](https://hwhang0917.github.io/local-eml/docs/)** covers everything else:
+- [Open .eml files](https://hwhang0917.github.io/local-eml/docs/how-to/open-eml-files)
+- [View a Google Takeout .mbox](https://hwhang0917.github.io/local-eml/docs/how-to/takeout-mbox)
+- [Open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook)
+- [Free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
 
-- [Importing mail](https://hwhang0917.github.io/local-eml/docs/import) from files, folders, archives, `.mbox`, `.pst`, S3 and IMAP
-- [Searching](https://hwhang0917.github.io/local-eml/docs/search), including Korean 초성검색, filters and performance
-- [Receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync) from IMAP in the background
-- [Spam & phishing](https://hwhang0917.github.io/local-eml/docs/spam-phishing) warnings and flags
-- [Privacy & your data](https://hwhang0917.github.io/local-eml/docs/privacy): where data lives, credentials, temporary sessions, deleting everything
-- [Settings & CLI](https://hwhang0917.github.io/local-eml/docs/settings-cli) and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting)
+The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
 
 ## Contributing
 
-See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) to build or run from source, and [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Library attributions are listed in-app under **Settings → Attributions**.
+[`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) explains how to build and run from source. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or pull request. Licenses for the libraries Local Eml uses are listed in the app under **Settings → Attributions**.
 
 ## License
 
