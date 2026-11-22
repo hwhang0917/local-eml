@@ -65,7 +65,7 @@ watchEffect(() => {
   <div v-if="locked" class="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
     <Lock class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
     <h1 class="text-lg font-semibold">{{ t('auth.title') }}</h1>
-    <p class="max-w-md text-sm text-muted-foreground">{{ t('auth.body') }}</p>
+    <p class="max-w-xl text-sm text-muted-foreground whitespace-pre-line text-balance break-keep">{{ t('auth.body') }}</p>
     <form class="flex gap-2 w-full max-w-md" @submit.prevent="unlock(token)">
       <input
         v-model="token"

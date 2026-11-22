@@ -40,7 +40,7 @@ async function copyCommand() {
 </script>
 
 <template>
-  <div class="w-full max-w-md rounded-sm border border-hairline p-4 text-left text-sm">
+  <div class="w-full max-w-md rounded-sm border border-hairline p-4 text-left text-sm break-keep">
     <p class="font-medium mb-3">{{ t('auth.help_title') }}</p>
     <ol class="list-decimal pl-5 space-y-3 text-muted-foreground">
       <li>

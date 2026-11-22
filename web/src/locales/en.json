@@ -10,7 +10,7 @@
   },
   "auth": {
     "title": "Sign in to Local Eml",
-    "body": "This browser has no session for the server on this port. Open Local Eml from its launcher, or get a session token with the steps below.",
+    "body": "This browser has no session for the server on this port.\nOpen Local Eml from its launcher, or get a session token with the steps below.",
     "placeholder": "Session token",
     "submit": "Unlock",
     "help_title": "Don't have a token?",
