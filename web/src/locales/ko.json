@@ -131,6 +131,7 @@
     "expand_thread": "이 대화에 메일 {count}건",
     "select_row": "이 메일 선택",
     "select_page": "이 페이지 전체 선택",
+    "bulk_actions": "일괄 작업",
     "selected_count": "{count}건 선택됨",
     "selected_threads_hint": "선택한 대화에 속한 모든 메일에 적용됩니다.",
     "bulk_mark_read": "모두 읽음으로 표시",

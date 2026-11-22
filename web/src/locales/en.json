@@ -131,6 +131,7 @@
     "expand_thread": "{count} messages in this conversation",
     "select_row": "Select this email",
     "select_page": "Select all on this page",
+    "bulk_actions": "Bulk actions",
     "selected_count": "{count} selected",
     "selected_threads_hint": "Actions apply to every message in the selected conversations.",
     "bulk_mark_read": "Mark all as read",

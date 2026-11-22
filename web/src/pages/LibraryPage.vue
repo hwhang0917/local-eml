@@ -26,6 +26,7 @@ import { useEmailActions } from '@/composables/useEmailActions'
 import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext } from '@/composables/useListContext'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
+import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -392,6 +393,10 @@ const selectionHasThreads = computed(
   () => groupThreads.value && items.value.some((e) => selected.value.has(e.sha256) && (e.thread_count ?? 0) > 1),
 )
 const bulkBusy = ref(false)
+// Compact so the action row fits the header's height; Button's sizes don't go this small.
+const bulkBtn = 'inline-flex h-7 items-center gap-1.5 rounded-sm border border-hairline bg-pearl px-2.5 text-xs '
+  + 'text-foreground hover:bg-accent disabled:opacity-50 disabled:pointer-events-none '
+  + 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 const deleteConfirmOpen = ref(false)
 
 function toggleSelected(sha: string) {
@@ -616,45 +621,14 @@ const pageInfo = computed(() => {
       </div>
     </div>
 
-    <div
-      v-if="selected.size"
-      role="toolbar"
-      :aria-label="t('library.selected_count', { count: selected.size })"
-      class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-muted/40 px-3 py-2 text-sm"
-    >
-      <span class="font-medium tabular-nums">{{ t('library.selected_count', { count: selected.size }) }}</span>
-      <span v-if="selectionHasThreads" class="text-xs text-muted-foreground">{{ t('library.selected_threads_hint') }}</span>
-      <div class="ml-auto flex flex-wrap items-center gap-2">
-        <Button v-if="readTracking" variant="outline" size="sm" :disabled="bulkBusy" @click="runBulk('read')">
-          <MailOpen class="h-4 w-4" />
-          <span class="ml-1.5">{{ t('library.bulk_mark_read') }}</span>
-        </Button>
-        <Button v-if="readTracking" variant="outline" size="sm" :disabled="bulkBusy" @click="runBulk('unread')">
-          <Mail class="h-4 w-4" />
-          <span class="ml-1.5">{{ t('library.bulk_mark_unread') }}</span>
-        </Button>
-        <Button variant="destructive" size="sm" :disabled="bulkBusy" @click="deleteConfirmOpen = true">
-          <Trash2 class="h-4 w-4" />
-          <span class="ml-1.5">{{ t('library.bulk_delete') }}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          :title="t('library.clear_selection')"
-          :aria-label="t('library.clear_selection')"
-          :disabled="bulkBusy"
-          @click="selected.clear()"
-        >
-          <X class="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
-
     <Card class="overflow-hidden" :aria-busy="loading">
       <table class="w-full text-sm">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
-          <tr>
+          <!-- With a selection the column headers are hidden, not removed, and the
+               bulk actions sit over them: the row keeps its height and every
+               column its width, so nothing below moves. -->
+          <tr :class="['h-10 relative', selected.size ? '[&>th:not(:first-child)]:invisible' : '']">
             <th scope="col" class="text-left px-3 py-2 w-10">
               <input
                 type="checkbox"
@@ -666,6 +640,47 @@ const pageInfo = computed(() => {
                 :title="t('library.select_page')"
                 @change="toggleSelectPage"
               />
+              <div
+                v-if="selected.size"
+                role="toolbar"
+                :aria-label="t('library.bulk_actions')"
+                class="absolute inset-y-0 left-10 right-0 flex items-center gap-2 whitespace-nowrap px-3
+                  normal-case font-normal text-sm"
+              >
+                <span class="font-medium tabular-nums text-foreground">{{ t('library.selected_count', { count: selected.size }) }}</span>
+                <span v-if="selectionHasThreads" class="hidden lg:inline truncate text-xs text-muted-foreground">
+                  {{ t('library.selected_threads_hint') }}
+                </span>
+                <div class="ml-auto flex items-center gap-2">
+                  <button v-if="readTracking" type="button" :class="bulkBtn" :disabled="bulkBusy" @click="runBulk('read')">
+                    <MailOpen class="h-3.5 w-3.5" />
+                    {{ t('library.bulk_mark_read') }}
+                  </button>
+                  <button v-if="readTracking" type="button" :class="bulkBtn" :disabled="bulkBusy" @click="runBulk('unread')">
+                    <Mail class="h-3.5 w-3.5" />
+                    {{ t('library.bulk_mark_unread') }}
+                  </button>
+                  <button
+                    type="button"
+                    :class="cn(bulkBtn, 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/95')"
+                    :disabled="bulkBusy"
+                    @click="deleteConfirmOpen = true"
+                  >
+                    <Trash2 class="h-3.5 w-3.5" />
+                    {{ t('library.bulk_delete') }}
+                  </button>
+                  <button
+                    type="button"
+                    :class="cn(bulkBtn, 'border-transparent bg-transparent')"
+                    :title="t('library.clear_selection')"
+                    :aria-label="t('library.clear_selection')"
+                    :disabled="bulkBusy"
+                    @click="selected.clear()"
+                  >
+                    <X class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </th>
             <th v-if="colShown('starred')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.starred') }}</span>
