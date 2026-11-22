@@ -61,22 +61,55 @@ func (s *Store) IncImportCounters(ctx context.Context, id string, processed, dup
 	return err
 }
 
-func (s *Store) GetImport(ctx context.Context, id string) (*Import, error) {
+// importCols is the projection scanImport expects, in order.
+const importCols = `id, source_kind, source_name, status, total, processed, duplicates,
+	errors, COALESCE(started_at, 0), COALESCE(finished_at, 0)`
+
+func scanImport(rs rowScanner) (Import, error) {
 	var imp Import
 	var started, finished int64
-	err := s.DB.QueryRowContext(ctx, `
-		SELECT id, source_kind, source_name, status, total, processed, duplicates,
-			errors, COALESCE(started_at, 0), COALESCE(finished_at, 0)
-		FROM imports WHERE id = ?`, id).Scan(
+	if err := rs.Scan(
 		&imp.ID, &imp.SourceKind, &imp.SourceName, &imp.Status,
 		&imp.Total, &imp.Processed, &imp.Duplicates, &imp.Errors,
-		&started, &finished)
-	if err != nil {
-		return nil, err
+		&started, &finished); err != nil {
+		return Import{}, err
 	}
 	imp.StartedAt = timeFromUnix(started)
 	imp.FinishedAt = timeFromUnix(finished)
+	return imp, nil
+}
+
+func (s *Store) GetImport(ctx context.Context, id string) (*Import, error) {
+	imp, err := scanImport(s.DB.QueryRowContext(ctx,
+		`SELECT `+importCols+` FROM imports WHERE id = ?`, id))
+	if err != nil {
+		return nil, err
+	}
 	return &imp, nil
+}
+
+// ListFinishedImports returns the jobs of one kind that reached a terminal
+// status at or after since (Unix seconds), oldest first, at most limit of
+// them. The SPA polls it for background syncs that brought in new mail.
+func (s *Store) ListFinishedImports(ctx context.Context, kind string, since int64, limit int) ([]Import, error) {
+	rows, err := s.DB.QueryContext(ctx, `
+		SELECT `+importCols+` FROM imports
+		WHERE source_kind = ? AND finished_at IS NOT NULL AND finished_at >= ?
+		ORDER BY finished_at, id
+		LIMIT ?`, kind, since, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Import{}
+	for rows.Next() {
+		imp, err := scanImport(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, imp)
+	}
+	return out, rows.Err()
 }
 
 func (s *Store) RecordImportError(ctx context.Context, id, path, message string) error {

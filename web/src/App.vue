@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
@@ -11,7 +11,9 @@ import { APP_NAME, pageTitle } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
+import { startNewMailWatcher } from '@/composables/useNewMailNotifier'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
+import TokenCommand from '@/components/TokenCommand.vue'
 import Button from '@/components/ui/Button.vue'
 import { fieldClass } from '@/lib/utils'
 import { locked, unlock } from '@/lib/auth'
@@ -23,6 +25,9 @@ const { online, checking, retry } = useHealth()
 const tour = useTour()
 const { session } = useSession()
 const token = ref('')
+
+// Polls for mail a background sync brought in; idle unless turned on.
+onMounted(startNewMailWatcher)
 
 // Two of the steps point at library controls, so the tour has to run from the
 // library route or those steps would highlight nothing.
@@ -64,7 +69,7 @@ watchEffect(() => {
   <div v-if="locked" class="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
     <Lock class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
     <h1 class="text-lg font-semibold">{{ t('auth.title') }}</h1>
-    <p class="max-w-md text-sm text-muted-foreground">{{ t('auth.body') }}</p>
+    <p class="max-w-xl text-sm text-muted-foreground whitespace-pre-line text-balance break-keep">{{ t('auth.body') }}</p>
     <form class="flex gap-2 w-full max-w-md" @submit.prevent="unlock(token)">
       <input
         v-model="token"
@@ -76,7 +81,7 @@ watchEffect(() => {
       />
       <Button type="submit" :disabled="!token.trim()">{{ t('auth.submit') }}</Button>
     </form>
-    <p class="text-xs text-muted-foreground">{{ t('auth.hint') }} <code>local-eml token</code></p>
+    <TokenCommand />
   </div>
   <template v-else>
   <!-- Desktop only. The server is loopback-only so no phone ever reaches it;
