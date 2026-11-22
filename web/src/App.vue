@@ -12,6 +12,7 @@ import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
 import ShortcutsHelp from '@/components/ShortcutsHelp.vue'
+import TokenCommand from '@/components/TokenCommand.vue'
 import Button from '@/components/ui/Button.vue'
 import { fieldClass } from '@/lib/utils'
 import { locked, unlock } from '@/lib/auth'
@@ -64,7 +65,7 @@ watchEffect(() => {
   <div v-if="locked" class="min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
     <Lock class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
     <h1 class="text-lg font-semibold">{{ t('auth.title') }}</h1>
-    <p class="max-w-md text-sm text-muted-foreground">{{ t('auth.body') }}</p>
+    <p class="max-w-xl text-sm text-muted-foreground whitespace-pre-line text-balance break-keep">{{ t('auth.body') }}</p>
     <form class="flex gap-2 w-full max-w-md" @submit.prevent="unlock(token)">
       <input
         v-model="token"
@@ -76,7 +77,7 @@ watchEffect(() => {
       />
       <Button type="submit" :disabled="!token.trim()">{{ t('auth.submit') }}</Button>
     </form>
-    <p class="text-xs text-muted-foreground">{{ t('auth.hint') }} <code>local-eml token</code></p>
+    <TokenCommand />
   </div>
   <template v-else>
   <!-- Desktop only. The server is loopback-only so no phone ever reaches it;

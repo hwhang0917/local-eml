@@ -10,10 +10,22 @@
   },
   "auth": {
     "title": "Local Eml에 로그인",
-    "body": "이 브라우저에는 이 포트의 서버 세션이 없습니다. 실행 파일로 Local Eml을 열거나, 아래 명령이 출력하는 토큰을 붙여 넣으세요.",
+    "body": "이 브라우저에는 이 포트의 서버 세션이 없습니다.\n실행 파일로 Local Eml을 열거나, 아래 순서대로 세션 토큰을 받아 붙여 넣으세요.",
     "placeholder": "세션 토큰",
     "submit": "열기",
-    "hint": "토큰 출력 명령:"
+    "help_title": "토큰이 없나요?",
+    "step_open": "{app} 앱을 여세요.",
+    "step_run": "아래 명령을 복사해 붙여 넣고 Enter를 누르세요.",
+    "step_paste": "출력된 토큰을 복사해 위 칸에 붙여 넣으세요.",
+    "app_windows": "명령 프롬프트",
+    "app_mac": "터미널",
+    "app_other": "터미널",
+    "open_windows": "Windows 키를 누르고 cmd를 입력한 뒤 Enter를 누르세요.",
+    "open_mac": "⌘ Space를 누르고 터미널을 입력한 뒤 Enter를 누르세요.",
+    "open_other": "",
+    "copy": "복사",
+    "copied": "복사됨",
+    "copy_failed": "복사하지 못했습니다. 명령을 직접 선택해 복사하세요."
   },
   "nav": {
     "library": "라이브러리",
