@@ -2,9 +2,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cn, fieldClass, segmentClass } from '@/lib/utils'
-import { formatBytes, formatEpoch } from '@/lib/format'
+import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
-import { NEW_PROFILE } from '@/composables/useS3Form'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
 import type { IMAPImportConfig, IMAPProfile } from '@/lib/api'
@@ -13,6 +12,8 @@ import Button from '@/components/ui/Button.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import S3FormCard from '@/components/S3FormCard.vue'
 import JobRunCard from '@/components/JobRunCard.vue'
+import ImapProfileCard from '@/components/ImapProfileCard.vue'
+import { Plus } from 'lucide-vue-next'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const IMAP_DEFAULT_PORT = 993
@@ -92,8 +93,9 @@ function emptyImap(): IMAPImportConfig {
 
 const imapForm = ref<IMAPImportConfig>(emptyImap())
 const imapConfirming = ref(false)
-const imapSyncEnabled = ref(false)
-const imapSyncing = ref(false)
+// Profile ids with a sync-flag save or a "Sync now" request in flight.
+const imapToggling = ref(new Set<number>())
+const imapSyncing = ref(new Set<number>())
 
 const imapValid = computed(
   () =>
@@ -106,6 +108,16 @@ const imapValid = computed(
 const imapProfiles = ref<IMAPProfile[]>([])
 const selectedImapProfileId = ref<number | null>(null)
 const imapDeleteConfirmOpen = ref(false)
+// Turning sync off drops the stored password, so it is confirmed first.
+const imapSyncOffTarget = ref<IMAPProfile | null>(null)
+const imapSyncOffOpen = computed({
+  get: () => imapSyncOffTarget.value != null,
+  set: (open: boolean) => {
+    if (!open) imapSyncOffTarget.value = null
+  },
+})
+
+const imapActiveSyncCount = computed(() => imapProfiles.value.filter((p) => p.sync_enabled).length)
 
 const activeImapProfile = computed(() =>
   imapProfiles.value.find((p) => p.id === selectedImapProfileId.value) ?? null,
@@ -170,7 +182,6 @@ onMounted(() => {
 function applyImapProfile(p: IMAPProfile | null) {
   if (!p) {
     imapForm.value = emptyImap()
-    imapSyncEnabled.value = false
     return
   }
   imapForm.value = {
@@ -180,27 +191,45 @@ function applyImapProfile(p: IMAPProfile | null) {
     password: '',
     folder: p.folder ?? IMAP_DEFAULT_FOLDER,
   }
-  imapSyncEnabled.value = p.sync_enabled
 }
 
-function onImapProfileChange(value: string) {
-  if (value === NEW_PROFILE) {
-    selectedImapProfileId.value = null
-    applyImapProfile(null)
-    return
+function selectImapProfile(p: IMAPProfile | null) {
+  selectedImapProfileId.value = p?.id ?? null
+  applyImapProfile(p)
+}
+
+function onImapSyncToggle(p: IMAPProfile, enabled: boolean) {
+  if (enabled) void setImapSync(p, true)
+  else imapSyncOffTarget.value = p
+}
+
+function confirmImapSyncOff() {
+  const p = imapSyncOffTarget.value
+  imapSyncOffTarget.value = null
+  if (p) void setImapSync(p, false)
+}
+
+// Saves the profile as stored, with only the sync flag changed, so edits
+// sitting unsaved in the form below are not swept along.
+async function setImapSync(p: IMAPProfile, enabled: boolean) {
+  imapToggling.value.add(p.id)
+  try {
+    await api.saveIMAPProfile({
+      name: p.name,
+      host: p.host,
+      port: p.port,
+      username: p.username,
+      folder: p.folder,
+      sync_enabled: enabled,
+    })
+    await loadImapProfiles()
+    toast.success(t(enabled ? 'import.imap_sync_on_toast' : 'import.imap_sync_off_toast', { name: p.name }))
+  } catch (e) {
+    toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+  } finally {
+    imapToggling.value.delete(p.id)
   }
-  const id = Number(value)
-  selectedImapProfileId.value = id
-  applyImapProfile(imapProfiles.value.find((p) => p.id === id) ?? null)
 }
-
-const imapProfileSelectValue = computed(() =>
-  selectedImapProfileId.value == null ? NEW_PROFILE : String(selectedImapProfileId.value),
-)
-
-const imapProfileSelectLabel = computed(() =>
-  activeImapProfile.value?.name ?? t('import.imap_profile_new'),
-)
 
 async function saveImapProfile() {
   const existing = activeImapProfile.value
@@ -218,7 +247,8 @@ async function saveImapProfile() {
       port: imapForm.value.port || undefined,
       username: imapForm.value.username.trim(),
       folder: imapForm.value.folder?.trim() || undefined,
-      sync_enabled: imapSyncEnabled.value,
+      // The card's switch owns this flag; a form save keeps whatever it is.
+      sync_enabled: existing?.sync_enabled ?? false,
     })
     await loadImapProfiles()
     selectedImapProfileId.value = saved.id
@@ -227,17 +257,15 @@ async function saveImapProfile() {
   }
 }
 
-async function syncImapNow() {
-  const p = activeImapProfile.value
-  if (!p) return
-  imapSyncing.value = true
+async function syncImapNow(p: IMAPProfile) {
+  imapSyncing.value.add(p.id)
   try {
     await api.syncIMAPProfile(p.id)
     toast.success(t('import.imap_sync_started'))
   } catch (e) {
     toast.error(t('import.imap_sync_error'), { description: String(e) })
   } finally {
-    imapSyncing.value = false
+    imapSyncing.value.delete(p.id)
     await loadImapProfiles()
   }
 }
@@ -389,59 +417,61 @@ async function confirmImap() {
           <p class="text-sm text-muted-foreground">{{ t('import.imap_hint') }}</p>
         </div>
 
-        <div class="flex items-end gap-2">
-          <div class="space-y-1 flex-1 max-w-xs">
-            <span class="text-sm">{{ t('import.imap_profile') }}</span>
-            <Select
-              :model-value="imapProfileSelectValue"
-              @update:model-value="(v) => v && onImapProfileChange(String(v))"
-            >
-              <SelectTrigger class="w-full">
-                <SelectValue>{{ imapProfileSelectLabel }}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem :value="NEW_PROFILE">{{ t('import.imap_profile_new') }}</SelectItem>
-                <SelectItem v-for="p in imapProfiles" :key="p.id" :value="String(p.id)">
-                  {{ p.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+        <section class="space-y-2" :aria-label="t('import.imap_profiles_title')">
+          <div class="flex items-baseline justify-between gap-3">
+            <h4 class="text-sm font-medium">{{ t('import.imap_profiles_title') }}</h4>
+            <span v-if="imapProfiles.length" class="text-xs text-muted-foreground">
+              {{ t('import.imap_profiles_active', { n: imapActiveSyncCount, total: imapProfiles.length }) }}
+            </span>
           </div>
-          <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
-            {{ t('import.imap_profile_save') }}
-          </Button>
-          <Button variant="outline" :disabled="!activeImapProfile" @click="imapDeleteConfirmOpen = true">
-            {{ t('import.imap_profile_delete') }}
-          </Button>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <ImapProfileCard
+              v-for="p in imapProfiles"
+              :key="p.id"
+              :profile="p"
+              :selected="p.id === selectedImapProfileId"
+              :toggling="imapToggling.has(p.id)"
+              :syncing="imapSyncing.has(p.id)"
+              @select="selectImapProfile(p)"
+              @toggle-sync="(v) => onImapSyncToggle(p, v)"
+              @sync-now="syncImapNow(p)"
+            />
+            <button
+              type="button"
+              :class="cn(
+                'rounded-md border border-dashed p-3 min-h-[5.5rem] flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer',
+                selectedImapProfileId == null
+                  ? 'border-primary text-foreground bg-accent/40'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
+              )"
+              :aria-pressed="selectedImapProfileId == null"
+              @click="selectImapProfile(null)"
+            >
+              <Plus class="h-4 w-4" aria-hidden="true" />
+              {{ t('import.imap_profile_new_card') }}
+            </button>
+          </div>
           <ConfirmDialog
-            v-model:open="imapDeleteConfirmOpen"
-            :title="t('import.imap_profile_delete_confirm', { name: activeImapProfile?.name ?? '' })"
-            :description="t('import.profile_delete_body')"
-            :confirm-label="t('import.imap_profile_delete')"
+            v-model:open="imapSyncOffOpen"
+            :title="t('import.imap_sync_off_confirm', { name: imapSyncOffTarget?.name ?? '' })"
+            :description="t('import.imap_sync_off_body')"
+            :confirm-label="t('import.imap_sync_off_action')"
             :cancel-label="t('import.cancel')"
-            destructive
-            @confirm="deleteImapProfile"
+            @confirm="confirmImapSyncOff"
           />
-        </div>
+        </section>
 
         <div class="rounded-md border border-border bg-muted/30 p-3 space-y-2">
-          <label class="flex items-start gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              class="mt-0.5"
-              :checked="imapSyncEnabled"
-              @change="imapSyncEnabled = ($event.target as HTMLInputElement).checked"
-            />
-            <span class="text-sm">
-              <span class="font-medium">{{ t('import.imap_sync_label') }}</span>
-              <span class="block text-xs text-muted-foreground mt-0.5">
-                {{ syncIntervalSeconds === 0
-                  ? t('import.imap_sync_help_off')
-                  : t('import.imap_sync_help', { interval: syncIntervalLabel }) }}
-              </span>
+          <div class="text-sm">
+            <span class="font-medium">{{ t('import.imap_sync_label') }}</span>
+            <span class="block text-xs text-muted-foreground mt-0.5">
+              {{ syncIntervalSeconds === 0
+                ? t('import.imap_sync_help_off')
+                : t('import.imap_sync_help', { interval: syncIntervalLabel }) }}
+              {{ t('import.imap_sync_help_cards') }}
             </span>
-          </label>
-          <div class="flex items-center gap-2 pl-6">
+          </div>
+          <div class="flex items-center gap-2">
             <span class="text-xs text-muted-foreground">{{ t('import.sync_interval_label') }}</span>
             <Select
               :model-value="String(syncIntervalSeconds)"
@@ -456,27 +486,6 @@ async function confirmImap() {
                 </SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div
-            v-if="activeImapProfile && activeImapProfile.sync_enabled"
-            class="flex items-center gap-3 text-xs text-muted-foreground pl-6"
-          >
-            <span v-if="activeImapProfile.last_synced_at">
-              {{ t('import.imap_last_synced', { when: formatEpoch(activeImapProfile.last_synced_at) }) }}
-            </span>
-            <span v-else>{{ t('import.imap_never_synced') }}</span>
-            <Button
-              v-if="activeImapProfile.has_password"
-              size="sm"
-              variant="outline"
-              :disabled="imapSyncing"
-              @click="syncImapNow"
-            >
-              {{ imapSyncing ? t('import.imap_sync_running') : t('import.imap_sync_now') }}
-            </Button>
-            <span v-else class="text-amber-600">
-              · {{ t('import.imap_sync_needs_password') }}
-            </span>
           </div>
         </div>
 
@@ -503,8 +512,23 @@ async function confirmImap() {
           </label>
         </div>
 
-        <div class="flex justify-end">
-          <Button :disabled="!imapValid" @click="reviewImap">{{ t('import.review') }}</Button>
+        <div class="flex items-center gap-2">
+          <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
+            {{ activeImapProfile ? t('import.imap_profile_save') : t('import.imap_profile_save_new') }}
+          </Button>
+          <Button v-if="activeImapProfile" variant="outline" @click="imapDeleteConfirmOpen = true">
+            {{ t('import.imap_profile_delete') }}
+          </Button>
+          <ConfirmDialog
+            v-model:open="imapDeleteConfirmOpen"
+            :title="t('import.imap_profile_delete_confirm', { name: activeImapProfile?.name ?? '' })"
+            :description="t('import.profile_delete_body')"
+            :confirm-label="t('import.imap_profile_delete')"
+            :cancel-label="t('import.cancel')"
+            destructive
+            @confirm="deleteImapProfile"
+          />
+          <Button class="ml-auto" :disabled="!imapValid" @click="reviewImap">{{ t('import.review') }}</Button>
         </div>
       </Card>
     </template>
