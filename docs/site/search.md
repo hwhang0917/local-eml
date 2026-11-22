@@ -21,6 +21,15 @@ You can type just the first consonant of each Korean syllable. `ㅎㄱ` finds `�
 - **Date range** shows only messages sent between two dates.
 - **Group by conversation** shows each conversation as one row, using its newest message. Click the count to see the rest.
 
+## Selecting several messages
+
+Tick the box at the start of a row to select a message, or press `x` on the highlighted one. The box in the header selects everything on the current page. Once something is selected, the header shows what you can do with it:
+
+- **Mark all as read** and **Mark all as unread**, if read tracking is on (see [Settings](./settings-cli#settings)).
+- **Delete all**, which asks you to confirm first. The messages and their `.eml` files are removed from your computer, and this can't be undone. If you import from the same source again, they'll come back.
+
+With **Group by conversation** on, selecting a row selects the whole conversation, and the action applies to every message in it.
+
 ## Reading a message
 
 HTML email is shown in a locked-down frame so scripts in the email can't run. Images hosted on the internet are blocked until you click to load them, which stops senders from seeing that you opened the message. Before a link opens, Local Eml shows you where it really goes.

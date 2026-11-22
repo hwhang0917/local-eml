@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-Then go to <http://localhost:7878> and paste in the token that `local-eml token` prints. Double-clicking the program also works and signs you in for you. The [install guide](https://hwhang0917.github.io/local-eml/docs/install) covers changing the port, checking downloads, updating and uninstalling.
+Then go to <http://localhost:7878>. The first time, it asks for a session token, and the page shows how to get one with the `local-eml token` command. Double-clicking the program also works and signs you in for you. The [install guide](https://hwhang0917.github.io/local-eml/docs/install) covers changing the port, checking downloads, updating and uninstalling.
 
 ## Documentation
 

@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-The script downloads the latest release, checks that the file wasn't corrupted or altered, and sets Local Eml up to start automatically. When it's done, open <http://localhost:7878>. The first time, the page asks for a session token. Run `local-eml token` to print it, then paste it in. Double-clicking the program also works and signs you in automatically. See [session token](./settings-cli#session-token) for why this is needed.
+The script downloads the latest release, checks that the file wasn't corrupted or altered, and sets Local Eml up to start automatically. When it's done, open <http://localhost:7878>. The first time, the page asks for a session token. The page walks you through getting one: open Command Prompt (Windows) or Terminal (macOS), copy the command with the **Copy** button, paste it there and press Enter, then paste the token it prints back into the page. Double-clicking the program also works and signs you in automatically. See [session token](./settings-cli#session-token) for why this is needed.
 
 To use a port other than 7878, set `LOCAL_EML_PORT` before running the script, for example `LOCAL_EML_PORT=9000 curl … | sh`, or `$env:LOCAL_EML_PORT=9000` in PowerShell. Whichever port you choose, only your own computer can connect to it.
 

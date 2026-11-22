@@ -31,7 +31,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-설치가 끝나면 <http://localhost:7878>에 접속해 `local-eml token` 명령이 보여 주는 토큰을 붙여 넣으세요. 실행 파일을 더블클릭해도 되는데, 이때는 토큰 없이 바로 열립니다. 포트 바꾸기, 내려받은 파일 확인, 업데이트, 삭제 방법은 [설치 안내](https://hwhang0917.github.io/local-eml/docs/ko/install)를 참고하세요.
+설치가 끝나면 <http://localhost:7878>에 접속하세요. 처음에는 세션 토큰을 묻는데, `local-eml token` 명령으로 토큰을 받는 방법이 화면에 나옵니다. 실행 파일을 더블클릭해도 되는데, 이때는 토큰 없이 바로 열립니다. 포트 바꾸기, 내려받은 파일 확인, 업데이트, 삭제 방법은 [설치 안내](https://hwhang0917.github.io/local-eml/docs/ko/install)를 참고하세요.
 
 ## 문서
 

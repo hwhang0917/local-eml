@@ -38,7 +38,7 @@ curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/i
 irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
 ```
 
-설치 스크립트가 최신 릴리스를 내려받아 파일이 손상되거나 바뀌지 않았는지 확인하고, 컴퓨터를 켤 때 자동으로 실행되도록 등록합니다. 설치가 끝나면 <http://localhost:7878>에 접속하세요. 처음에는 세션 토큰을 입력하라고 나옵니다. `local-eml token`을 실행하면 토큰이 나오니 그대로 붙여 넣으면 됩니다. 실행 파일을 더블클릭해도 되는데, 이때는 자동으로 로그인됩니다. 토큰이 왜 필요한지는 [세션 토큰](./settings-cli#세션-토큰)에 설명해 두었습니다.
+설치 스크립트가 최신 릴리스를 내려받아 파일이 손상되거나 바뀌지 않았는지 확인하고, 컴퓨터를 켤 때 자동으로 실행되도록 등록합니다. 설치가 끝나면 <http://localhost:7878>에 접속하세요. 처음에는 세션 토큰을 입력하라고 나옵니다. 화면에 받는 방법이 순서대로 나와 있습니다. 명령 프롬프트(Windows)나 터미널(macOS)을 열고, **복사** 버튼으로 복사한 명령을 붙여 넣고 Enter를 누른 다음, 출력된 토큰을 화면에 붙여 넣으세요. 실행 파일을 더블클릭해도 되는데, 이때는 자동으로 로그인됩니다. 토큰이 왜 필요한지는 [세션 토큰](./settings-cli#세션-토큰)에 설명해 두었습니다.
 
 7878이 아닌 다른 포트를 쓰려면 스크립트를 실행하기 전에 `LOCAL_EML_PORT`를 지정하세요. 예를 들어 `LOCAL_EML_PORT=9000 curl … | sh`, PowerShell에서는 `$env:LOCAL_EML_PORT=9000`입니다. 어떤 포트를 쓰든 내 컴퓨터에서만 접속할 수 있습니다.
 
