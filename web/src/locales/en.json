@@ -294,6 +294,11 @@
     "sync_interval_minutes": "{n} minutes",
     "sync_interval_hours": "{n} hour | {n} hours",
     "sync_interval_error": "Failed to save the check interval",
+    "notify_label": "Notify me when new mail arrives",
+    "notify_help": "Shows a desktop notification when background sync brings in new mail, while Local Eml is open in a browser tab. Your browser asks for permission first.",
+    "notify_blocked": "Notifications are blocked for this site. Allow them in your browser's site settings, then turn this on again.",
+    "notify_denied_toast": "Notifications weren't allowed, so this stays off",
+    "notify_unsupported": "This browser doesn't support notifications.",
     "imap_sync_needs_password": "Run an import once to seed the password",
     "imap_sync_now": "Sync now",
     "imap_sync_running": "Syncing…",
@@ -318,6 +323,14 @@
     "abort": "Cancel",
     "cancel_error": "Couldn't cancel job",
     "s3_creds_optional": "Leave Access Key ID and Secret Access Key blank to use the credentials in ~/.aws/credentials or the AWS_* environment variables."
+  },
+  "notify": {
+    "enabled_title": "New mail notifications are on",
+    "enabled_body": "You'll get a notification here when background sync brings in new mail.",
+    "count_title": "{n} new email | {n} new emails",
+    "latest_body": "Latest from {from}: {subject}",
+    "generic_body": "Background sync brought in new mail.",
+    "no_subject": "(no subject)"
   },
   "export": {
     "mode_zip": "Download ZIP",

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { cn, fieldClass, segmentClass } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
+import { useNewMailNotifier } from '@/composables/useNewMailNotifier'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
 import type { IMAPImportConfig, IMAPProfile } from '@/lib/api'
@@ -134,6 +135,25 @@ async function loadImapProfiles() {
     imapProfiles.value = await api.listIMAPProfiles()
   } catch (e) {
     toast.error(t('import.imap_profile_load_error'), { description: String(e) })
+  }
+}
+
+// --- new-mail notifications ---
+const notifier = useNewMailNotifier()
+const notifyBusy = ref(false)
+
+async function onNotifyToggle(e: Event) {
+  const input = e.target as HTMLInputElement
+  const want = input.checked
+  // The box shows the real state, which only changes once the browser answers.
+  input.checked = notifier.active.value
+  notifyBusy.value = true
+  try {
+    const res = await notifier.setEnabled(want)
+    if (res === 'denied') toast.warning(t('import.notify_denied_toast'))
+    else if (res === 'unsupported') toast.warning(t('import.notify_unsupported'))
+  } finally {
+    notifyBusy.value = false
   }
 }
 
@@ -487,6 +507,30 @@ async function confirmImap() {
               </SelectContent>
             </Select>
           </div>
+          <label class="flex items-start gap-2 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              class="mt-0.5"
+              :checked="notifier.active.value"
+              :disabled="notifyBusy || notifier.permission.value === 'unsupported'"
+              data-testid="notify-new-mail"
+              @change="onNotifyToggle"
+            />
+            <span class="text-sm">
+              {{ t('import.notify_label') }}
+              <span class="block text-xs text-muted-foreground mt-0.5">{{ t('import.notify_help') }}</span>
+              <span
+                v-if="notifier.permission.value === 'denied'"
+                class="block text-xs text-amber-600 mt-0.5"
+                role="status"
+              >{{ t('import.notify_blocked') }}</span>
+              <span
+                v-else-if="notifier.permission.value === 'unsupported'"
+                class="block text-xs text-amber-600 mt-0.5"
+                role="status"
+              >{{ t('import.notify_unsupported') }}</span>
+            </span>
+          </label>
         </div>
 
         <div class="grid gap-4 sm:grid-cols-2">

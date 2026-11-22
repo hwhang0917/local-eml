@@ -294,6 +294,11 @@
     "sync_interval_minutes": "{n}분",
     "sync_interval_hours": "{n}시간",
     "sync_interval_error": "확인 주기를 저장하지 못했습니다",
+    "notify_label": "새 메일이 오면 알림 받기",
+    "notify_help": "Local Eml이 브라우저 탭에 열려 있는 동안, 백그라운드 동기화로 새 메일이 들어오면 데스크톱 알림을 보여줘요. 먼저 브라우저가 권한을 물어봐요.",
+    "notify_blocked": "이 사이트의 알림이 차단되어 있어요. 브라우저의 사이트 설정에서 알림을 허용한 뒤 다시 켜 주세요.",
+    "notify_denied_toast": "알림이 허용되지 않아 꺼진 상태로 둘게요",
+    "notify_unsupported": "이 브라우저는 알림을 지원하지 않아요.",
     "imap_sync_needs_password": "한 번 가져오기를 실행해 비밀번호를 등록해 주세요",
     "imap_sync_now": "지금 동기화",
     "imap_sync_running": "동기화 중…",
@@ -318,6 +323,14 @@
     "abort": "취소",
     "cancel_error": "작업을 취소하지 못했어요",
     "s3_creds_optional": "액세스 키 ID와 시크릿 액세스 키를 비워두면 ~/.aws/credentials 또는 AWS_* 환경 변수의 자격 증명을 사용합니다."
+  },
+  "notify": {
+    "enabled_title": "새 메일 알림이 켜졌어요",
+    "enabled_body": "백그라운드 동기화로 새 메일이 들어오면 여기로 알려 드릴게요.",
+    "count_title": "새 메일 {n}통",
+    "latest_body": "최근 메일 {from}: {subject}",
+    "generic_body": "백그라운드 동기화로 새 메일이 들어왔어요.",
+    "no_subject": "(제목 없음)"
   },
   "export": {
     "mode_zip": "ZIP 다운로드",
