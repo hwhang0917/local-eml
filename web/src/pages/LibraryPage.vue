@@ -3,7 +3,7 @@ import { ref, watch, onBeforeUpdate, onMounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, Mail, MailOpen, MessagesSquare, RotateCcw, Star, TriangleAlert, X } from 'lucide-vue-next'
+import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, Mail, MailOpen, MessagesSquare, RotateCcw, Star, Trash2, TriangleAlert, X } from 'lucide-vue-next'
 import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import {
   TooltipRoot,
   TooltipTrigger,
 } from 'reka-ui'
-import { api, type Email, type EmailListParams, type PartInfo } from '@/lib/api'
+import { api, type BulkAction, type Email, type EmailListParams, type PartInfo } from '@/lib/api'
 import { attachmentName, dateFormat, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
 import { useTour } from '@/composables/useTour'
@@ -29,6 +29,7 @@ import { hasModifier, isTypingTarget } from '@/lib/keys'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
@@ -70,7 +71,8 @@ function toggleCol(c: HideableCol) {
 // can't skew the colspan.
 // The read column is not in HIDEABLE_COLS: it exists only while read tracking is on.
 const { enabled: readTracking } = useReadTracking()
-const colCount = computed(() => 1 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
+// The leading 2 are the selection checkbox and the subject.
+const colCount = computed(() => 2 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
 
 function str(v: unknown, def = ''): string {
   return typeof v === 'string' ? v : def
@@ -140,6 +142,8 @@ const listParams = computed<EmailListParams>(() => ({
 async function load() {
   loading.value = true
   expandedThreads.value.clear()
+  // A selection belongs to the page it was made on; a new query is a new page.
+  selected.value.clear()
   try {
     const r = await api.listEmails({ ...listParams.value, limit: limit.value, offset: offset.value })
     items.value = r.items
@@ -235,6 +239,11 @@ function onKeydown(e: KeyboardEvent) {
     case 's': {
       const cur = focusedRow()
       if (cur >= 0) toggleStar(items.value[cur])
+      break
+    }
+    case 'x': {
+      const cur = focusedRow()
+      if (cur >= 0) toggleSelected(items.value[cur].sha256)
       break
     }
     case '/':
@@ -370,6 +379,48 @@ async function toggleStar(e: Email) {
 async function toggleRead(e: Email) {
   const next = !e.read
   if (await actions.toggleRead(e) && unreadOnly.value && next) dropRow(e)
+}
+
+// Bulk selection. Keyed by sha, holding top-level rows only: in grouped mode a
+// row stands for its conversation, and the server widens it to every member.
+const selected = ref(new Set<string>())
+const allSelected = computed(
+  () => items.value.length > 0 && items.value.every((e) => selected.value.has(e.sha256)),
+)
+const someSelected = computed(() => selected.value.size > 0 && !allSelected.value)
+const selectionHasThreads = computed(
+  () => groupThreads.value && items.value.some((e) => selected.value.has(e.sha256) && (e.thread_count ?? 0) > 1),
+)
+const bulkBusy = ref(false)
+const deleteConfirmOpen = ref(false)
+
+function toggleSelected(sha: string) {
+  const s = selected.value
+  if (s.has(sha)) s.delete(sha)
+  else s.add(sha)
+}
+
+function toggleSelectPage() {
+  if (allSelected.value) selected.value.clear()
+  else for (const e of items.value) selected.value.add(e.sha256)
+}
+
+async function runBulk(action: BulkAction) {
+  const shas = [...selected.value]
+  if (shas.length === 0 || bulkBusy.value) return
+  bulkBusy.value = true
+  try {
+    const r = await api.bulkEmails(action, shas, groupThreads.value)
+    toast.success(t(`library.bulk_${action}_done`, { count: r.affected }, r.affected))
+    // Refetch rather than patch rows: deletes shift the page and a read change
+    // can move rows in or out of the unread filter.
+    await load()
+    if (items.value.length === 0 && offset.value > 0) goPrevPage()
+  } catch (err) {
+    toast.error(t('library.bulk_error'), { description: String(err) })
+  } finally {
+    bulkBusy.value = false
+  }
 }
 
 const { byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
@@ -565,11 +616,57 @@ const pageInfo = computed(() => {
       </div>
     </div>
 
+    <div
+      v-if="selected.size"
+      role="toolbar"
+      :aria-label="t('library.selected_count', { count: selected.size })"
+      class="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-hairline bg-muted/40 px-3 py-2 text-sm"
+    >
+      <span class="font-medium tabular-nums">{{ t('library.selected_count', { count: selected.size }) }}</span>
+      <span v-if="selectionHasThreads" class="text-xs text-muted-foreground">{{ t('library.selected_threads_hint') }}</span>
+      <div class="ml-auto flex flex-wrap items-center gap-2">
+        <Button v-if="readTracking" variant="outline" size="sm" :disabled="bulkBusy" @click="runBulk('read')">
+          <MailOpen class="h-4 w-4" />
+          <span class="ml-1.5">{{ t('library.bulk_mark_read') }}</span>
+        </Button>
+        <Button v-if="readTracking" variant="outline" size="sm" :disabled="bulkBusy" @click="runBulk('unread')">
+          <Mail class="h-4 w-4" />
+          <span class="ml-1.5">{{ t('library.bulk_mark_unread') }}</span>
+        </Button>
+        <Button variant="destructive" size="sm" :disabled="bulkBusy" @click="deleteConfirmOpen = true">
+          <Trash2 class="h-4 w-4" />
+          <span class="ml-1.5">{{ t('library.bulk_delete') }}</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          :title="t('library.clear_selection')"
+          :aria-label="t('library.clear_selection')"
+          :disabled="bulkBusy"
+          @click="selected.clear()"
+        >
+          <X class="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+
     <Card class="overflow-hidden" :aria-busy="loading">
       <table class="w-full text-sm">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr>
+            <th scope="col" class="text-left px-3 py-2 w-10">
+              <input
+                type="checkbox"
+                class="h-4 w-4 align-middle accent-primary cursor-pointer disabled:cursor-default"
+                :checked="allSelected"
+                :indeterminate="someSelected"
+                :disabled="items.length === 0"
+                :aria-label="t('library.select_page')"
+                :title="t('library.select_page')"
+                @change="toggleSelectPage"
+              />
+            </th>
             <th v-if="colShown('starred')" scope="col" class="text-left px-3 py-2 w-10">
               <span class="sr-only">{{ t('library.col.starred') }}</span>
             </th>
@@ -604,11 +701,22 @@ const pageInfo = computed(() => {
           </tr>
           <template v-for="(e, i) in items" :key="e.sha256">
           <tr
-            class="border-t hover:bg-accent/50 cursor-pointer"
+            :class="['border-t hover:bg-accent/50 cursor-pointer', selected.has(e.sha256) ? 'bg-accent/30' : '']"
             @click="rememberPosition(i); openEmail(e.sha256, $event)"
             @auxclick="rememberPosition(i); openEmailAux(e.sha256, $event)"
             @mousedown.middle.prevent
           >
+            <!-- The whole cell toggles, so a near miss doesn't open the email. -->
+            <td class="px-3 py-2" @click.stop="toggleSelected(e.sha256)" @auxclick.stop>
+              <input
+                type="checkbox"
+                class="h-4 w-4 align-middle accent-primary cursor-pointer"
+                :checked="selected.has(e.sha256)"
+                :aria-label="t('library.select_row')"
+                @click.stop
+                @change="toggleSelected(e.sha256)"
+              />
+            </td>
             <td v-if="colShown('starred')" class="px-3 py-2">
               <button
                 type="button"
@@ -747,6 +855,7 @@ const pageInfo = computed(() => {
             @auxclick="openEmailAux(m.sha256, $event)"
             @mousedown.middle.prevent
           >
+            <td class="px-3 py-2"></td>
             <td v-if="colShown('starred')" class="px-3 py-2"></td>
             <td v-if="readTracking" class="px-3 py-2">
               <button
@@ -800,6 +909,18 @@ const pageInfo = computed(() => {
         @next="goNextPage"
       />
     </div>
+
+    <ConfirmDialog
+      v-model:open="deleteConfirmOpen"
+      :title="selectionHasThreads
+        ? t('library.bulk_delete_title_threads', { count: selected.size }, selected.size)
+        : t('library.bulk_delete_title', { count: selected.size }, selected.size)"
+      :description="t('library.bulk_delete_body')"
+      :confirm-label="t('library.bulk_delete_confirm')"
+      :cancel-label="t('library.bulk_delete_cancel')"
+      destructive
+      @confirm="runBulk('delete')"
+    />
   </section>
 </template>
 
