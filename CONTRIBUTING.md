@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for taking an interest in Local Eml. Issues and pull requests are both welcome; this page tells you what makes them easy to act on.
+Issues and pull requests are both welcome. This page explains what makes them easy to act on.
 
 ## Reporting a bug
 
@@ -9,18 +9,18 @@ Open a [GitHub issue](https://github.com/hwhang0917/local-eml/issues/new) with:
 - What you did, what you expected, and what happened instead.
 - Your OS and the output of `local-eml version`.
 - How you run it: the installer (background service) or double-click app mode.
-- The relevant lines from the log at `~/.local-eml/logs/local-eml.log` (`%USERPROFILE%\.local-eml\logs\` on Windows). **The log contains subjects and addresses from your mail — redact anything private before pasting.**
+- The relevant lines from the log at `~/.local-eml/logs/local-eml.log` (`%USERPROFILE%\.local-eml\logs\` on Windows). The log contains subjects and addresses from your mail, so remove anything private before pasting it.
 - For parsing or rendering bugs, a sample `.eml` that reproduces it, with personal content replaced. A message you wrote to yourself is ideal.
 
 For a security issue, do not open a public issue. Use the repository's **Security → Report a vulnerability** form instead.
 
 ## Suggesting a feature
 
-Open an issue and describe the problem you are trying to solve, not only the solution. A few things are deliberate and unlikely to change, so a proposal that fits them has a much better chance:
+Open an issue and describe the problem you are trying to solve, not only the solution. A few things are deliberate and unlikely to change, so proposals that fit them are much more likely to be accepted:
 
-- It is an **archive**, not a mail client: no composing, sending, or replying, and IMAP stays read-only.
+- It is an archive, not a mail client: no composing, sending, or replying, and IMAP stays read-only.
 - It only ever listens on `127.0.0.1`.
-- It ships as **one pure-Go binary**. Anything that needs CGO breaks the cross-compile matrix in `release.yml`.
+- It ships as one pure-Go binary. Anything that needs CGO breaks the cross-compile matrix in `release.yml`.
 - Nothing about your mail leaves your machine.
 
 ## Pull requests
@@ -43,7 +43,7 @@ Do not commit `web/dist/` output or `VERSION` bumps; releases are cut by the mai
 
 ## Adding a language
 
-Translations are very welcome. To add a locale:
+Translations are welcome. To add a locale:
 
 1. Copy `web/src/locales/en.json` to `<code>.json` and translate the values, keeping every key.
 2. Register the code in `web/src/i18n.ts`: the `Locale` type, the `messages` map, and `detectInitial` (stored value and browser-language detection).

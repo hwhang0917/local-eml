@@ -1,29 +1,29 @@
 # Spam and phishing
 
-Local Eml has two separate tools: a warning that's computed, and a flag that you set.
+Local Eml warns you about messages that look like phishing, and lets you mark messages as spam or phishing yourself. These are separate features.
 
 ## Phishing warnings
 
-Every message is checked offline for structural signs of phishing. There are no keyword lists and nothing is sent anywhere. The signals are:
+Every message is checked on your computer for common signs of phishing. Nothing is sent anywhere, and it doesn't rely on lists of suspicious words. It looks for:
 
-- Link text names one site while the link goes to another.
-- A link to a bare IP address.
-- A lookalike or non-ASCII domain.
-- Failed SPF, DKIM or DMARC in the message headers.
-- A Reply-To on a different site than the sender.
-- A display name that embeds an address on another site.
-- An executable or script attachment.
-- A form or password field in the body.
+- A link whose text shows one website but actually goes to another
+- A link to a bare IP address instead of a website name
+- A website name made to look like another one, or one that uses unusual characters
+- A message that fails the sender checks mail servers use (SPF, DKIM or DMARC)
+- Replies that would go to a different website than the sender's
+- A sender name that contains an email address from a different website
+- An attached program or script
+- A form or password box inside the message
 
-A message with any of these shows an amber banner in the viewer and a warning icon in the list. It's a warning, never a verdict: nothing is hidden automatically.
+If a message has any of these, you'll see a yellow banner when you open it and a warning icon in the list. It's only a warning. Nothing is hidden automatically.
 
-If you know a message is fine, choose **Not spam** from the banner or the flag menu. The warning disappears for that message only. Turn warnings off entirely under **Settings → Spam & phishing**.
+If you know a message is fine, choose **Not spam** on the banner or from the flag menu. The warning goes away for that message only. To turn warnings off completely, go to **Settings → Spam & phishing**.
 
-## Flagging a message
+## Marking a message as spam or phishing
 
-The shield icon in the viewer flags a message as **Spam** or **Phishing**. Flagged mail is:
+Use the shield icon while reading a message to mark it as **Spam** or **Phishing**. Marked messages are:
 
-- Hidden from the library and from conversation views.
-- Shown as plain text only when opened: no HTML, no images, no attachments, no clickable links. The server refuses to serve those parts, so this holds even if a page asks for them.
+- Hidden from the library and from conversations.
+- Shown as plain text only. Formatting, images, attachments and links are all turned off. Local Eml refuses to load those parts, so they stay off even if something tries to request them.
 
-**Settings → Spam & phishing** lists everything you've flagged, and a button there unflags a message.
+**Settings → Spam & phishing** lists everything you've marked, and you can unmark messages there.

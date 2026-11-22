@@ -104,7 +104,7 @@
         `<a href="${ASSET('local-eml-darwin-arm64.app.zip')}"><code>local-eml-darwin-arm64.app.zip</code></a>(Apple silicon) 또는 <a href="${ASSET('local-eml-darwin-amd64.app.zip')}"><code>local-eml-darwin-amd64.app.zip</code></a>(Intel)를 내려받아 압축을 풀고 <strong>Local Eml</strong>을 더블클릭하세요. 개발자를 확인할 수 없다고 나오면 <strong>시스템 설정 → 개인정보 보호 및 보안</strong>에서 <strong>그래도 열기</strong>를 누른 뒤 다시 여세요.`,
       'install.linux': `<a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>를 내려받아 실행 권한을 주고(<code>chmod +x</code>) 실행하세요. 브라우저에서 열립니다.`,
       'install.howto':
-        '따라하기: <a href="docs/ko/how-to/open-eml-files">.eml 파일 열기</a> · <a href="docs/ko/how-to/takeout-mbox">Google 테이크아웃 .mbox 가져오기</a> · <a href="docs/ko/how-to/pst-without-outlook">Outlook 없이 .pst 열기</a> · <a href="docs/ko/how-to/free-up-gmail">Gmail 용량 비우기</a>',
+        '따라하기: <a href="docs/ko/how-to/open-eml-files">.eml 파일 열기</a> · <a href="docs/ko/how-to/takeout-mbox">Google 테이크아웃 .mbox 가져오기</a> · <a href="docs/ko/how-to/pst-without-outlook">Outlook 없이 .pst 열기</a> · <a href="docs/ko/how-to/free-up-gmail">Gmail 용량 확보하기</a>',
       'install.svc.title': '항상 켜 두고 싶다면',
       'install.svc.sub': '한 줄이면 부팅 시 자동으로 시작되고 새 IMAP 메일을 계속 받아오는 백그라운드 서비스로 설치됩니다. 최신 릴리스를 내려받아 무결성을 먼저 확인합니다.',
       'install.copy': '복사',

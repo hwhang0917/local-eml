@@ -1,41 +1,41 @@
 # Searching and browsing
 
-The library page is the home screen: a list of your mail with search, filters and a reading pane one click away.
+The **Library** page is where you'll spend most of your time. It lists your mail, with search and filters at the top. Click a message to read it.
 
 ![The library](https://hwhang0917.github.io/local-eml/img/en/library.webp)
 
-## Full-text search
+## Search
 
-The search box matches sender, subject and body at once. Korean and other CJK languages work out of the box; the index is built with SQLite FTS5.
+The search box looks through the sender, subject and body of every message. Korean, Japanese and Chinese text work without any setup.
 
-### 초성검색
+### 초성검색 (Korean initial-consonant search)
 
-Type only the initial consonants of Hangul syllables to match any word that starts with them. `ㅎㄱ` finds `한국`, `ㅇㅁ` finds `이메일`. It works across the whole library.
+You can type just the first consonant of each Korean syllable. `ㅎㄱ` finds `한국`, and `ㅇㅁ` finds `이메일`. This works across your whole library.
 
 ![Search results](https://hwhang0917.github.io/local-eml/img/en/search.webp)
 
 ## Filters
 
-- **Starred** shows only messages you starred.
-- **Categories** are a fixed set of colours you can name under **Settings → Categories**. Assign one from the list or the viewer, then filter by it.
-- **Date range** limits the list to messages sent between two dates.
-- **Group by conversation** collapses each thread to its newest message, with a count you can expand.
+- **Starred** shows only the messages you've starred.
+- **Categories** are a set of colours. Give them names under **Settings → Categories**, assign one to a message from the list or while reading it, and then filter by it.
+- **Date range** shows only messages sent between two dates.
+- **Group by conversation** shows each conversation as one row, using its newest message. Click the count to see the rest.
 
-## Reading
+## Reading a message
 
-HTML messages render inside a sandboxed frame. Remote images are blocked by default and shown as a placeholder; one click loads them for that message. Links open in a new tab after a confirmation that shows the real destination.
+HTML email is shown in a locked-down frame so scripts in the email can't run. Images hosted on the internet are blocked until you click to load them, which stops senders from seeing that you opened the message. Before a link opens, Local Eml shows you where it really goes.
 
-Attachments are listed with a preview for images, PDFs, audio, video and text. Other types download.
+Images, PDFs, audio, video and text attachments can be previewed. Other attachments are downloaded when you click them.
 
-## Performance
+## Speed
 
-Browsing and search stay effectively instant well past 100,000 messages. The one view that grows with library size is **group by conversation**: on a very large library it can take about a second per page. If that feels slow, turn the grouping toggle off.
+Browsing and searching stay instant even with more than 100,000 messages. The one exception is **Group by conversation**, which can take about a second per page on a very large library. If that bothers you, turn grouping off.
 
-| Operation | 10k emails | 100k emails |
+| Action | 10,000 messages | 100,000 messages |
 |---|---|---|
-| Browse / paginate | < 1 ms | < 1 ms |
-| Search, typical term | < 1 ms | ~2 ms |
-| 초성 search | ~5 ms | ~50 ms |
-| Conversation-grouped list | ~85 ms | ~0.9 s |
+| Browse / change page | under 1 ms | under 1 ms |
+| Search for a typical word | under 1 ms | about 2 ms |
+| 초성 search | about 5 ms | about 50 ms |
+| Grouped by conversation | about 85 ms | about 0.9 s |
 
-Measured on a mid-range laptop with synthetic libraries, timing one 50-row page including its total count.
+These were measured on an ordinary laptop with generated test mail, timing one page of 50 messages including the total count.
