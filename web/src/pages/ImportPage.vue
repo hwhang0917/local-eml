@@ -22,7 +22,7 @@ const IMAP_DEFAULT_PORT = 993
 const IMAP_DEFAULT_FOLDER = 'INBOX'
 
 // Seconds. Mirrors what the server accepts; 0 turns background sync off.
-const SYNC_INTERVALS_S = [0, 300, 600, 1800, 3600]
+const SYNC_INTERVALS_S = [0, 60, 300, 600, 1800, 3600]
 // Also the server default, so the help text never renders blank before the
 // fetch corrects it.
 const DEFAULT_SYNC_INTERVAL_S = 600
@@ -165,7 +165,7 @@ function intervalLabel(s: number): string {
   if (s === 0) return t('import.sync_interval_off')
   return s % 3600 === 0
     ? t('import.sync_interval_hours', { n: s / 3600 }, s / 3600)
-    : t('import.sync_interval_minutes', { n: Math.round(s / 60) })
+    : t('import.sync_interval_minutes', { n: Math.round(s / 60) }, Math.round(s / 60))
 }
 
 const syncIntervalChoices = computed(() =>
