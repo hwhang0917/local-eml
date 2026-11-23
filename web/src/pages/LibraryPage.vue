@@ -28,6 +28,7 @@ import { useListContext } from '@/composables/useListContext'
 import { onMailSignal } from '@/composables/useMailEvents'
 import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
+import { highlightTerms } from '@/lib/searchQuery'
 import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
@@ -37,6 +38,7 @@ import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
 import Highlight from '@/components/ui/Highlight.vue'
+import SearchHelp from '@/components/SearchHelp.vue'
 import PageNav from '@/components/ui/PageNav.vue'
 import SortHeader from '@/components/ui/SortHeader.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -111,6 +113,10 @@ watch(q, (val) => {
   if (val === lastPushedQ) return
   if (val !== searchInput.value) searchInput.value = val
 })
+// Operators aren't text to find, so each column highlights only the plain
+// words and the operator aimed at it (subject:, from:).
+const subjectHighlight = computed(() => highlightTerms(q.value, 'subject'))
+const fromHighlight = computed(() => highlightTerms(q.value, 'from'))
 
 function mergeQuery(patch: Record<string, string | undefined>): LocationQueryRaw {
   const next: Record<string, string> = {}
@@ -303,6 +309,20 @@ function onKeydown(e: KeyboardEvent) {
       searchInputEl()?.focus()
       break
   }
+}
+
+// Adds an operator from the search help and leaves the caret after it, ready
+// for the value ("from:" waits for a name; "has:attachment" is complete).
+function insertOperator(text: string) {
+  const cur = searchInput.value.trimEnd()
+  const complete = !text.endsWith(':')
+  searchInput.value = (cur ? cur + ' ' : '') + text + (complete ? ' ' : '')
+  requestAnimationFrame(() => {
+    const el = searchInputEl()
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  })
 }
 
 function searchInputEl(): HTMLInputElement | null {
@@ -536,19 +556,22 @@ const pageInfo = computed(() => {
           type="search"
           :placeholder="t('library.search_placeholder')"
           :aria-label="t('library.search_placeholder')"
-          class="w-full pr-8 [&::-webkit-search-cancel-button]:appearance-none"
+          class="w-full pr-14 [&::-webkit-search-cancel-button]:appearance-none"
         />
-        <button
-          v-if="searchInput"
-          type="button"
-          :aria-label="t('library.clear_search')"
-          :title="t('library.clear_search')"
-          class="absolute right-2 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-sm
-            text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          @click="searchInput = ''"
-        >
-          <X class="h-4 w-4" />
-        </button>
+        <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+          <button
+            v-if="searchInput"
+            type="button"
+            :aria-label="t('library.clear_search')"
+            :title="t('library.clear_search')"
+            class="inline-flex h-5 w-5 items-center justify-center rounded-sm
+              text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            @click="searchInput = ''"
+          >
+            <X class="h-4 w-4" />
+          </button>
+          <SearchHelp @insert="insertOperator" />
+        </div>
       </div>
       <Button
         variant="outline"
@@ -876,7 +899,7 @@ const pageInfo = computed(() => {
               >{{ formatDate(e.sent_at) }}</time>
             </td>
             <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap" :title="e.from">
-              <Highlight :text="senderName(e.from)" :query="q" />
+              <Highlight :text="senderName(e.from)" :query="fromHighlight" />
             </td>
             <td class="px-3 py-2 truncate">
               <button
@@ -910,7 +933,7 @@ const pageInfo = computed(() => {
                   readTracking && !e.read ? 'font-semibold' : '']"
                 @click.stop="rememberPosition(i)"
               >
-                <Highlight v-if="e.subject" :text="e.subject" :query="q" />
+                <Highlight v-if="e.subject" :text="e.subject" :query="subjectHighlight" />
                 <template v-else>{{ t('library.no_subject') }}</template>
               </RouterLink>
               <!-- Full-strength muted token: the /60 variant computed to 2.4:1

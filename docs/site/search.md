@@ -6,13 +6,44 @@ The **Library** page is where you'll spend most of your time. It lists your mail
 
 ## Search
 
-The search box looks through the sender, subject and body of every message. Korean, Japanese and Chinese text work without any setup.
+The search box looks through the sender, recipients, subject, body and attachment file names of every message. Korean, Japanese and Chinese text work without any setup. When you type several words, a message has to contain all of them, in any field.
 
 ### 초성검색 (Korean initial-consonant search)
 
 You can type just the first consonant of each Korean syllable. `ㅎㄱ` finds `한국`, and `ㅇㅁ` finds `이메일`. This works across your whole library.
 
 ![Search results](https://hwhang0917.github.io/local-eml/img/en/search.webp)
+
+### Search filters
+
+Add filters to the search box to narrow things down. Say you're looking for a receipt Amazon sent you in 2019 that came with a PDF. Type:
+
+```
+receipt from:amazon filename:pdf after:2019 before:2020
+```
+
+Click the sliders button at the right of the search box for the full list. Clicking a filter there adds it to your search.
+
+| Filter | Finds mail that… |
+|---|---|
+| `from:alice` | was sent by someone whose name or address contains `alice` |
+| `to:bob@example.com` | was sent to that person, including Cc |
+| `cc:bob` | has that person in Cc |
+| `subject:invoice` | has the word in its subject |
+| `filename:pdf` | has an attachment whose file name contains `pdf` |
+| `has:attachment` | has any attachment |
+| `is:starred` | you starred |
+| `is:unread` / `is:read` | you haven't opened / have opened (needs [read tracking](./settings-cli#settings)) |
+| `after:2019-03` | was sent on or after that date |
+| `before:2020` | was sent before that date |
+| `on:2024-05-17` | was sent on that day, month or year |
+| `larger:5M` / `smaller:100K` | is bigger / smaller than that size (K, M or G) |
+| `"exact phrase"` | contains those words next to each other, in that order |
+| `-word` | does **not** contain the word. Works on filters too: `-from:newsletter`, `-has:attachment` |
+
+Dates can be a year (`2019`), a month (`2019-03`) or a day (`2019-03-05`), so `after:2019 before:2020` covers all of 2019. Dates use your computer's time zone, like the date range picker. You can use the filters together with the buttons and the date range picker; everything has to match.
+
+If a filter is misspelled or not finished yet, such as `from:` with nothing after it, it's ignored rather than emptying your results.
 
 ## Filters
 
@@ -45,6 +76,7 @@ Browsing and searching stay instant even with more than 100,000 messages. The on
 | Browse / change page | under 1 ms | under 1 ms |
 | Search for a typical word | under 1 ms | about 2 ms |
 | 초성 search | about 5 ms | about 50 ms |
+| Search with filters such as `from:` and `has:attachment` | under 1 ms | about 10 ms |
 | Grouped by conversation | about 85 ms | about 0.9 s |
 
-These were measured on an ordinary laptop with generated test mail, timing one page of 50 messages including the total count.
+Matching a word against attachment names adds a few milliseconds on a very large library. These were measured on an ordinary laptop with generated test mail, timing one page of 50 messages including the total count.

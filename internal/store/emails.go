@@ -406,15 +406,10 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 func listWhere(opts ListOptions) (string, []any) {
 	args := []any{}
 	conds := []string{}
-	if hasJamo(opts.Query) {
-		for _, term := range strings.Fields(opts.Query) {
-			conds = append(conds, `chosung_text LIKE ?`)
-			args = append(args, "%"+toChosung(term)+"%")
-		}
-	} else if fts := buildFTSQuery(opts.Query); fts != "" {
-		conds = append(conds, `id IN (SELECT rowid FROM emails_fts WHERE emails_fts MATCH ?)`)
-		args = append(args, fts)
-	}
+	// The search box's words and operators (see searchquery.go).
+	qConds, qArgs := searchConds(opts.Query, time.Local)
+	conds = append(conds, qConds...)
+	args = append(args, qArgs...)
 	if opts.StarredOnly {
 		conds = append(conds, `starred = 1`)
 	}
@@ -537,20 +532,6 @@ func isUniqueViolation(err error) bool {
 	msg := err.Error()
 	return strings.Contains(msg, "UNIQUE constraint failed") ||
 		strings.Contains(msg, "unique constraint")
-}
-
-func buildFTSQuery(raw string) string {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return ""
-	}
-	terms := strings.Fields(raw)
-	parts := make([]string, 0, len(terms))
-	for _, t := range terms {
-		t = strings.ReplaceAll(t, `"`, `""`)
-		parts = append(parts, `"`+t+`"*`)
-	}
-	return strings.Join(parts, " ")
 }
 
 // Email flags. Spam and phishing quarantine the message: hidden from the

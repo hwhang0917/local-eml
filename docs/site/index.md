@@ -23,5 +23,5 @@ features:
   - title: Stays on your computer
     details: One program that only your own computer can connect to. All your data is in a single folder.
   - title: Search that handles Korean
-    details: Search sender, subject and body at once. Korean initial-consonant search (초성검색) works too.
+    details: Search sender, subject, body and attachment names at once, with filters like `from:` and `has:attachment`. Korean initial-consonant search (초성검색) works too.
 ---
