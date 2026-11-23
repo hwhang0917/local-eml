@@ -77,42 +77,100 @@ func LatestRelease(ctx context.Context) (*Release, error) {
 	return &rel, nil
 }
 
-// IsNewer reports whether latestTag is strictly greater than currentTag using
-// X.Y.Z semver order. Either input may carry a leading "v". Non-semver inputs
-// (e.g. "dev" during a development build) return false so the caller treats
-// "I'm not sure" the same as "no update available."
+// IsNewer reports whether latestTag is strictly greater than currentTag in
+// semver order. Either input may carry a leading "v". A pre-release suffix
+// ("0.18.0-rc.1") sorts below its release, so someone running an RC is offered
+// the final 0.18.0, and rc.2 is newer than rc.1. Non-semver inputs (e.g. "dev"
+// during a development build) return false so the caller treats "I'm not sure"
+// the same as "no update available."
 func IsNewer(currentTag, latestTag string) bool {
 	cv, ok1 := parseSemver(currentTag)
 	lv, ok2 := parseSemver(latestTag)
 	if !ok1 || !ok2 {
 		return false
 	}
-	for i := range cv {
-		if lv[i] > cv[i] {
-			return true
-		}
-		if lv[i] < cv[i] {
-			return false
-		}
-	}
-	return false
+	return compareSemver(lv, cv) > 0
 }
 
-func parseSemver(tag string) ([3]int, bool) {
+type semver struct {
+	core [3]int
+	pre  []string // dot-separated pre-release identifiers; nil for a release
+}
+
+func parseSemver(tag string) (semver, bool) {
 	s := strings.TrimPrefix(strings.TrimSpace(tag), "v")
+	if i := strings.IndexByte(s, '+'); i >= 0 {
+		s = s[:i] // build metadata never affects precedence
+	}
+	var v semver
+	if i := strings.IndexByte(s, '-'); i >= 0 {
+		v.pre = strings.Split(s[i+1:], ".")
+		s = s[:i]
+		for _, id := range v.pre {
+			if id == "" {
+				return semver{}, false
+			}
+		}
+	}
 	parts := strings.Split(s, ".")
 	if len(parts) != 3 {
-		return [3]int{}, false
+		return semver{}, false
 	}
-	var v [3]int
 	for i, p := range parts {
 		n, err := strconv.Atoi(p)
-		if err != nil {
-			return [3]int{}, false
+		if err != nil || n < 0 {
+			return semver{}, false
 		}
-		v[i] = n
+		v.core[i] = n
 	}
 	return v, true
+}
+
+// compareSemver returns -1, 0 or 1 following semver 2.0.0 precedence.
+func compareSemver(a, b semver) int {
+	for i := range a.core {
+		if a.core[i] != b.core[i] {
+			return cmpInt(a.core[i], b.core[i])
+		}
+	}
+	switch {
+	case a.pre == nil && b.pre == nil:
+		return 0
+	case a.pre == nil:
+		return 1 // 0.18.0 > 0.18.0-rc.1
+	case b.pre == nil:
+		return -1
+	}
+	for i := 0; i < len(a.pre) && i < len(b.pre); i++ {
+		if c := comparePreID(a.pre[i], b.pre[i]); c != 0 {
+			return c
+		}
+	}
+	return cmpInt(len(a.pre), len(b.pre))
+}
+
+func comparePreID(a, b string) int {
+	an, aErr := strconv.Atoi(a)
+	bn, bErr := strconv.Atoi(b)
+	switch {
+	case aErr == nil && bErr == nil:
+		return cmpInt(an, bn) // rc.10 > rc.9
+	case aErr == nil:
+		return -1 // numeric identifiers sort below alphanumeric ones
+	case bErr == nil:
+		return 1
+	}
+	return strings.Compare(a, b)
+}
+
+func cmpInt(a, b int) int {
+	switch {
+	case a < b:
+		return -1
+	case a > b:
+		return 1
+	}
+	return 0
 }
 
 // AssetName returns the expected binary asset name for the running OS/arch.
