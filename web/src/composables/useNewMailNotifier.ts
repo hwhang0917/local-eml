@@ -210,6 +210,17 @@ export function startNewMailWatcher() {
   })
 }
 
+/**
+ * Shows a sample notification, so the person can tell whether their OS lets
+ * it pop up. Returns false when notifications aren't on in Local Eml.
+ */
+function sendTest(): boolean {
+  permission.value = readPermission()
+  if (!active.value) return false
+  show(t('notify.test_title'), t('notify.test_body'), 'local-eml-notify-test')
+  return true
+}
+
 export function useNewMailNotifier() {
-  return { wanted, permission, active, setEnabled }
+  return { wanted, permission, active, setEnabled, sendTest }
 }

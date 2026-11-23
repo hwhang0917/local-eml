@@ -5,6 +5,7 @@ import { cn, fieldClass, segmentClass } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
 import { useNewMailNotifier } from '@/composables/useNewMailNotifier'
+import NotifyHelp from '@/components/NotifyHelp.vue'
 import { onMailSignal } from '@/composables/useMailEvents'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
@@ -536,7 +537,7 @@ async function confirmImap() {
               @change="onNotifyToggle"
             />
             <span class="text-sm">
-              {{ t('import.notify_label') }}
+              {{ t('import.notify_label') }}<NotifyHelp />
               <span class="block text-xs text-muted-foreground mt-0.5">{{ t('import.notify_help') }}</span>
               <span
                 v-if="notifier.permission.value === 'denied'"
