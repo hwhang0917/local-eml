@@ -15,7 +15,7 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import S3FormCard from '@/components/S3FormCard.vue'
 import JobRunCard from '@/components/JobRunCard.vue'
 import ImapProfileCard from '@/components/ImapProfileCard.vue'
-import { Plus } from 'lucide-vue-next'
+import NewProfileCard from '@/components/NewProfileCard.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
 const IMAP_DEFAULT_PORT = 993
@@ -484,20 +484,11 @@ async function confirmImap() {
               @toggle-sync="(v) => onImapSyncToggle(p, v)"
               @sync-now="syncImapNow(p)"
             />
-            <button
-              type="button"
-              :class="cn(
-                'rounded-md border border-dashed p-3 min-h-[5.5rem] flex items-center justify-center gap-2 text-sm transition-colors cursor-pointer',
-                selectedImapProfileId == null
-                  ? 'border-primary text-foreground bg-accent/40'
-                  : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/50',
-              )"
-              :aria-pressed="selectedImapProfileId == null"
-              @click="selectImapProfile(null)"
-            >
-              <Plus class="h-4 w-4" aria-hidden="true" />
-              {{ t('import.imap_profile_new_card') }}
-            </button>
+            <NewProfileCard
+              :selected="selectedImapProfileId == null"
+              :label="t('import.imap_profile_new_card')"
+              @select="selectImapProfile(null)"
+            />
           </div>
           <ConfirmDialog
             v-model:open="imapSyncOffOpen"

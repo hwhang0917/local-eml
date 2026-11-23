@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import type { IMAPProfile } from '@/lib/api'
 import Button from '@/components/ui/Button.vue'
 import Switch from '@/components/ui/Switch.vue'
+import ProfileCard from '@/components/ProfileCard.vue'
 
 const props = defineProps<{
   profile: IMAPProfile
@@ -60,44 +61,25 @@ const waitingForPassword = computed(() => props.profile.sync_enabled && !props.p
   below; the switch turns background sync on or off for it straight away.
 -->
 <template>
-  <div
-    :class="cn(
-      'rounded-md border bg-card p-3 flex flex-col gap-2 transition-colors',
-      selected ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-muted-foreground/50',
-    )"
+  <ProfileCard
+    :name="profile.name"
+    :detail="`${address} · ${profile.folder || 'INBOX'}`"
+    :selected="selected"
+    :select-title="t('import.imap_profile_select')"
+    :dot-class="profile.sync_enabled ? (waitingForPassword ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-muted-foreground/30'"
     data-testid="imap-profile-card"
+    @select="emit('select')"
   >
-    <div class="flex items-start gap-3">
-      <button
-        type="button"
-        class="flex-1 min-w-0 text-left cursor-pointer focus-visible:outline-none focus-visible:underline"
-        :aria-pressed="selected"
-        :title="t('import.imap_profile_select')"
-        @click="emit('select')"
-      >
-        <span class="flex items-center gap-2">
-          <span
-            :class="cn(
-              'inline-block h-2 w-2 rounded-full shrink-0',
-              profile.sync_enabled ? (waitingForPassword ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-muted-foreground/30',
-            )"
-            aria-hidden="true"
-          />
-          <span class="font-medium truncate">{{ profile.name }}</span>
-        </span>
-        <span class="block text-xs text-muted-foreground font-mono truncate mt-0.5" :title="address">
-          {{ address }} · {{ profile.folder || 'INBOX' }}
-        </span>
-      </button>
+    <template #action>
       <Switch
         :model-value="profile.sync_enabled"
         :disabled="toggling"
         :aria-label="t('import.imap_card_sync_toggle', { name: profile.name })"
         @update:model-value="(v: boolean) => emit('toggle-sync', v)"
       />
-    </div>
+    </template>
 
-    <div class="flex items-center gap-2 text-xs min-h-8">
+    <template #footer>
       <template v-if="!profile.sync_enabled">
         <span class="text-muted-foreground">{{ t('import.imap_card_sync_off') }}</span>
       </template>
@@ -135,6 +117,6 @@ const waitingForPassword = computed(() => props.profile.sync_enabled && !props.p
           {{ syncing ? t('import.imap_sync_running') : t('import.imap_sync_now') }}
         </Button>
       </template>
-    </div>
-  </div>
+    </template>
+  </ProfileCard>
 </template>
