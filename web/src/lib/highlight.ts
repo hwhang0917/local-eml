@@ -1,7 +1,7 @@
 // Mirrors internal/store/chosung.go so the list highlights exactly what the
-// server matched. Two modes, chosen the same way the query is: a query holding
-// compatibility jamo is a 초성검색 and folds Hangul syllables to their initial
-// consonant; anything else is plain text and only case-folds, because folding
+// server matched. Two modes, chosen per word the same way the server does: a
+// word holding compatibility jamo is a 초성검색 and folds Hangul syllables to
+// their initial consonant; anything else is plain text and only case-folds, because folding
 // syllables there would highlight 하고 for the query 한국.
 const CHOSUNG = [
   'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ',
@@ -70,14 +70,18 @@ export function highlightSegments(text: string, query: string): Segment[] {
   const trimmed = query.trim()
   if (!text || !trimmed) return text ? [{ text, match: false }] : []
 
-  const chosung = hasJamo(trimmed)
   const chars = [...text]
-  const folded = chars.map((c) => foldChar(c, chosung))
+  // The mode is chosen per term, as the server does, so 'ㅎㄱ invoice' is a
+  // 초성 match for the first word and a plain match for the second.
+  const foldedPlain = chars.map((c) => foldChar(c, false))
+  let foldedChosung: string[] | null = null
 
   const ranges: Array<[number, number]> = []
   for (const term of trimmed.split(/\s+/)) {
+    const chosung = hasJamo(term)
+    if (chosung) foldedChosung ??= chars.map((c) => foldChar(c, true))
     const foldedTerm = [...term].map((c) => foldChar(c, chosung))
-    ranges.push(...findRanges(folded, foldedTerm))
+    ranges.push(...findRanges(chosung ? foldedChosung! : foldedPlain, foldedTerm))
   }
 
   const merged = mergeRanges(ranges)

@@ -62,7 +62,7 @@
     },
     "search": {
       "title": "Search everything",
-      "body": "Find messages by sender, subject, or body. Hangul initial consonants work too — type ㅎㄱ to find 한국. Matching characters are highlighted in the results."
+      "body": "Find messages by sender, subject, body or attachment name. Add filters like from:, has:attachment or after:2019 — the sliders button lists them all. Hangul initial consonants work too: type ㅎㄱ to find 한국."
     },
     "starred": {
       "title": "Star what matters",
@@ -86,7 +86,7 @@
     }
   },
   "library": {
-    "search_placeholder": "Search subject, from, body…",
+    "search_placeholder": "Search mail, or try from: has:attachment…",
     "clear_search": "Clear search",
     "loading": "Loading…",
     "no_emails": "No emails.",
@@ -573,5 +573,28 @@
     "wipe_done": "Deleted {count} email | Deleted {count} emails",
     "wipe_error": "Couldn't delete the data",
     "disk_note": "These options delete files the ordinary way. They are not secure erasure: deleted data may still be recoverable, especially on SSDs, and Local Eml can't restore it either. Keep a backup of anything you need. Provided as is, without warranty."
+  },
+  "search_help": {
+    "open": "Search filters",
+    "title": "Search filters",
+    "intro": "Plain words search the subject, people, body and attachment names. Combine them with any of these; click one to add it.",
+    "rows": {
+      "from": "From a sender (name or address)",
+      "to": "To or Cc a recipient",
+      "cc": "Cc a recipient",
+      "subject": "Words in the subject",
+      "filename": "Attachment file name",
+      "has_attachment": "Has attachments",
+      "is_starred": "Starred",
+      "is_unread": "Unread",
+      "after": "Sent on or after",
+      "before": "Sent before",
+      "on": "Sent on that day, month or year",
+      "larger": "Bigger than a size (K, M, G)",
+      "smaller": "Smaller than a size",
+      "phrase": "These words in this order",
+      "exclude": "Leave out mail with this word (works with filters too)"
+    },
+    "dates": "Dates can be a year (2019), a month (2019-03) or a day (2019-03-05). after:2019 before:2020 means all of 2019."
   }
 }

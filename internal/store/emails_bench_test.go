@@ -24,6 +24,8 @@ var benchVocab = []string{
 	"일정", "배송", "주문", "확인", "보고서", "서버", "점검", "안내", "이벤트", "할인",
 }
 
+var benchExts = []string{"pdf", "xlsx", "docx", "png", "jpg", "zip"}
+
 func benchWords(r *rand.Rand, n int) string {
 	out := ""
 	for i := 0; i < n; i++ {
@@ -65,8 +67,21 @@ func benchCatalog(b *testing.B, n int) *Store {
 		if r.Intn(10) < 3 {
 			row.ThreadID = fmt.Sprintf("thr-%d@example.com", i/3)
 		}
-		if _, err := st.InsertEmail(ctx, row); err != nil {
+		// ~30% of mail carries one or two attachments, so filename search
+		// scans a realistically sized attachments table.
+		if r.Intn(10) < 3 {
+			row.HasAttachments, row.AttachmentCount = true, 1+r.Intn(2)
+		}
+		id, err := st.InsertEmail(ctx, row)
+		if err != nil {
 			b.Fatal(err)
+		}
+		for k := 0; k < row.AttachmentCount; k++ {
+			name := fmt.Sprintf("%s_%d.%s", benchVocab[r.Intn(len(benchVocab))], i, benchExts[r.Intn(len(benchExts))])
+			if _, err := st.DB.Exec(`INSERT INTO attachments (email_id, idx, filename) VALUES (?,?,?)`,
+				id, k, name); err != nil {
+				b.Fatal(err)
+			}
 		}
 	}
 	// A rare term with ~50 hits, so there is a selective query to measure —
@@ -110,6 +125,9 @@ func BenchmarkListEmails(b *testing.B) {
 		{"fts_common_word", ListOptions{Query: "invoice"}},
 		{"fts_korean", ListOptions{Query: "청구서"}},
 		{"chosung_like", ListOptions{Query: "ㅊㄱㅅ"}},
+		{"filename", ListOptions{Query: "filename:pdf"}},
+		{"operators", ListOptions{Query: "from:sender42 has:attachment after:2018"}},
+		{"words_and_operators", ListOptions{Query: "invoice subject:budget before:2020-06"}},
 		{"grouped", ListOptions{GroupThreads: true}},
 		{"grouped_fts_common", ListOptions{Query: "invoice", GroupThreads: true}},
 	}
