@@ -29,6 +29,7 @@
   },
   "nav": {
     "library": "라이브러리",
+    "attachments": "첨부파일",
     "import": "가져오기",
     "export": "내보내기",
     "settings": "설정",
@@ -491,6 +492,40 @@
     "top_senders": "자주 받은 보낸사람",
     "per_category": "카테고리별",
     "empty": "아직 메일이 없습니다. 메일을 가져오면 통계가 표시됩니다."
+  },
+  "attachments": {
+    "title": "첨부파일",
+    "summary": "첨부파일 {count}개 · {size}",
+    "search_placeholder": "파일 이름 검색…",
+    "sender_placeholder": "보낸 사람으로 거르기",
+    "kind_label": "파일 형식",
+    "kind_all": "모든 형식",
+    "kind": {
+      "image": "이미지",
+      "pdf": "PDF",
+      "document": "문서",
+      "spreadsheet": "스프레드시트",
+      "archive": "압축 파일",
+      "media": "오디오·비디오",
+      "other": "기타"
+    },
+    "table_caption": "모든 이메일의 첨부파일",
+    "col": {
+      "name": "이름",
+      "type": "형식",
+      "size": "크기",
+      "date": "날짜",
+      "sender": "보낸 사람",
+      "email": "이메일",
+      "actions": "작업"
+    },
+    "open": "새 탭에서 열기",
+    "open_named": "{name} 새 탭에서 열기",
+    "download_named": "{name} 다운로드",
+    "go_to_email": "이메일로 이동",
+    "empty": "아직 첨부파일이 없습니다. 가져온 메일의 첨부파일이 여기에 표시됩니다.",
+    "no_matches": "조건에 맞는 첨부파일이 없습니다.",
+    "load_error": "첨부파일을 불러오지 못했습니다"
   },
   "shortcuts": {
     "title": "키보드 단축키",

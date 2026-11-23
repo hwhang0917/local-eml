@@ -104,6 +104,32 @@ func (im *Importer) BackfillRisk(ctx context.Context) (int, error) {
 	return updated, im.Store.SetUserVersion(ctx, riskVersion)
 }
 
+// BackfillAttachments records the attachments of rows imported before the
+// attachments table existed. It is not gated on user_version: the query only
+// finds rows still missing theirs, so once done it costs one cheap query per
+// start, and a row whose blob was unreadable gets another chance next time.
+func (im *Importer) BackfillAttachments(ctx context.Context) (int, error) {
+	rows, err := im.Store.ListEmailsMissingAttachments(ctx)
+	if err != nil {
+		return 0, err
+	}
+	updated := 0
+	for _, r := range rows {
+		if err := ctx.Err(); err != nil {
+			return updated, err
+		}
+		parsed, ok := im.parseBlob(r.SHA256)
+		if !ok || len(parsed.Attachments) == 0 {
+			continue
+		}
+		if err := im.Store.SetEmailAttachments(ctx, r.ID, attachmentMeta(parsed)); err != nil {
+			return updated, err
+		}
+		updated++
+	}
+	return updated, nil
+}
+
 // due reports whether the repair tagged version has not run on this database.
 func (im *Importer) due(ctx context.Context, version int) (bool, error) {
 	v, err := im.Store.UserVersion(ctx)

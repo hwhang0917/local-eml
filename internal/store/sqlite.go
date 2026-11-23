@@ -186,6 +186,28 @@ CREATE TABLE IF NOT EXISTS s3_profiles (
   updated_at INTEGER NOT NULL
 );
 
+-- One row per attachment (not inline cid: images), so the attachment browser
+-- can list and sort them without re-parsing every message. idx is the part's
+-- position in the parsed message's attachment list, the same index
+-- /api/emails/{sha}/attachments/{idx} serves. Derived from the blob: filled on
+-- import and by BackfillAttachments for older rows.
+CREATE TABLE IF NOT EXISTS attachments (
+  id INTEGER PRIMARY KEY,
+  email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
+  idx INTEGER NOT NULL,
+  filename TEXT NOT NULL DEFAULT '',
+  content_type TEXT NOT NULL DEFAULT '',
+  size_bytes INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (email_id, idx)
+);
+CREATE INDEX IF NOT EXISTS idx_attachments_size ON attachments(size_bytes);
+-- PRAGMA foreign_keys is per connection and Open only sets it on one pooled
+-- connection, so the cascade above cannot be relied on. The trigger can.
+CREATE TRIGGER IF NOT EXISTS attachments_follow_email AFTER DELETE ON emails
+BEGIN
+  DELETE FROM attachments WHERE email_id = old.id;
+END;
+
 -- User-tunable knobs the UI can change at runtime (e.g. the IMAP poll
 -- interval), as opposed to env vars, which need a restart.
 CREATE TABLE IF NOT EXISTS settings (

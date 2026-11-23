@@ -73,6 +73,49 @@ export interface EmailList {
   items: Email[]
 }
 
+/** Coarse attachment grouping for the attachment browser's type filter. */
+export const ATTACHMENT_KINDS = ['image', 'pdf', 'document', 'spreadsheet', 'archive', 'media', 'other'] as const
+export type AttachmentKind = (typeof ATTACHMENT_KINDS)[number]
+
+/** One attachment in the attachment browser, with enough of its message to link back. */
+export interface AttachmentItem {
+  email_sha256: string
+  email_subject: string
+  email_from: string
+  /** Unix seconds; 0 when the message had no date. */
+  sent_at: number
+  /** Position in the message's attachments: the idx of attachmentURL. */
+  index: number
+  filename: string
+  content_type: string
+  size: number
+  kind: AttachmentKind
+}
+
+export interface AttachmentListParams {
+  /** Matches anywhere in the file name. */
+  q?: string
+  kind?: AttachmentKind
+  /** Matches anywhere in the sender. */
+  sender?: string
+  from?: string
+  to?: string
+  sort?: 'name' | 'type' | 'size' | 'date' | 'sender'
+  order?: 'asc' | 'desc'
+  limit?: number
+  offset?: number
+}
+
+export interface AttachmentList {
+  total: number
+  total_bytes: number
+  /** Matches per kind, ignoring the kind filter. */
+  kinds: Record<AttachmentKind, number>
+  limit: number
+  offset: number
+  items: AttachmentItem[]
+}
+
 export interface PartInfo {
   index: number
   content_id?: string
@@ -295,6 +338,15 @@ export const api = {
   setFlag(sha: string, flag: EmailFlag) {
     const url = `/api/emails/${sha}/flag`
     return fetch(url, flag ? jsonBody('PUT', { flag }) : { method: 'DELETE' }).then(okOrThrow)
+  },
+
+  listAttachments(params: AttachmentListParams = {}) {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(params)) {
+      if (v === undefined || v === '') continue
+      qs.set(k, String(v))
+    }
+    return fetch(`/api/attachments?${qs}`).then(jsonOrThrow<AttachmentList>)
   },
 
   getStats() {

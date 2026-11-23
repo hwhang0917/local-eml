@@ -107,6 +107,8 @@ func (s *Server) Router() http.Handler {
 
 		api.Get("/events", s.handleMailEvents)
 
+		api.Get("/attachments", s.handleListAttachments)
+
 		api.Get("/stats", s.handleStats)
 
 		api.Get("/categories", s.handleListCategories)

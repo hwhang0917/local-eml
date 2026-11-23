@@ -29,6 +29,7 @@
   },
   "nav": {
     "library": "Library",
+    "attachments": "Attachments",
     "import": "Import",
     "export": "Export",
     "settings": "Settings",
@@ -491,6 +492,40 @@
     "top_senders": "Top senders",
     "per_category": "By category",
     "empty": "No emails yet — import some to see your stats."
+  },
+  "attachments": {
+    "title": "Attachments",
+    "summary": "{count} attachment · {size} | {count} attachments · {size}",
+    "search_placeholder": "Search file names…",
+    "sender_placeholder": "Filter by sender",
+    "kind_label": "File type",
+    "kind_all": "All types",
+    "kind": {
+      "image": "Image",
+      "pdf": "PDF",
+      "document": "Document",
+      "spreadsheet": "Spreadsheet",
+      "archive": "Archive",
+      "media": "Audio & video",
+      "other": "Other"
+    },
+    "table_caption": "Attachments from every email",
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "size": "Size",
+      "date": "Date",
+      "sender": "From",
+      "email": "Email",
+      "actions": "Actions"
+    },
+    "open": "Open in a new tab",
+    "open_named": "Open {name} in a new tab",
+    "download_named": "Download {name}",
+    "go_to_email": "Go to the email",
+    "empty": "No attachments yet. Attachments from the mail you import show up here.",
+    "no_matches": "No attachments match these filters.",
+    "load_error": "Couldn't load attachments"
   },
   "shortcuts": {
     "title": "Keyboard shortcuts",

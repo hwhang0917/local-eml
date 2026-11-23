@@ -114,7 +114,8 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 			AttachmentCount: parsed.AttachmentCount,
 			Risk:            parsed.Risk,
 		},
-		BodyText: parsed.BodyText,
+		BodyText:    parsed.BodyText,
+		Attachments: attachmentMeta(parsed),
 	}
 	id, err := im.Store.InsertEmail(ctx, row)
 	if err != nil {
@@ -125,6 +126,18 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 		return nil, fmt.Errorf("insert: %w", err)
 	}
 	return &Result{SHA256: sum, EmailID: id}, nil
+}
+
+// attachmentMeta converts the parser's view of the attachments into rows for
+// the attachments table.
+func attachmentMeta(p *parser.Parsed) []store.AttachmentMeta {
+	out := make([]store.AttachmentMeta, 0, len(p.Attachments))
+	for i, a := range p.Attachments {
+		out = append(out, store.AttachmentMeta{
+			Index: i, Filename: a.Filename, ContentType: a.ContentType, Size: a.Size,
+		})
+	}
+	return out
 }
 
 func atomicCopy(src, dst string) error {
