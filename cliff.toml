@@ -35,6 +35,29 @@ body = """
 # Same on every release: how to get it, for people who land here from the
 # in-app "release notes" link.
 footer = """
+{%- set v = releases | first | get(key="version", default="") -%}
+{%- if v is containing("-") %}
+
+---
+
+### Install this pre-release
+
+Release candidates are not offered by the in-app updater or the default install command, so pin the tag. Once the final release is out, the in-app updater offers it.
+
+Linux / macOS:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.sh | sh -s -- --version {{ v }}
+```
+
+Windows (PowerShell):
+
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1))) -Version {{ v }}
+```
+
+Or download the file for your OS below and double-click it — no install needed. Verify downloads against `SHA256SUMS`.
+{%- else %}
 
 ---
 
@@ -53,6 +76,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 ```
 
 Or download the file for your OS below and double-click it — no install needed. Verify downloads against `SHA256SUMS`.
+{%- endif %}
 """
 
 [git]
