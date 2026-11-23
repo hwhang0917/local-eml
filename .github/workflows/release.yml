@@ -162,6 +162,19 @@ jobs:
           pattern: local-eml-*
           merge-multiple: true
 
+      # A tag with a suffix (v0.18.0-rc.1) is a release candidate: published as
+      # a GitHub pre-release, never marked latest, and kept off winget. Stable
+      # users only ever see /releases/latest (install scripts, in-app updater),
+      # which skips pre-releases.
+      - name: Classify tag
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
       # Release notes from Conventional Commits since the previous tag
       # (cliff.toml). GitHub's own generator only sees pull requests, and this
       # repo commits straight to main.
@@ -173,6 +186,11 @@ jobs:
           args: --latest --strip header
         env:
           OUTPUT: dist/RELEASE_NOTES.md
+          # A stable release counts only stable tags, so v0.18.0's notes cover
+          # everything since v0.17.0 rather than just what changed after the
+          # last RC. Empty for an RC, which falls back to cliff.toml's pattern
+          # and lists what changed since the previous tag of any kind.
+          GIT_CLIFF_TAG_PATTERN: ${{ steps.tag.outputs.prerelease == 'false' && '^v[0-9]+\.[0-9]+\.[0-9]+$' || '' }}
 
       - name: Generate SHA256SUMS
         run: |
@@ -197,15 +215,17 @@ jobs:
             dist/SHA256SUMS
           body_path: dist/RELEASE_NOTES.md
           fail_on_unmatched_files: true
+          prerelease: ${{ steps.tag.outputs.prerelease }}
+          make_latest: ${{ steps.tag.outputs.prerelease == 'true' && 'false' || 'true' }}
 
-      # Offers the new version to winget as a pull request to
+      # Stable tags only. Offers the new version to winget as a pull request to
       # microsoft/winget-pkgs from the owner's fork. The action only updates
       # packages that already exist there, and it needs WINGET_TOKEN, a classic
       # PAT with the public_repo scope, so it is skipped until both are set up.
       # A winget failure (package not yet in winget-pkgs, moderation hiccup)
       # must not mark the already-published release as failed; re-run the job.
       - name: Publish to winget
-        if: env.WINGET_TOKEN != ''
+        if: env.WINGET_TOKEN != '' && steps.tag.outputs.prerelease == 'false'
         continue-on-error: true
         uses: vedantmgoyal9/winget-releaser@v2
         env:
