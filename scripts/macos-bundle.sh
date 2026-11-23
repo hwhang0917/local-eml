@@ -12,6 +12,9 @@ set -eu
 BIN=$1
 VERSION=$2
 OUT=$3
+# Bundle versions must be plain X.Y.Z, so an RC (0.18.0-rc.1) drops its
+# suffix here; `local-eml version` still reports the full string.
+PLIST_VERSION=${VERSION%%-*}
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 # Same artwork the Windows resources use (cmd/local-eml/winres/winres.json).
@@ -50,8 +53,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleExecutable</key><string>local-eml</string>
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>$VERSION</string>
-  <key>CFBundleShortVersionString</key><string>$VERSION</string>
+  <key>CFBundleVersion</key><string>$PLIST_VERSION</string>
+  <key>CFBundleShortVersionString</key><string>$PLIST_VERSION</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>

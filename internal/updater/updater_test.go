@@ -25,6 +25,18 @@ func TestIsNewer(t *testing.T) {
 		{"v0.3.0", "v1.0.0", true},
 		{"dev", "v0.3.0", false}, // non-semver current → never upgrade
 		{"v0.3.0", "abc", false}, // non-semver latest → don't claim newer
+		// Release candidates.
+		{"v0.18.0-rc.1", "v0.18.0", true},  // RC users get offered the final
+		{"v0.18.0", "v0.18.0-rc.1", false}, // never step back to an RC
+		{"v0.17.0", "v0.18.0-rc.1", true},
+		{"v0.18.0-rc.1", "v0.18.0-rc.2", true},
+		{"v0.18.0-rc.2", "v0.18.0-rc.1", false},
+		{"v0.18.0-rc.9", "v0.18.0-rc.10", true}, // numeric, not lexical
+		{"v0.18.0-rc.1", "v0.18.0-rc.1", false},
+		{"v0.18.0-rc.1", "v0.17.0", false},
+		{"0.18.0-rc.1", "v0.18.1", true},
+		{"v0.18.0-rc", "v0.18.0-rc.1", true}, // fewer identifiers sort first
+		{"v0.18.0-", "v0.18.0", false},       // malformed suffix → not semver
 	}
 	for _, c := range cases {
 		got := IsNewer(c.current, c.latest)
