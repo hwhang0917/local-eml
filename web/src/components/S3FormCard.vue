@@ -2,11 +2,12 @@
 import { useI18n } from 'vue-i18n'
 import { fieldClass } from '@/lib/utils'
 import type { S3ImportConfig } from '@/lib/api'
-import { useS3Form, NEW_PROFILE } from '@/composables/useS3Form'
+import { useS3Form } from '@/composables/useS3Form'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
+import S3ProfileCard from '@/components/S3ProfileCard.vue'
+import NewProfileCard from '@/components/NewProfileCard.vue'
 
 // i18n keys rather than strings, so the page stays the only place that knows
 // which namespace it speaks.
@@ -24,8 +25,8 @@ const props = defineProps<{
 const { t } = useI18n()
 const {
   s3, confirming, valid, credsLabel,
-  profiles, activeProfile, profileSelectValue, profileSelectLabel, deleteConfirmOpen,
-  onProfileChange, saveProfile, deleteProfile, review, cancel, confirm: confirmS3,
+  profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
+  selectProfile, saveProfile, deleteProfile, review, cancel, confirm: confirmS3,
 } = useS3Form()
 
 // Suggestions only — the input still accepts any value, so newly launched
@@ -93,40 +94,28 @@ const awsRegions: { code: string; name: string }[] = [
       <p v-if="hintKey" class="text-sm text-muted-foreground">{{ t(hintKey) }}</p>
     </div>
 
-    <div class="flex items-end gap-2">
-      <div class="space-y-1 flex-1 max-w-xs">
-        <span class="text-sm">{{ t('import.s3_profile') }}</span>
-        <Select
-          :model-value="profileSelectValue"
-          @update:model-value="(v) => v && onProfileChange(String(v))"
-        >
-          <SelectTrigger class="w-full">
-            <SelectValue>{{ profileSelectLabel }}</SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem :value="NEW_PROFILE">{{ t('import.s3_profile_new') }}</SelectItem>
-            <SelectItem v-for="p in profiles" :key="p.id" :value="String(p.id)">
-              {{ p.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+    <section class="space-y-2" :aria-label="t('import.s3_profiles_title')">
+      <div class="flex items-baseline justify-between gap-3">
+        <h4 class="text-sm font-medium">{{ t('import.s3_profiles_title') }}</h4>
+        <span v-if="profiles.length" class="text-xs text-muted-foreground">
+          {{ t('import.s3_profiles_count', { n: profiles.length }, profiles.length) }}
+        </span>
       </div>
-      <Button variant="outline" :disabled="!valid" @click="saveProfile">
-        {{ t('import.s3_profile_save') }}
-      </Button>
-      <Button variant="outline" :disabled="!activeProfile" @click="deleteConfirmOpen = true">
-        {{ t('import.s3_profile_delete') }}
-      </Button>
-      <ConfirmDialog
-        v-model:open="deleteConfirmOpen"
-        :title="t('import.s3_profile_delete_confirm', { name: activeProfile?.name ?? '' })"
-        :description="t('import.profile_delete_body')"
-        :confirm-label="t('import.s3_profile_delete')"
-        :cancel-label="t('import.cancel')"
-        destructive
-        @confirm="deleteProfile"
-      />
-    </div>
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <S3ProfileCard
+          v-for="p in profiles"
+          :key="p.id"
+          :profile="p"
+          :selected="p.id === selectedProfileId"
+          @select="selectProfile(p)"
+        />
+        <NewProfileCard
+          :selected="selectedProfileId == null"
+          :label="t('import.s3_profile_new_card')"
+          @select="selectProfile(null)"
+        />
+      </div>
+    </section>
 
     <p class="text-sm text-muted-foreground">{{ t('import.s3_creds_optional') }}</p>
     <div class="grid gap-4 sm:grid-cols-2">
@@ -165,8 +154,23 @@ const awsRegions: { code: string; name: string }[] = [
       </label>
     </div>
 
-    <div class="flex justify-end">
-      <Button :disabled="!valid" @click="review">{{ t('import.review') }}</Button>
+    <div class="flex items-center gap-2">
+      <Button variant="outline" :disabled="!valid" @click="saveProfile">
+        {{ activeProfile ? t('import.s3_profile_save') : t('import.s3_profile_save_new') }}
+      </Button>
+      <Button v-if="activeProfile" variant="outline" @click="deleteConfirmOpen = true">
+        {{ t('import.s3_profile_delete') }}
+      </Button>
+      <ConfirmDialog
+        v-model:open="deleteConfirmOpen"
+        :title="t('import.s3_profile_delete_confirm', { name: activeProfile?.name ?? '' })"
+        :description="t('import.profile_delete_body')"
+        :confirm-label="t('import.s3_profile_delete')"
+        :cancel-label="t('import.cancel')"
+        destructive
+        @confirm="deleteProfile"
+      />
+      <Button class="ml-auto" :disabled="!valid" @click="review">{{ t('import.review') }}</Button>
     </div>
   </Card>
 </template>

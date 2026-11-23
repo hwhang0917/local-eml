@@ -3,9 +3,6 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { api, type S3ImportConfig, type S3Profile } from '@/lib/api'
 
-/** Select value for "no saved profile picked" — ids are numeric strings. */
-export const NEW_PROFILE = '__new__'
-
 export function emptyS3(): S3ImportConfig {
   return { accessKeyId: '', secretAccessKey: '', sessionToken: '', region: '', bucket: '', prefix: '' }
 }
@@ -42,23 +39,11 @@ export function useS3Form() {
       : emptyS3()
   }
 
-  function onProfileChange(value: string) {
-    if (value === NEW_PROFILE) {
-      selectedProfileId.value = null
-      applyProfile(null)
-      return
-    }
-    const id = Number(value)
-    selectedProfileId.value = id
-    applyProfile(profiles.value.find((p) => p.id === id) ?? null)
+  /** Loads a saved profile into the form, or clears it for a new one. */
+  function selectProfile(p: S3Profile | null) {
+    selectedProfileId.value = p?.id ?? null
+    applyProfile(p)
   }
-
-  const profileSelectValue = computed(() =>
-    selectedProfileId.value == null ? NEW_PROFILE : String(selectedProfileId.value),
-  )
-  const profileSelectLabel = computed(() =>
-    activeProfile.value?.name ?? t('import.s3_profile_new'),
-  )
 
   async function saveProfile() {
     const existing = activeProfile.value
@@ -124,8 +109,8 @@ export function useS3Form() {
 
   return {
     s3, confirming, valid, credsLabel,
-    profiles, activeProfile, profileSelectValue, profileSelectLabel, deleteConfirmOpen,
-    onProfileChange, saveProfile, deleteProfile,
+    profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
+    selectProfile, saveProfile, deleteProfile,
     review, cancel, confirm,
   }
 }
