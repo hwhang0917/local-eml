@@ -42,7 +42,7 @@ Step-by-step guides:
 - [Open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook)
 - [Free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
 
-The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
+The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [browsing attachments](https://hwhang0917.github.io/local-eml/docs/attachments), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
 
 ## Contributing
 

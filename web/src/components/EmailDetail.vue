@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
@@ -27,6 +27,7 @@ const TEXT_PREVIEW_MAX_BYTES = 512 * 1024
 const props = defineProps<{ sha: string }>()
 const { t, locale } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const { toggleStar, toggleRead, setCategory: assignCategory } = useEmailActions()
 const { enabled: readTracking } = useReadTracking()
 
@@ -128,6 +129,7 @@ async function load() {
     else if (p.has_text) tab.value = 'text'
     else if (p.attachments.length > 0) tab.value = 'attachments'
     else tab.value = 'raw'
+    openRequestedAttachment(e, p)
   } catch (err) {
     error.value = String(err)
   }
@@ -304,6 +306,15 @@ function previewKind(a: PartInfo): PreviewKind | null {
 
 function inlineURL(index: number) {
   return api.attachmentURL(email.value!.sha256, index, true)
+}
+
+// The attachment browser links here with ?tab=attachments&att=<index>: land
+// on that tab with the attachment's preview already open.
+function openRequestedAttachment(e: Email, p: PartsManifest) {
+  if (route.query.tab !== 'attachments' || quarantined(e.flag) || p.attachments.length === 0) return
+  tab.value = 'attachments'
+  const a = p.attachments.find((x) => String(x.index) === route.query.att)
+  if (a && previewKind(a)) void togglePreview(a)
 }
 
 async function togglePreview(a: PartInfo) {

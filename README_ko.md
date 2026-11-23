@@ -42,7 +42,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 - [Outlook 없이 .pst 열기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/pst-without-outlook)
 - [Gmail 용량 확보하기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/free-up-gmail)
 
-[전체 문서](https://hwhang0917.github.io/local-eml/docs/ko/)에는 [메일 가져오기](https://hwhang0917.github.io/local-eml/docs/ko/import), 초성검색을 포함한 [검색](https://hwhang0917.github.io/local-eml/docs/ko/search), [새 메일 받기](https://hwhang0917.github.io/local-eml/docs/ko/sync), [스팸·피싱 경고](https://hwhang0917.github.io/local-eml/docs/ko/spam-phishing), [데이터 보관 위치](https://hwhang0917.github.io/local-eml/docs/ko/privacy), [설정과 명령어](https://hwhang0917.github.io/local-eml/docs/ko/settings-cli), [문제 해결](https://hwhang0917.github.io/local-eml/docs/ko/troubleshooting)이 정리되어 있습니다.
+[전체 문서](https://hwhang0917.github.io/local-eml/docs/ko/)에는 [메일 가져오기](https://hwhang0917.github.io/local-eml/docs/ko/import), 초성검색을 포함한 [검색](https://hwhang0917.github.io/local-eml/docs/ko/search), [첨부파일 둘러보기](https://hwhang0917.github.io/local-eml/docs/ko/attachments), [새 메일 받기](https://hwhang0917.github.io/local-eml/docs/ko/sync), [스팸·피싱 경고](https://hwhang0917.github.io/local-eml/docs/ko/spam-phishing), [데이터 보관 위치](https://hwhang0917.github.io/local-eml/docs/ko/privacy), [설정과 명령어](https://hwhang0917.github.io/local-eml/docs/ko/settings-cli), [문제 해결](https://hwhang0917.github.io/local-eml/docs/ko/troubleshooting)이 정리되어 있습니다.
 
 ## 기여하기
 
