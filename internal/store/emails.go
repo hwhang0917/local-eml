@@ -45,6 +45,8 @@ type Email struct {
 type EmailRow struct {
 	Email
 	BodyText string
+	// Attachments fill the attachments table alongside the row.
+	Attachments []AttachmentMeta
 }
 
 var ErrDuplicate = errors.New("email already exists")
@@ -88,6 +90,10 @@ func (s *Store) InsertEmail(ctx context.Context, e EmailRow) (int64, error) {
 		VALUES (?,?,?,?,?)`,
 		id, e.Subject, e.FromAddr, string(to), e.BodyText,
 	); err != nil {
+		return 0, err
+	}
+
+	if err := insertAttachments(ctx, tx, id, e.Attachments); err != nil {
 		return 0, err
 	}
 

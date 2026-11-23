@@ -345,6 +345,11 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		} else if n > 0 {
 			slog.Info("phishing risk backfill done", "assessed", n)
 		}
+		if n, err := imp.BackfillAttachments(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			slog.Warn("attachment list backfill", "err", err)
+		} else if n > 0 {
+			slog.Info("attachment list backfill done", "emails", n)
+		}
 	}()
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.port))

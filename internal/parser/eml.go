@@ -24,8 +24,17 @@ type Parsed struct {
 	BodyText        string
 	HTMLAvailable   bool
 	AttachmentCount int
+	// Attachments describes each of env.Attachments, in order.
+	Attachments []Attachment
 	// Risk is the phishing heuristics' findings; empty (not nil) when clean.
 	Risk []risk.Reason
+}
+
+// Attachment is the metadata of one attachment part.
+type Attachment struct {
+	Filename    string
+	ContentType string
+	Size        int64
 }
 
 func Open(r io.Reader) (*enmime.Envelope, error) {
@@ -45,6 +54,13 @@ func Parse(r io.Reader) (*Parsed, error) {
 		// counting them made nearly every marketing email claim an attachment.
 		AttachmentCount: len(env.Attachments),
 		HTMLAvailable:   env.HTML != "",
+	}
+	for _, a := range env.Attachments {
+		p.Attachments = append(p.Attachments, Attachment{
+			Filename:    a.FileName,
+			ContentType: a.ContentType,
+			Size:        int64(len(a.Content)),
+		})
 	}
 	p.ThreadID = threadID(env.GetHeader("References"), env.GetHeader("In-Reply-To"), p.MessageID)
 	p.To = splitAddrs(env.GetHeader("To"))
