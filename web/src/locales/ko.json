@@ -218,6 +218,13 @@
     "toggle_details": "상세 정보 접기/펼치기",
     "mark_read": "읽음으로 표시",
     "mark_unread": "안 읽음으로 표시",
+    "delete": "메일 삭제",
+    "delete_title": "이 메일을 삭제할까요?",
+    "delete_body": "메일과 .eml 파일이 이 컴퓨터에서 삭제되며 되돌릴 수 없습니다. 원본을 전체 다시 동기화하면 다시 가져올 수 있습니다.",
+    "delete_confirm": "삭제",
+    "delete_cancel": "취소",
+    "delete_done": "메일을 삭제했습니다",
+    "delete_error": "메일을 삭제하지 못했습니다",
     "toggle_thread": "대화 접기/펼치기"
   },
   "import": {

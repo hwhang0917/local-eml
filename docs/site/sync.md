@@ -8,7 +8,7 @@ On the **Import** page, choose **IMAP**. Each saved profile appears as a card wi
 
 The dot on each card shows where things stand. Green means the profile is syncing in the background. Amber means sync is on but still waiting for that first import with your password.
 
-By default it checks every 10 minutes. You can change that with **Check interval** on the Import page. If you run the background service, you can also set `LOCAL_EML_SYNC_INTERVAL` in its environment to a value like `5m` or `30s`, or `off` to pause it. If both are set, the value in the app is used.
+By default it checks every 10 minutes. You can change that with **Check interval** on the Import page, anywhere from every minute to once an hour. If you run the background service, you can also set `LOCAL_EML_SYNC_INTERVAL` in its environment to a value like `5m` or `30s`, or `off` to pause it. If both are set, the value in the app is used.
 
 ## Instant delivery
 

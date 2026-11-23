@@ -218,6 +218,13 @@
     "toggle_details": "Show or hide details",
     "mark_read": "Mark as read",
     "mark_unread": "Mark as unread",
+    "delete": "Delete email",
+    "delete_title": "Delete this email?",
+    "delete_body": "The message and its .eml file are removed from this computer. This can't be undone. A full resync of the original source may import it again.",
+    "delete_confirm": "Delete",
+    "delete_cancel": "Cancel",
+    "delete_done": "Email deleted",
+    "delete_error": "Couldn't delete the email",
     "toggle_thread": "Show or hide the conversation"
   },
   "import": {
@@ -304,7 +311,7 @@
     "imap_sync_help_off": "Stores the password encrypted on this machine. Automatic fetching is turned off — use the interval below to enable it.",
     "sync_interval_label": "Check interval",
     "sync_interval_off": "Off",
-    "sync_interval_minutes": "{n} minutes",
+    "sync_interval_minutes": "{n} minute | {n} minutes",
     "sync_interval_hours": "{n} hour | {n} hours",
     "sync_interval_error": "Failed to save the check interval",
     "notify_label": "Notify me when new mail arrives",

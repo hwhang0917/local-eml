@@ -26,6 +26,7 @@ import { useEmailActions } from '@/composables/useEmailActions'
 import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext } from '@/composables/useListContext'
 import { onMailSignal } from '@/composables/useMailEvents'
+import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input.vue'
@@ -443,6 +444,10 @@ const selectionHasThreads = computed(
   () => groupThreads.value && items.value.some((e) => selected.value.has(e.sha256) && (e.thread_count ?? 0) > 1),
 )
 const bulkBusy = ref(false)
+// A temporary session throws the whole library away on exit, so deleting
+// single messages is pointless there. Hidden until the mode is known.
+const { session } = useSession()
+const canDelete = computed(() => session.value != null && session.value.mode !== 'temporary')
 // Compact so the action row fits the header's height; Button's sizes don't go this small.
 const bulkBtn = 'inline-flex h-7 items-center gap-1.5 rounded-sm border border-hairline bg-pearl px-2.5 text-xs '
   + 'text-foreground hover:bg-accent disabled:opacity-50 disabled:pointer-events-none '
@@ -712,6 +717,7 @@ const pageInfo = computed(() => {
                     {{ t('library.bulk_mark_unread') }}
                   </button>
                   <button
+                    v-if="canDelete"
                     type="button"
                     :class="cn(bulkBtn, 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/95')"
                     :disabled="bulkBusy"

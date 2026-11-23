@@ -4,12 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, ShieldAlert, ShieldCheck, Star, TriangleAlert } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
 import { api, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { NO_CATEGORY, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
 import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext, type Neighbors } from '@/composables/useListContext'
+import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { pageTitle } from '@/lib/app'
 import { dialogClass } from '@/lib/utils'
@@ -18,6 +19,7 @@ import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import Card from '@/components/ui/Card.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 // Larger plain-text attachments are a download, not a preview.
 const TEXT_PREVIEW_MAX_BYTES = 512 * 1024
@@ -233,6 +235,37 @@ async function deleteDangling() {
   }
 }
 
+// Deleting from the toolbar. Afterwards the viewer moves on the way a mail
+// client does: to the next message in the list it came from, else the
+// previous one, else back to the library.
+const deleteConfirmOpen = ref(false)
+const deleting = ref(false)
+// Not offered in a temporary session: the whole library goes on exit anyway.
+const { session } = useSession()
+const canDelete = computed(() => session.value != null && session.value.mode !== 'temporary')
+
+async function deleteThis() {
+  if (deleting.value) return
+  deleting.value = true
+  const next = nav.value?.next ?? null
+  const prev = nav.value?.prev ?? null
+  try {
+    // The bulk endpoint removes the row and its .eml file; deleteEmail only
+    // clears rows whose file is already gone. threads=false: just this one.
+    await api.bulkEmails('delete', [props.sha], false)
+  } catch (err) {
+    toast.error(t('viewer.delete_error'), { description: String(err) })
+    return
+  } finally {
+    deleting.value = false
+  }
+  toast.success(t('viewer.delete_done'))
+  // The list shrank by one, so the next message now sits at this index.
+  if (next) router.replace({ name: 'viewer', params: { sha: next.sha256 } })
+  else if (prev) goSibling(prev, -1)
+  else goBack()
+}
+
 async function indexOrphan() {
   repairing.value = true
   try {
@@ -402,6 +435,19 @@ async function togglePreview(a: PartInfo) {
           @click="toggleRead(email)"
         >
           <component :is="email.read ? MailOpen : Mail" class="h-5 w-5" />
+        </button>
+        <button
+          v-if="canDelete"
+          type="button"
+          :title="t('viewer.delete')"
+          :aria-label="t('viewer.delete')"
+          :disabled="deleting"
+          class="inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0
+            text-muted-foreground hover:text-destructive disabled:opacity-50"
+          data-testid="viewer-delete"
+          @click="deleteConfirmOpen = true"
+        >
+          <Trash2 class="h-5 w-5" />
         </button>
         <button
           type="button"
@@ -594,6 +640,15 @@ async function togglePreview(a: PartInfo) {
       </div>
     </dialog>
 
+    <ConfirmDialog
+      v-model:open="deleteConfirmOpen"
+      :title="t('viewer.delete_title')"
+      :description="t('viewer.delete_body')"
+      :confirm-label="t('viewer.delete_confirm')"
+      :cancel-label="t('viewer.delete_cancel')"
+      destructive
+      @confirm="deleteThis"
+    />
     <dialog ref="linkDialog" aria-labelledby="link-dialog-title" :class="dialogClass">
       <div class="space-y-3 p-5">
         <h2 id="link-dialog-title" class="font-semibold">{{ t('viewer.external_link.title') }}</h2>
