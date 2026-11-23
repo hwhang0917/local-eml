@@ -37,6 +37,26 @@ winget upgrade hwhang0917.LocalEml
 
 The checks can't be right every time. Choose **Not spam** on the banner to hide the warning for that message, or turn warnings off under **Settings → Spam & phishing**. See [Spam and phishing](./spam-phishing).
 
+## New-mail notifications don't pop up
+
+First check that **Notify me when new mail arrives** is ticked under the sync settings and that Local Eml is open in a browser tab. The site doesn't need HTTPS for this: browsers treat `http://localhost` as secure, so notifications work at `http://localhost:7878`.
+
+If the option is on but nothing pops up, your operating system is usually holding the notifications back. Click the **(?)** next to the option for these steps in the app, and use **Send a test notification** there to check your settings. The setting is under your browser's name (Google Chrome, Microsoft Edge, Safari, Firefox), not Local Eml, because the browser shows the notification.
+
+**Windows**
+
+1. Open **Settings → System → Notifications** and turn off **Do not disturb**.
+2. On the same page, open **Turn on do not disturb automatically** and clear the rules you don't want, such as *when duplicating your display*, *when playing a game*, or *when using an app in full-screen mode*.
+3. Under **Notifications from apps and other senders**, click your browser and turn on **Show notification banners**. If notifications appear in the list (Windows key + N) but never pop up in the corner, this is usually why.
+
+**macOS**
+
+1. Open **System Settings → Notifications**, pick your browser, and turn on **Allow notifications**. Chrome may be listed as *Google Chrome Helper (Alerts)*.
+2. On the same screen, set the alert style to **Banners** or **Alerts**. With **None**, notifications only collect in Notification Center.
+3. If the Focus icon (a moon) is in the menu bar, notifications are held back. Turn Focus off in Control Center, or add your browser to the allowed apps under **System Settings → Focus**.
+
+On Linux, check your desktop's Do Not Disturb setting and its notification settings for your browser.
+
 ## Finding the log file
 
 On Linux and macOS:

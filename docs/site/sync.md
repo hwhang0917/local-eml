@@ -43,3 +43,5 @@ Each check appears on the Import page as a job. You can watch its progress and c
 If you'd like a desktop notification when new mail comes in, tick **Notify me when new mail arrives** under the sync settings. It's off by default. The first time, your browser asks for permission. If you say no, the option stays off. You can allow notifications later in your browser's settings for the site and then tick it again.
 
 Notifications come from the Local Eml tab, so you only get them while Local Eml is open in your browser. The setting is remembered separately in each browser. Messages flagged as spam or phishing are included in the count, but their sender and subject aren't shown.
+
+If notifications are on but don't pop up, see [New-mail notifications don't pop up](./troubleshooting#new-mail-notifications-don-t-pop-up).
