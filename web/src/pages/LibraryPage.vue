@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUpdate, onMounted, computed } from 'vue'
+import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
 import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
@@ -25,6 +25,7 @@ import { ANY_CATEGORY, NO_CATEGORY, parseCategoryValue, useCategories } from '@/
 import { useEmailActions } from '@/composables/useEmailActions'
 import { useReadTracking } from '@/composables/useReadTracking'
 import { useListContext } from '@/composables/useListContext'
+import { onMailSignal } from '@/composables/useMailEvents'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input.vue'
@@ -183,6 +184,55 @@ async function toggleThread(e: Email) {
 }
 
 watch([q, starredOnly, unreadOnly, category, from, to, sort, order, offset, limit], load)
+
+// Live refresh. When the server says mail came in (a background sync, or an
+// import in another tab), the page re-runs its query in place: no spinner,
+// and the selection and open threads survive. Rows that weren't there before
+// are tinted for a moment so the eye finds them.
+const REFRESH_DEBOUNCE_MS = 400
+const FRESH_ROW_MS = 4_000
+const freshRows = ref(new Set<string>())
+const liveAnnouncement = ref('')
+let freshTimer: number | undefined
+
+async function refreshInPlace() {
+  if (loading.value || bulkBusy.value) {
+    // Let the running load or bulk action land first, then look again.
+    refreshSoon()
+    return
+  }
+  const params = { ...listParams.value, limit: limit.value, offset: offset.value }
+  const asked = JSON.stringify(params)
+  const before = new Set(items.value.map((e) => e.sha256))
+  let r
+  try {
+    r = await api.listEmails(params)
+  } catch {
+    return // the next event or a manual reload will try again
+  }
+  // The person moved to another query meanwhile; its own load wins.
+  if (loading.value || JSON.stringify({ ...listParams.value, limit: limit.value, offset: offset.value }) !== asked) return
+
+  const now = new Set(r.items.map((e) => e.sha256))
+  items.value = r.items
+  total.value = r.total
+  for (const sha of selected.value) if (!now.has(sha)) selected.value.delete(sha)
+  for (const sha of expandedThreads.value.keys()) if (!now.has(sha)) expandedThreads.value.delete(sha)
+
+  const added = r.items.filter((e) => !before.has(e.sha256)).map((e) => e.sha256)
+  if (added.length === 0) return
+  freshRows.value = new Set(added)
+  window.clearTimeout(freshTimer)
+  freshTimer = window.setTimeout(() => freshRows.value.clear(), FRESH_ROW_MS)
+  liveAnnouncement.value = t('library.new_mail_arrived', { count: added.length }, added.length)
+}
+const refreshSoon = useDebounceFn(refreshInPlace, REFRESH_DEBOUNCE_MS)
+
+const stopMailSignal = onMailSignal(() => void refreshSoon())
+onUnmounted(() => {
+  stopMailSignal()
+  window.clearTimeout(freshTimer)
+})
 
 const tour = useTour()
 onMounted(() => {
@@ -621,6 +671,7 @@ const pageInfo = computed(() => {
       </div>
     </div>
 
+    <p class="sr-only" aria-live="polite">{{ liveAnnouncement }}</p>
     <Card class="overflow-hidden" :aria-busy="loading">
       <table class="w-full text-sm">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
@@ -716,7 +767,7 @@ const pageInfo = computed(() => {
           </tr>
           <template v-for="(e, i) in items" :key="e.sha256">
           <tr
-            :class="['border-t hover:bg-accent/50 cursor-pointer', selected.has(e.sha256) ? 'bg-accent/30' : '']"
+            :class="['border-t hover:bg-accent/50 cursor-pointer', selected.has(e.sha256) ? 'bg-accent/30' : '', freshRows.has(e.sha256) ? 'row-fresh' : '']"
             @click="rememberPosition(i); openEmail(e.sha256, $event)"
             @auxclick="rememberPosition(i); openEmailAux(e.sha256, $event)"
             @mousedown.middle.prevent

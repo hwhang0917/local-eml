@@ -17,15 +17,22 @@ import (
 // It is non-fatal — callers should log and move on.
 var ErrSyncSkipped = errors.New("sync skipped")
 
+// errSyncBusy is the ErrSyncSkipped a profile reports while another sync of
+// it is running.
+var errSyncBusy = fmt.Errorf("%w: already running", ErrSyncSkipped)
+
 // syncLocks serializes concurrent syncs of the same profile. Two timer ticks
 // landing close together, or a tick racing with a manual import, must not run
 // the same profile twice.
 type syncLocks struct {
 	mu     sync.Mutex
 	active map[int64]bool
+	// rerun marks running syncs that must go once more when they end,
+	// because new mail was pushed while they ran.
+	rerun map[int64]bool
 }
 
-var imapSyncLocks = &syncLocks{active: map[int64]bool{}}
+var imapSyncLocks = &syncLocks{active: map[int64]bool{}, rerun: map[int64]bool{}}
 
 func (l *syncLocks) tryAcquire(id int64) bool {
 	l.mu.Lock()
@@ -37,10 +44,26 @@ func (l *syncLocks) tryAcquire(id int64) bool {
 	return true
 }
 
-func (l *syncLocks) release(id int64) {
+// release ends a run and reports whether another was asked for meanwhile.
+func (l *syncLocks) release(id int64) (again bool) {
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	delete(l.active, id)
-	l.mu.Unlock()
+	again = l.rerun[id]
+	delete(l.rerun, id)
+	return again
+}
+
+// rerunWhenDone asks the running sync of id to run again when it ends. It
+// returns false when no sync is running any more.
+func (l *syncLocks) rerunWhenDone(id int64) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.active[id] {
+		return false
+	}
+	l.rerun[id] = true
+	return true
 }
 
 // firstSyncDelay is how soon after startup the first poll fires, so
@@ -52,33 +75,22 @@ const firstSyncDelay = 5 * time.Second
 // profile: a second concurrent invocation returns ErrSyncSkipped.
 func (s *Server) RunIMAPSync(ctx context.Context, profileID int64) error {
 	if !imapSyncLocks.tryAcquire(profileID) {
-		return fmt.Errorf("%w: already running", ErrSyncSkipped)
+		return errSyncBusy
 	}
-	defer imapSyncLocks.release(profileID)
+	defer func() {
+		if imapSyncLocks.release(profileID) {
+			go s.syncNow(profileID)
+		}
+	}()
 
-	if s.Secret == nil {
-		return fmt.Errorf("%w: encryptor not configured", ErrSyncSkipped)
-	}
 	profile, err := s.Store.GetIMAPProfile(ctx, profileID)
 	if err != nil {
 		return err
 	}
-	if !profile.SyncEnabled {
-		return fmt.Errorf("%w: sync disabled", ErrSyncSkipped)
-	}
-	if !profile.HasPassword {
-		return fmt.Errorf("%w: no stored password", ErrSyncSkipped)
-	}
-	blob, err := s.Store.GetIMAPProfilePassword(ctx, profileID)
+	cfg, err := s.syncConfig(ctx, profile)
 	if err != nil {
-		return fmt.Errorf("read password: %w", err)
+		return err
 	}
-	plain, err := s.Secret.Decrypt(blob)
-	if err != nil {
-		return fmt.Errorf("decrypt password: %w", err)
-	}
-
-	cfg := profileDefaults(importer.IMAPConfig{Password: string(plain)}, profile)
 	cfg = withSyncCursor(cfg, profile)
 	src := importer.NewIMAPSource(cfg)
 	importID, err := s.queueJob(ctx, kindIMAPSync, src.Label()+" (sync)")
@@ -97,6 +109,30 @@ func (s *Server) RunIMAPSync(ctx context.Context, profileID int64) error {
 		s.persistIMAPSyncState(profile.ID, src)
 	})
 	return nil
+}
+
+// syncConfig builds the connection settings unattended sync uses for a
+// profile, with its stored password decrypted. A profile that can't be
+// synced unattended reports ErrSyncSkipped.
+func (s *Server) syncConfig(ctx context.Context, profile *store.IMAPProfile) (importer.IMAPConfig, error) {
+	if s.Secret == nil {
+		return importer.IMAPConfig{}, fmt.Errorf("%w: encryptor not configured", ErrSyncSkipped)
+	}
+	if !profile.SyncEnabled {
+		return importer.IMAPConfig{}, fmt.Errorf("%w: sync disabled", ErrSyncSkipped)
+	}
+	if !profile.HasPassword {
+		return importer.IMAPConfig{}, fmt.Errorf("%w: no stored password", ErrSyncSkipped)
+	}
+	blob, err := s.Store.GetIMAPProfilePassword(ctx, profile.ID)
+	if err != nil {
+		return importer.IMAPConfig{}, fmt.Errorf("read password: %w", err)
+	}
+	plain, err := s.Secret.Decrypt(blob)
+	if err != nil {
+		return importer.IMAPConfig{}, fmt.Errorf("decrypt password: %w", err)
+	}
+	return profileDefaults(importer.IMAPConfig{Password: string(plain)}, profile), nil
 }
 
 // profileDefaults fills whatever cfg left blank from the saved profile.
@@ -129,7 +165,8 @@ func withSyncCursor(cfg importer.IMAPConfig, p *store.IMAPProfile) importer.IMAP
 
 // RunDueIMAPSyncs walks every sync-enabled profile and triggers a sync. It
 // returns after kicking each off in sequence; per-profile errors are logged
-// but never abort the loop.
+// but never abort the loop. Profiles IMAP IDLE keeps current are left alone
+// until they go idleSafetyPoll without a sync.
 func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 	profiles, err := s.Store.ListIMAPProfilesForSync(ctx)
 	if err != nil {
@@ -139,6 +176,9 @@ func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 	for _, p := range profiles {
 		if ctx.Err() != nil {
 			return
+		}
+		if s.pushCovered(&p) {
+			continue
 		}
 		if err := s.RunIMAPSync(ctx, p.ID); err != nil {
 			level := slog.LevelWarn
@@ -154,13 +194,19 @@ func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 }
 
 // StartIMAPSyncer launches a goroutine that polls every sync-enabled IMAP
-// profile on the given interval. It returns immediately; the goroutine exits
-// when ctx is cancelled. A duration <= 0 starts the syncer paused — the
-// goroutine still runs so SetIMAPSyncInterval can wake it later.
+// profile on the given interval, and keeps an IMAP IDLE watcher running for
+// each so new mail is fetched as soon as the server has it. It returns
+// immediately; the goroutine exits when ctx is cancelled. A duration <= 0
+// starts the syncer paused — the goroutine still runs so SetIMAPSyncInterval
+// can wake it later. Pausing stops the watchers too.
 func (s *Server) StartIMAPSyncer(ctx context.Context, interval time.Duration) {
 	s.syncIntervalNs.Store(int64(interval))
 	s.syncIntervalCh = make(chan time.Duration, 1)
+	s.idleKick = make(chan struct{}, 1)
 	go func() {
+		defer s.stopIdle()
+		reconcile := time.NewTicker(idleReconcileEvery)
+		defer reconcile.Stop()
 		if interval > 0 {
 			slog.Info("imap syncer started", slog.Duration("interval", interval))
 		} else {
@@ -171,6 +217,7 @@ func (s *Server) StartIMAPSyncer(ctx context.Context, interval time.Duration) {
 		if interval <= 0 {
 			timer.Stop()
 		}
+		s.reconcileIdle(ctx)
 		for {
 			select {
 			case <-ctx.Done():
@@ -185,6 +232,11 @@ func (s *Server) StartIMAPSyncer(ctx context.Context, interval time.Duration) {
 				} else {
 					slog.Info("imap syncer paused")
 				}
+				s.reconcileIdle(ctx)
+			case <-s.idleKick:
+				s.reconcileIdle(ctx)
+			case <-reconcile.C:
+				s.reconcileIdle(ctx)
 			case <-timer.C:
 				s.RunDueIMAPSyncs(ctx)
 				if interval > 0 {

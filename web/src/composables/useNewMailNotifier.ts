@@ -4,14 +4,17 @@ import { locked } from '@/lib/auth'
 import { senderName } from '@/lib/format'
 import { i18n } from '@/i18n'
 import { router } from '@/router'
+import { onMailSignal, startMailEvents } from '@/composables/useMailEvents'
 
 // Opt-in desktop notifications for mail a background IMAP sync brought in.
 // The choice is kept per browser, because the permission it depends on is
 // per browser too. There is no service worker: notifications come from an
-// open Local Eml tab, which polls the server for finished sync jobs.
+// open Local Eml tab. The server's live mail stream says when a sync added
+// mail; the tab then reads which jobs finished since it last looked. A slow
+// poll covers a stream that is down.
 
 const STORAGE_KEY = 'notify-new-mail'
-const POLL_MS = 30_000
+const FALLBACK_POLL_MS = 5 * 60_000
 // Matches the server's job kind for background syncs (kindIMAPSync).
 const SYNC_KIND = 'imap-sync'
 
@@ -119,7 +122,27 @@ function resetCursor() {
 const added = (j: ImportStatus) => Math.max(0, j.processed - j.duplicates - j.errors)
 const unix = (iso: string) => Math.floor(new Date(iso).getTime() / 1000)
 
-async function poll() {
+// One check at a time: a pushed event and the fallback tick landing together
+// must not announce the same jobs twice.
+let checking: Promise<void> | null = null
+let checkAgain = false
+
+function poll(): Promise<void> {
+  if (checking) {
+    checkAgain = true
+    return checking
+  }
+  checking = check().finally(() => {
+    checking = null
+    if (checkAgain) {
+      checkAgain = false
+      void poll()
+    }
+  })
+  return checking
+}
+
+async function check() {
   permission.value = readPermission()
   if (!active.value || locked.value) {
     // Nothing is announced while off, and turning back on starts from now
@@ -172,10 +195,14 @@ async function notifyNewMail(count: number, sinceS: number, tagID: string) {
   show(title, body, tag, () => router.push({ name: 'library' }))
 }
 
-/** Starts the poll loop once for the page. Safe to call more than once. */
+/** Starts watching once for the page. Safe to call more than once. */
 export function startNewMailWatcher() {
   if (timer != null) return
-  timer = window.setInterval(() => void poll(), POLL_MS)
+  startMailEvents()
+  onMailSignal((sig) => {
+    if (sig.type === 'resumed' || sig.kind === SYNC_KIND) void poll()
+  })
+  timer = window.setInterval(() => void poll(), FALLBACK_POLL_MS)
   // A permission changed in the browser's site settings shows up when the
   // person comes back to the tab.
   document.addEventListener('visibilitychange', () => {

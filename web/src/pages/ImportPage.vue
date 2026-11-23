@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { cn, fieldClass, segmentClass } from '@/lib/utils'
 import { formatBytes } from '@/lib/format'
 import { useImports } from '@/composables/useImports'
 import { useNewMailNotifier } from '@/composables/useNewMailNotifier'
+import { onMailSignal } from '@/composables/useMailEvents'
 import { toast } from 'vue-sonner'
 import { api } from '@/lib/api'
 import type { IMAPImportConfig, IMAPProfile } from '@/lib/api'
@@ -197,6 +198,33 @@ async function setSyncInterval(v: string | undefined) {
 onMounted(() => {
   loadImapProfiles()
   loadSyncInterval()
+})
+
+// The cards show live state the server changes on its own: the push
+// connection comes up a moment after sync is switched on, and each sync moves
+// "synced …". Re-read the list quietly when mail arrives, and every few
+// seconds while a push connection is still settling.
+const SETTLING_POLL_MS = 5_000
+async function refreshImapProfilesQuietly() {
+  try {
+    imapProfiles.value = await api.listIMAPProfiles()
+  } catch {
+    /* the cards keep their last state */
+  }
+}
+const settling = computed(() =>
+  imapProfiles.value.some(
+    (p) => p.sync_enabled && p.has_password && syncIntervalSeconds.value > 0
+      && (p.push == null || p.push === 'connecting' || p.push === 'retrying'),
+  ),
+)
+const settleTimer = window.setInterval(() => {
+  if (settling.value) void refreshImapProfilesQuietly()
+}, SETTLING_POLL_MS)
+const stopMailSignal = onMailSignal(() => void refreshImapProfilesQuietly())
+onUnmounted(() => {
+  window.clearInterval(settleTimer)
+  stopMailSignal()
 })
 
 function applyImapProfile(p: IMAPProfile | null) {

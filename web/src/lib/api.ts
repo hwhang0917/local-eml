@@ -148,6 +148,21 @@ export interface UpdateStatus {
   error?: string
 }
 
+/** One message on /api/events. */
+export interface MailEvent {
+  type: 'ready' | 'new-mail'
+  /** Job kind that added the mail, e.g. 'imap-sync'. */
+  kind?: string
+  import_id?: string
+  added?: number
+}
+
+/**
+ * Whether a profile's new mail is pushed by the server (IMAP IDLE): live,
+ * still connecting, reconnecting after a drop, or not offered by the server.
+ */
+export type PushState = 'live' | 'connecting' | 'retrying' | 'unsupported'
+
 export interface IMAPProfile {
   id: number
   name: string
@@ -160,6 +175,8 @@ export interface IMAPProfile {
   last_uid?: number
   last_synced_at?: number
   has_password: boolean
+  /** Absent when background sync isn't watching this profile. */
+  push?: PushState
 }
 
 export interface S3Profile {
@@ -368,6 +385,11 @@ export const api = {
 
   importEventSource(id: string): EventSource {
     return new EventSource(`/api/imports/${id}/events`)
+  },
+
+  /** Live "new mail came in" stream; see useMailEvents. */
+  mailEventSource(): EventSource {
+    return new EventSource('/api/events')
   },
 
   listIMAPProfiles() {

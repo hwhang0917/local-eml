@@ -26,7 +26,7 @@ const tour = useTour()
 const { session } = useSession()
 const token = ref('')
 
-// Polls for mail a background sync brought in; idle unless turned on.
+// Listens for new mail the server announces; notifies only when turned on.
 onMounted(startNewMailWatcher)
 
 // Two of the steps point at library controls, so the tour has to run from the

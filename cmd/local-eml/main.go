@@ -360,6 +360,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	httpSrv.RegisterOnShutdown(srv.CloseStreams)
 
 	var shutdownOnce sync.Once
 	shutdownDone := make(chan struct{})

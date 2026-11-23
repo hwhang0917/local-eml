@@ -131,3 +131,19 @@
                 border-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
   }
 }
+
+/* A library row that just arrived by live refresh: a primary tint that fades
+   out, so the eye finds it without the list jumping. */
+@keyframes row-fresh {
+  from { background-color: color-mix(in srgb, var(--primary) 14%, transparent); }
+  to { background-color: transparent; }
+}
+.row-fresh {
+  animation: row-fresh 4s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-fresh {
+    animation: none;
+    background-color: color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}

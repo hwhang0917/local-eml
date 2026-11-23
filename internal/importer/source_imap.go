@@ -158,7 +158,9 @@ type imapClientSession struct {
 	uidValidity uint32
 }
 
-func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
+// dialIMAP connects to the configured server and logs in. opts may be nil;
+// it carries the unilateral-data handler the IDLE watcher listens on.
+func dialIMAP(cfg IMAPConfig, opts *imapclient.Options) (*imapclient.Client, *slog.Logger, error) {
 	port := cfg.Port
 	if port == 0 {
 		port = imapsPort
@@ -172,22 +174,30 @@ func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
 	)
 	if port == imapStartTLSPort {
 		log.Info("imap dial starttls")
-		c, err = imapclient.DialStartTLS(addr, nil)
+		c, err = imapclient.DialStartTLS(addr, opts)
 	} else {
 		log.Info("imap dial tls")
-		c, err = imapclient.DialTLS(addr, nil)
+		c, err = imapclient.DialTLS(addr, opts)
 	}
 	if err != nil {
 		log.Error("imap dial failed", slog.String("err", err.Error()))
-		return nil, fmt.Errorf("imap dial: %w", err)
+		return nil, log, fmt.Errorf("imap dial: %w", err)
 	}
 
 	if err := c.Login(cfg.Username, cfg.Password).Wait(); err != nil {
 		log.Error("imap login failed", slog.String("err", err.Error()))
 		_ = c.Close()
-		return nil, fmt.Errorf("imap login: %w", err)
+		return nil, log, fmt.Errorf("imap login: %w", err)
 	}
 	log.Info("imap logged in")
+	return c, log, nil
+}
+
+func newIMAPSession(cfg IMAPConfig) (imapSession, error) {
+	c, log, err := dialIMAP(cfg, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	folder := cfg.Mailbox()
 	selectData, err := c.Select(folder, &imap.SelectOptions{ReadOnly: true}).Wait()

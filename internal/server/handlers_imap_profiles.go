@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
@@ -15,6 +16,15 @@ type imapProfileBody struct {
 	Username    string  `json:"username"`
 	Folder      *string `json:"folder,omitempty"`
 	SyncEnabled bool    `json:"sync_enabled,omitempty"`
+}
+
+// imapProfileView is a saved profile as the profile cards show it: the stored
+// fields plus whether new mail is pushed (IMAP IDLE) or polled.
+type imapProfileView struct {
+	store.IMAPProfile
+	// Push is the IDLE watcher's state: live, connecting, retrying or
+	// unsupported; empty when no watcher runs for the profile.
+	Push importer.IdleState `json:"push,omitempty"`
 }
 
 const (
@@ -28,7 +38,11 @@ func (s *Server) handleListIMAPProfiles(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	writeJSON(w, http.StatusOK, profiles)
+	out := make([]imapProfileView, len(profiles))
+	for i, p := range profiles {
+		out[i] = imapProfileView{IMAPProfile: p, Push: s.pushState(p.ID)}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
@@ -64,6 +78,7 @@ func (s *Server) handleSaveIMAPProfile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.kickIdle()
 	writeJSON(w, http.StatusOK, saved)
 }
 
@@ -76,6 +91,7 @@ func (s *Server) handleDeleteIMAPProfile(w http.ResponseWriter, r *http.Request)
 		writeStoreErr(w, err, store.ErrIMAPProfileNotFound)
 		return
 	}
+	s.kickIdle()
 	w.WriteHeader(http.StatusNoContent)
 }
 
