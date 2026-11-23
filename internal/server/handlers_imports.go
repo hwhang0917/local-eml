@@ -365,7 +365,9 @@ func (s *Server) rememberIMAPPassword(ctx context.Context, profileID int64, pass
 	if err != nil {
 		slog.Warn("store imap password failed",
 			slog.Int64("profile_id", profileID), slog.String("err", err.Error()))
+		return
 	}
+	s.kickIdle() // the profile can be watched now
 }
 
 // resolveIMAPConfig fills in what the request left blank from the saved

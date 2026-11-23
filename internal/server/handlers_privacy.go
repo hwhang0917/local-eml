@@ -91,6 +91,8 @@ func (s *Server) handleWipeData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// The wipe turned sync off everywhere; close the push connections too.
+	s.kickIdle()
 	p := s.Importer.Paths
 	if err := emptyDir(p.EML, os.RemoveAll); err != nil {
 		http.Error(w, "delete mail files: "+err.Error(), http.StatusInternalServerError)

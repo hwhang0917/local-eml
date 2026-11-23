@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"sync/atomic"
 	"time"
@@ -40,6 +41,15 @@ type Server struct {
 	// Background IMAP poll state; see StartIMAPSyncer / SetIMAPSyncInterval.
 	syncIntervalNs atomic.Int64
 	syncIntervalCh chan time.Duration
+
+	// IMAP IDLE push; see idle.go. idleRunner replaces the real watcher in
+	// tests.
+	idle       idleWatchers
+	idleKick   chan struct{}
+	idleRunner func(ctx context.Context, cfg importer.IMAPConfig, onChange func(), onState func(importer.IdleState)) error
+
+	// mail tells open tabs that new mail came in; see mail_events.go.
+	mail mailFeed
 }
 
 func (s *Server) Router() http.Handler {
@@ -94,6 +104,8 @@ func (s *Server) Router() http.Handler {
 		api.Get("/s3/profiles", s.handleListS3Profiles)
 		api.Post("/s3/profiles", s.handleSaveS3Profile)
 		api.Delete("/s3/profiles/{id}", s.handleDeleteS3Profile)
+
+		api.Get("/events", s.handleMailEvents)
 
 		api.Get("/stats", s.handleStats)
 

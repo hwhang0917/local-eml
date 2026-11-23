@@ -34,6 +34,22 @@ const lastSynced = computed(() =>
   props.profile.last_synced_at ? formatDate(new Date(props.profile.last_synced_at * 1000).toISOString()) : '',
 )
 
+// How new mail reaches this profile, when the server reports it: pushed live
+// (IMAP IDLE), polled because the server can't push, or reconnecting. While
+// the push connection is still being set up the card says plain "sync on".
+const push = computed(() => {
+  switch (props.profile.push) {
+    case 'live':
+      return { label: t('import.imap_card_push_live'), help: t('import.imap_card_push_live_help'), tone: 'live' }
+    case 'retrying':
+      return { label: t('import.imap_card_push_retrying'), help: t('import.imap_card_push_retrying_help'), tone: 'warn' }
+    case 'unsupported':
+      return { label: t('import.imap_card_push_unsupported'), help: t('import.imap_card_push_unsupported_help'), tone: 'on' }
+    default:
+      return { label: t('import.imap_card_sync_on'), help: undefined, tone: 'on' }
+  }
+})
+
 // Sync is switched on but the poller can't log in yet: the password is only
 // kept after the first import with it.
 const waitingForPassword = computed(() => props.profile.sync_enabled && !props.profile.has_password)
@@ -93,7 +109,17 @@ const waitingForPassword = computed(() => props.profile.sync_enabled && !props.p
           class="flex-1 min-w-0 truncate text-muted-foreground"
           :title="profile.last_synced_at ? formatEpoch(profile.last_synced_at) : undefined"
         >
-          <span class="text-emerald-700 dark:text-emerald-400 font-medium">{{ t('import.imap_card_sync_on') }}</span>
+          <span
+            :class="cn(
+              'font-medium',
+              push.tone === 'warn' ? 'text-amber-600' : 'text-emerald-700 dark:text-emerald-400',
+            )"
+            :title="push.help"
+            data-testid="imap-push-state"
+          >
+            {{ push.label }}
+            <span v-if="push.help" class="sr-only">: {{ push.help }}</span>
+          </span>
           ·
           {{ profile.last_synced_at
             ? t('import.imap_card_last_synced', { when: lastSynced })

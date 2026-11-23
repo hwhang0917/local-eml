@@ -88,6 +88,7 @@ func (s *Server) runJob(id, kind string, src importer.Source, cleanup, afterDone
 	if afterDone != nil {
 		afterDone()
 	}
+	s.announceImported(id, kind)
 }
 
 // failJobOnPanic is deferred by every job runner: a panic inside a source or
