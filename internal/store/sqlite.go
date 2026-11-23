@@ -124,17 +124,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS emails_fts USING fts5(
 -- old terms would then resolve to the new message. Plain INTEGER PRIMARY KEY
 -- reuses max(id)+1 after the highest row is deleted, so ids come from this
 -- high-water mark instead and only ever move forward.
--- TEMP(search): mirrors the attachment browser's table until that lands.
-CREATE TABLE IF NOT EXISTS attachments (
-  id INTEGER PRIMARY KEY,
-  email_id INTEGER NOT NULL REFERENCES emails(id) ON DELETE CASCADE,
-  idx INTEGER NOT NULL,
-  filename TEXT NOT NULL DEFAULT '',
-  content_type TEXT NOT NULL DEFAULT '',
-  size_bytes INTEGER NOT NULL DEFAULT 0,
-  UNIQUE(email_id, idx)
-);
-
 CREATE TABLE IF NOT EXISTS email_id_seq (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   next_id INTEGER NOT NULL
