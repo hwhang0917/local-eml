@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, Printer, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
 import { api, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { NO_CATEGORY, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
@@ -14,6 +14,7 @@ import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { pageTitle } from '@/lib/app'
 import { dialogClass } from '@/lib/utils'
+import { buildPrintDocument, printDocument } from '@/lib/printEmail'
 import { attachmentName, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
@@ -183,6 +184,13 @@ function goSibling(target: Email | null, delta: number) {
 }
 
 function onKeydown(e: KeyboardEvent) {
+  // Ctrl/Cmd+P prints the message, not the app page with its clipped frame.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'p') {
+    if (!canPrint.value) return
+    e.preventDefault()
+    void printEmail()
+    return
+  }
   if (hasModifier(e) || isTypingTarget(e) || !nav.value) return
   if (e.key === 'ArrowLeft') goSibling(nav.value.prev, -1)
   else if (e.key === 'ArrowRight') goSibling(nav.value.next, 1)
@@ -278,6 +286,54 @@ async function indexOrphan() {
     error.value = String(err)
   } finally {
     repairing.value = false
+  }
+}
+
+// --- printing ---
+const printing = ref(false)
+const canPrint = computed(() => !!email.value && !email.value.blob_missing && !!parts.value)
+
+// Prints what is being read: the plain-text or raw tab prints that, any other
+// tab the HTML body (plain text when there is none, or the mail is flagged).
+async function printEmail() {
+  const e = email.value
+  const p = parts.value
+  if (!e || !p || printing.value) return
+  printing.value = true
+  try {
+    const useHTML = !flagged.value && p.has_html && tab.value !== 'text' && tab.value !== 'raw'
+    let html: string | null = null
+    let text = ''
+    if (useHTML) {
+      html = await api.getHTML(e.sha256, showRemote.value, locale.value)
+    } else if (tab.value === 'raw') {
+      text = rawBody.value || await api.getRaw(e.sha256)
+    } else {
+      text = textBody.value || (p.has_text ? await api.getText(e.sha256) : '')
+    }
+    const doc = buildPrintDocument({
+      lang: locale.value,
+      subject: e.subject || t('library.no_subject'),
+      fields: [
+        { label: t('viewer.from'), value: e.from },
+        { label: t('viewer.to'), value: e.to.join(', ') },
+        { label: t('viewer.cc'), value: e.cc.join(', ') },
+        { label: t('viewer.date'), value: formatDateAbsolute(e.sent_at) },
+      ],
+      attachmentsLabel: t('viewer.tabs.attachments'),
+      // Flagged mail has its attachments withheld, so they aren't listed either.
+      attachments: flagged.value ? [] : p.attachments.map((a) => ({
+        name: attachmentName(a),
+        detail: formatBytes(a.size),
+      })),
+      html,
+      text,
+    }, showRemote.value)
+    await printDocument(doc)
+  } catch (err) {
+    toast.error(t('viewer.print_error'), { description: String(err) })
+  } finally {
+    printing.value = false
   }
 }
 
@@ -446,6 +502,19 @@ async function togglePreview(a: PartInfo) {
           @click="toggleRead(email)"
         >
           <component :is="email.read ? MailOpen : Mail" class="h-5 w-5" />
+        </button>
+        <button
+          v-if="canPrint"
+          type="button"
+          :title="t('viewer.print')"
+          :aria-label="t('viewer.print')"
+          :disabled="printing"
+          class="inline-flex items-center justify-center h-8 w-8 rounded-sm hover:bg-accent shrink-0
+            text-muted-foreground hover:text-foreground disabled:opacity-50"
+          data-testid="viewer-print"
+          @click="printEmail"
+        >
+          <Printer class="h-5 w-5" />
         </button>
         <button
           v-if="canDelete"

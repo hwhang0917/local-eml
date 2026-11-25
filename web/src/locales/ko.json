@@ -226,6 +226,8 @@
     "delete_cancel": "취소",
     "delete_done": "메일을 삭제했습니다",
     "delete_error": "메일을 삭제하지 못했습니다",
+    "print": "메일 인쇄",
+    "print_error": "메일을 인쇄하지 못했습니다",
     "toggle_thread": "대화 접기/펼치기"
   },
   "import": {

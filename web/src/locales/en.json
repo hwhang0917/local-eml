@@ -226,6 +226,8 @@
     "delete_cancel": "Cancel",
     "delete_done": "Email deleted",
     "delete_error": "Couldn't delete the email",
+    "print": "Print email",
+    "print_error": "Couldn't print the email",
     "toggle_thread": "Show or hide the conversation"
   },
   "import": {
