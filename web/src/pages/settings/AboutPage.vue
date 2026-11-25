@@ -2,9 +2,9 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { Github, Bug, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
+import { BookOpen, Github, Bug, RefreshCw, Download, CheckCircle2, AlertCircle, FolderSync } from 'lucide-vue-next'
 import { APP_VERSION } from '@/version'
-import { REPO_URL } from '@/lib/app'
+import { REPO_URL, docsUrl } from '@/lib/app'
 import { api, type UpdateStatus } from '@/lib/api'
 import { useResync } from '@/composables/useResync'
 import { expectRestart } from '@/composables/useHealth'
@@ -12,7 +12,7 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const origin = window.location.origin
 
 const update = ref<UpdateStatus | null>(null)
@@ -99,6 +99,15 @@ const latestLabel = computed(() => {
       {{ t('settings.data_location', { path: '~/.local-eml/' }) }}
     </p>
     <div class="flex flex-wrap gap-x-5 gap-y-2">
+      <a
+        :href="docsUrl(locale)"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+      >
+        <BookOpen class="h-4 w-4" />
+        {{ t('settings.docs') }}
+      </a>
       <a
         :href="REPO_URL"
         target="_blank"
