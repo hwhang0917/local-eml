@@ -1,6 +1,7 @@
 {
   "lang": "English",
   "app": {
+    "docs": "Documentation (opens in a new tab)",
     "narrow_title": "Widen the window to continue",
     "narrow_body": "Local Eml is a desktop mail viewer and needs a wider window to lay out the library. Make the window larger or open it on a PC.",
     "server_offline": "Can't reach the local-eml server. Is it running?",
@@ -430,6 +431,7 @@
     "version": "Version",
     "server": "Server",
     "data_location": "Data lives in {path}.",
+    "docs": "Documentation",
     "github": "GitHub",
     "report_issue": "Report an issue",
     "resync_section": "Library",

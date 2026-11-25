@@ -1,6 +1,7 @@
 {
   "lang": "한국어",
   "app": {
+    "docs": "사용 설명서 (새 탭에서 열림)",
     "narrow_title": "창을 더 넓혀 주세요",
     "narrow_body": "Local Eml은 PC용 메일 뷰어라 라이브러리를 보여주려면 더 넓은 창이 필요합니다. 창을 키우거나 PC에서 열어 주세요.",
     "server_offline": "local-eml 서버에 연결할 수 없어요. 서버가 실행 중인가요?",
@@ -430,6 +431,7 @@
     "version": "버전",
     "server": "서버",
     "data_location": "데이터 저장 위치: {path}",
+    "docs": "사용 설명서",
     "github": "GitHub",
     "report_issue": "문제 신고하기",
     "resync_section": "라이브러리",

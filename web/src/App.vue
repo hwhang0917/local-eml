@@ -3,11 +3,11 @@ import { computed, nextTick, onMounted, watchEffect } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { ref } from 'vue'
-import { CircleHelp, Lock, Monitor } from 'lucide-vue-next'
+import { BookOpen, CircleHelp, Lock, Monitor } from 'lucide-vue-next'
 import { ConfigProvider } from 'reka-ui'
 import { Toaster } from 'vue-sonner'
 import 'vue-sonner/style.css'
-import { APP_NAME, pageTitle } from '@/lib/app'
+import { APP_NAME, docsUrl, pageTitle } from '@/lib/app'
 import { useHealth } from '@/composables/useHealth'
 import { useTour } from '@/composables/useTour'
 import { useSession } from '@/composables/useSession'
@@ -18,7 +18,7 @@ import Button from '@/components/ui/Button.vue'
 import { fieldClass } from '@/lib/utils'
 import { locked, unlock } from '@/lib/auth'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { online, checking, retry } = useHealth()
@@ -131,12 +131,24 @@ watchEffect(() => {
               {{ r.label }}
             </RouterLink>
           </nav>
+          <a
+            :href="docsUrl(locale)"
+            target="_blank"
+            rel="noopener noreferrer"
+            :title="t('app.docs')"
+            :aria-label="t('app.docs')"
+            class="ml-auto inline-flex items-center justify-center h-7 w-7 rounded-sm text-white/70
+              hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-white/60"
+          >
+            <BookOpen class="h-4 w-4" />
+          </a>
           <button
             type="button"
             data-tour="help"
             :title="t('tour.replay')"
             :aria-label="t('tour.replay')"
-            class="ml-auto inline-flex items-center justify-center h-7 w-7 rounded-sm text-white/70
+            class="inline-flex items-center justify-center h-7 w-7 rounded-sm text-white/70
               hover:text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2
               focus-visible:ring-white/60"
             @click="replayTour"
