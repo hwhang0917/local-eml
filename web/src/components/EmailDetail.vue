@@ -13,6 +13,7 @@ import { useListContext, type Neighbors } from '@/composables/useListContext'
 import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
 import { pageTitle } from '@/lib/app'
+import { returnToLibrary } from '@/lib/libraryReturn'
 import { dialogClass } from '@/lib/utils'
 import { attachmentName, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
 import Button from '@/components/ui/Button.vue'
@@ -151,14 +152,10 @@ watch(() => email.value?.subject, (subject) => {
   document.title = pageTitle(subject)
 })
 
-// The button promises "back to library", so that is where it must go. history
-// back is only taken when the previous entry actually is the library — it
-// restores the filters and scroll position — otherwise (direct link, arrived
-// from import/settings) we navigate there outright.
+// The button promises "back to library", so that is where it must go, even
+// after stepping through several emails. See lib/libraryReturn.ts.
 function goBack() {
-  const prev = router.options.history.state.back
-  if (typeof prev === 'string' && router.resolve(prev).name === 'library') router.back()
-  else router.push({ name: 'library' })
+  returnToLibrary(router)
 }
 
 // Prev/next inside the list the user came from. The context lives in
