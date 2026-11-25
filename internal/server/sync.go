@@ -165,8 +165,8 @@ func withSyncCursor(cfg importer.IMAPConfig, p *store.IMAPProfile) importer.IMAP
 
 // RunDueIMAPSyncs walks every sync-enabled profile and triggers a sync. It
 // returns after kicking each off in sequence; per-profile errors are logged
-// but never abort the loop. Profiles IMAP IDLE keeps current are left alone
-// until they go idleSafetyPoll without a sync.
+// but never abort the loop. Profiles with a live IMAP IDLE watcher are
+// polled too; see the note at the top of idle.go.
 func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 	profiles, err := s.Store.ListIMAPProfilesForSync(ctx)
 	if err != nil {
@@ -176,9 +176,6 @@ func (s *Server) RunDueIMAPSyncs(ctx context.Context) {
 	for _, p := range profiles {
 		if ctx.Err() != nil {
 			return
-		}
-		if s.pushCovered(&p) {
-			continue
 		}
 		if err := s.RunIMAPSync(ctx, p.ID); err != nil {
 			level := slog.LevelWarn

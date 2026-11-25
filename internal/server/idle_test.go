@@ -140,29 +140,6 @@ func TestReconcileIdleWatchesSyncableProfilesOnly(t *testing.T) {
 	}
 }
 
-func TestPushCoveredSkipsPollOnlyWhileFresh(t *testing.T) {
-	s, _ := newPushServer(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	prof := saveSyncProfile(t, s, "work", "pw", true)
-
-	recent := time.Now().Add(-time.Minute).Unix()
-	stale := time.Now().Add(-2 * idleSafetyPoll).Unix()
-	prof.LastSyncedAt = &recent
-	if s.pushCovered(&prof) {
-		t.Fatal("covered before any watcher runs")
-	}
-	s.reconcileIdle(ctx)
-	eventually(t, "live", func() bool { return s.pushState(prof.ID) == importer.IdleLive })
-	if !s.pushCovered(&prof) {
-		t.Fatal("live and freshly synced profile should be left to push")
-	}
-	prof.LastSyncedAt = &stale
-	if s.pushCovered(&prof) {
-		t.Fatal("stale profile should still get the safety poll")
-	}
-}
-
 func TestSyncLocksRerunWhenDone(t *testing.T) {
 	l := &syncLocks{active: map[int64]bool{}, rerun: map[int64]bool{}}
 	if l.rerunWhenDone(1) {
