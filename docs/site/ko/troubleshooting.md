@@ -62,10 +62,10 @@ Linux에서는 데스크톱 환경의 방해 금지 설정과 브라우저 알�
 Linux와 macOS:
 
 ```bash
-tail -f ~/.local-eml/logs/local-eml.log
+tail -F ~/.local-eml/logs/local-eml.log
 ```
 
-Windows에서는 `%USERPROFILE%\.local-eml\logs\local-eml.log`입니다. 더 자세한 로그가 필요하면 서비스 환경 변수에 `LOCAL_EML_LOG_LEVEL=debug`를 넣으세요. 로그에는 메일 제목과 주소가 들어 있으니, 다른 사람에게 보여 주기 전에 개인 정보는 지워 주세요.
+`-F`를 쓰면 자정에 로그가 바뀐 뒤에도 계속 따라갑니다. 이전 날짜의 로그는 같은 폴더의 `local-eml-YYYY-MM-DD.log`에 30일 동안 남습니다. Windows에서는 `%USERPROFILE%\.local-eml\logs\local-eml.log`입니다. 더 자세한 로그가 필요하면 서비스 환경 변수에 `LOCAL_EML_LOG_LEVEL=debug`를 넣으세요. 로그에는 메일 제목과 주소가 들어 있으니, 다른 사람에게 보여 주기 전에 개인 정보는 지워 주세요.
 
 ## 버그 신고
 

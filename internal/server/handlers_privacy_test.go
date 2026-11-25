@@ -79,8 +79,12 @@ func TestWipeData(t *testing.T) {
 	if _, err := s.Store.InsertEmail(ctx, store.EmailRow{Email: store.Email{SHA256: sha}}); err != nil {
 		t.Fatal(err)
 	}
-	logFile := filepath.Join(p.Logs, "local-eml.log")
+	logFile := p.LogFile()
 	if err := os.WriteFile(logFile, []byte("subject=secret\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	oldLog := filepath.Join(p.Logs, "local-eml-2026-11-24.log")
+	if err := os.WriteFile(oldLog, []byte("subject=older secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	keyFile := p.KeyFile()
@@ -104,6 +108,9 @@ func TestWipeData(t *testing.T) {
 	}
 	if info, err := os.Stat(logFile); err != nil || info.Size() != 0 {
 		t.Fatalf("log must be emptied (kept open by the logger): %v", err)
+	}
+	if _, err := os.Stat(oldLog); !os.IsNotExist(err) {
+		t.Fatalf("rotated log must be deleted: %v", err)
 	}
 	if _, err := os.Stat(keyFile); err != nil {
 		t.Fatalf("key file must be kept: %v", err)

@@ -52,7 +52,7 @@ crashed sessions are swept on the next launch. It is ignored when running as a s
 
 - `~/.local-eml/eml/<sha256>.eml`: raw messages, named by content hash
 - `~/.local-eml/db/local-eml.db`: SQLite with FTS5
-- `~/.local-eml/logs/local-eml.log`: append-only log, same as stderr
+- `~/.local-eml/logs/local-eml.log`: append-only log, same as stderr. Rotates daily to `local-eml-YYYY-MM-DD.log`; rotated days older than 30 days are deleted (`internal/logrotate`)
 - `~/.local-eml/keys/secret.key`: key for stored IMAP passwords
 - `~/.local-eml/session-token`: API session token
 
@@ -69,7 +69,7 @@ journalctl --user -u local-eml -o json | jq
 log show --predicate 'process == "local-eml"' --info --last 1h
 
 # Anywhere
-tail -f ~/.local-eml/logs/local-eml.log
+tail -F ~/.local-eml/logs/local-eml.log
 ```
 
 Set `LOCAL_EML_LOG_LEVEL=debug|info|warn|error` in the service environment to tune verbosity.
