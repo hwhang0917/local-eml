@@ -168,6 +168,9 @@ export interface S3ImportConfig {
   region?: string
   bucket: string
   prefix?: string
+  /** S3-compatible service URL (MinIO, R2, B2...); blank means AWS. */
+  endpoint?: string
+  pathStyle?: boolean
 }
 
 export interface IMAPImportConfig {
@@ -229,6 +232,8 @@ export interface S3Profile {
   prefix?: string
   region?: string
   access_key_id?: string
+  endpoint?: string
+  path_style?: boolean
 }
 
 export interface Stats {

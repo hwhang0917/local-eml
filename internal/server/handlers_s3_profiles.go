@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/store"
 )
 
@@ -13,6 +14,8 @@ type s3ProfileBody struct {
 	Prefix      *string `json:"prefix,omitempty"`
 	Region      *string `json:"region,omitempty"`
 	AccessKeyID *string `json:"access_key_id,omitempty"`
+	Endpoint    *string `json:"endpoint,omitempty"`
+	PathStyle   bool    `json:"path_style"`
 }
 
 func (s *Server) handleListS3Profiles(w http.ResponseWriter, r *http.Request) {
@@ -39,12 +42,19 @@ func (s *Server) handleSaveS3Profile(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid bucket", http.StatusBadRequest)
 		return
 	}
+	endpoint, err := importer.NormalizeEndpoint(stringOrEmpty(body.Endpoint))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	saved, err := s.Store.UpsertS3Profile(r.Context(), store.S3Profile{
 		Name:        name,
 		Bucket:      bucket,
 		Prefix:      trimmedOrNil(body.Prefix),
 		Region:      trimmedOrNil(body.Region),
 		AccessKeyID: trimmedOrNil(body.AccessKeyID),
+		Endpoint:    trimmedOrNil(&endpoint),
+		PathStyle:   body.PathStyle,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -80,4 +90,11 @@ func trimmedOrNil(s *string) *string {
 		return nil
 	}
 	return &t
+}
+
+func stringOrEmpty(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }

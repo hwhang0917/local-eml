@@ -24,7 +24,7 @@ const props = defineProps<{
 
 const { t } = useI18n()
 const {
-  s3, confirming, valid, credsLabel,
+  s3, confirming, valid, credsLabel, usesEndpoint,
   profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
   selectProfile, saveProfile, deleteProfile, review, cancel, confirm: confirmS3,
 } = useS3Form()
@@ -78,8 +78,19 @@ const awsRegions: { code: string; name: string }[] = [
         <dd class="font-mono">{{ s3.prefix || '—' }}</dd>
       </div>
       <div class="flex gap-3">
+        <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_endpoint') }}</dt>
+        <dd class="font-mono break-all">
+          {{ usesEndpoint ? s3.endpoint : t('import.s3_endpoint_aws') }}
+          <span v-if="usesEndpoint && s3.pathStyle" class="font-sans text-muted-foreground">
+            · {{ t('import.s3_path_style') }}
+          </span>
+        </dd>
+      </div>
+      <div class="flex gap-3">
         <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_region') }}</dt>
-        <dd class="font-mono">{{ s3.region || t('import.s3_region_default') }}</dd>
+        <dd class="font-mono">
+          {{ s3.region || (usesEndpoint ? 'us-east-1' : t('import.s3_region_default')) }}
+        </dd>
       </div>
       <div class="flex gap-3">
         <dt class="w-28 text-muted-foreground shrink-0">{{ t('import.s3_creds') }}</dt>
@@ -153,6 +164,32 @@ const awsRegions: { code: string; name: string }[] = [
         <input v-model="s3.prefix" :class="fieldClass" placeholder="mail/2026/" autocomplete="off" />
       </label>
     </div>
+
+    <section class="space-y-3 rounded-md border p-4" :aria-label="t('import.s3_compat_title')">
+      <div>
+        <h4 class="text-sm font-medium">{{ t('import.s3_compat_title') }}</h4>
+        <p class="text-sm text-muted-foreground">{{ t('import.s3_compat_hint') }}</p>
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="space-y-1">
+          <span class="text-sm">{{ t('import.s3_endpoint') }}</span>
+          <input
+            v-model="s3.endpoint"
+            :class="fieldClass"
+            placeholder="http://localhost:9000"
+            autocomplete="off"
+            data-testid="s3-endpoint"
+          />
+        </label>
+        <label class="flex items-start gap-2 sm:pt-6">
+          <input v-model="s3.pathStyle" type="checkbox" class="mt-1" data-testid="s3-path-style" />
+          <span class="space-y-0.5">
+            <span class="block text-sm">{{ t('import.s3_path_style') }}</span>
+            <span class="block text-xs text-muted-foreground">{{ t('import.s3_path_style_hint') }}</span>
+          </span>
+        </label>
+      </div>
+    </section>
 
     <div class="flex items-center gap-2">
       <Button variant="outline" :disabled="!valid" @click="saveProfile">

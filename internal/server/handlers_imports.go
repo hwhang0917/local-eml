@@ -247,6 +247,8 @@ type s3Body struct {
 	Region          string `json:"region"`
 	Bucket          string `json:"bucket"`
 	Prefix          string `json:"prefix"`
+	Endpoint        string `json:"endpoint"`
+	PathStyle       bool   `json:"pathStyle"`
 }
 
 // decodeS3Config reads and validates an S3 request. On failure the response
@@ -263,11 +265,18 @@ func decodeS3Config(w http.ResponseWriter, r *http.Request) (importer.S3Config, 
 		Region:          body.Region,
 		Bucket:          strings.TrimSpace(body.Bucket),
 		Prefix:          strings.TrimSpace(body.Prefix),
+		PathStyle:       body.PathStyle,
 	}
 	if cfg.Bucket == "" {
 		http.Error(w, "bucket is required", http.StatusBadRequest)
 		return importer.S3Config{}, false
 	}
+	endpoint, err := importer.NormalizeEndpoint(body.Endpoint)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return importer.S3Config{}, false
+	}
+	cfg.Endpoint = endpoint
 	return cfg, true
 }
 
@@ -277,6 +286,8 @@ func s3Logger(cfg importer.S3Config) *slog.Logger {
 		slog.String("bucket", cfg.Bucket),
 		slog.String("prefix", cfg.Prefix),
 		slog.String("region", cfg.Region),
+		slog.String("endpoint", cfg.Endpoint),
+		slog.Bool("path_style", cfg.PathStyle),
 		slog.Bool("static_creds", cfg.AccessKeyID != ""),
 	)
 }

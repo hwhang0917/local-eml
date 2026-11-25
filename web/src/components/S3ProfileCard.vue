@@ -18,6 +18,17 @@ const location = computed(() => {
   return `s3://${props.profile.bucket}/${prefix}`
 })
 
+// S3-compatible profiles show the service host where AWS ones show the region.
+const endpointHost = computed(() => {
+  const e = props.profile.endpoint?.trim()
+  if (!e) return ''
+  try {
+    return new URL(e).host
+  } catch {
+    return e
+  }
+})
+
 // Only the key id is saved, never the secret, so a profile with a key asks
 // for the secret each time; one without uses the machine's AWS credentials.
 const maskedKey = computed(() => {
@@ -38,6 +49,14 @@ const maskedKey = computed(() => {
   >
     <template #action>
       <span
+        v-if="endpointHost"
+        class="shrink-0 max-w-[12rem] truncate rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground"
+        :title="t('import.s3_endpoint') + ': ' + profile.endpoint"
+      >
+        {{ endpointHost }}
+      </span>
+      <span
+        v-else
         class="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground"
         :title="t('import.s3_region')"
       >

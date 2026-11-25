@@ -46,15 +46,32 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 
 	// Snapshots from before a column existed lack it; referencing it would
 	// fail the whole emails step, so later columns are copied only when present.
-	optionalCols := ""
-	for _, col := range []string{"flag", "read"} {
+	backupHas := func(table, col string) (bool, error) {
 		var n int
 		if err := conn.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM backup.pragma_table_info('emails') WHERE name = ?`, col).Scan(&n); err != nil {
-			return sum, fmt.Errorf("inspect backup schema: %w", err)
+			`SELECT COUNT(*) FROM pragma_table_info(?, 'backup') WHERE name = ?`, table, col).Scan(&n); err != nil {
+			return false, fmt.Errorf("inspect backup schema: %w", err)
 		}
-		if n > 0 {
+		return n > 0, nil
+	}
+	optionalCols := ""
+	for _, col := range []string{"flag", "read"} {
+		ok, err := backupHas("emails", col)
+		if err != nil {
+			return sum, err
+		}
+		if ok {
 			optionalCols += col + " = b." + col + ","
+		}
+	}
+	s3Cols := ""
+	for _, col := range []string{"endpoint", "path_style"} {
+		ok, err := backupHas("s3_profiles", col)
+		if err != nil {
+			return sum, err
+		}
+		if ok {
+			s3Cols += ", " + col
 		}
 	}
 
@@ -88,8 +105,8 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 			 FROM backup.imap_profiles`},
 		{&sum.S3Profiles, "s3_profiles",
 			`INSERT OR IGNORE INTO s3_profiles
-			   (name, bucket, prefix, region, access_key_id, created_at, updated_at)
-			 SELECT name, bucket, prefix, region, access_key_id, created_at, updated_at
+			   (name, bucket, prefix, region, access_key_id, created_at, updated_at` + s3Cols + `)
+			 SELECT name, bucket, prefix, region, access_key_id, created_at, updated_at` + s3Cols + `
 			 FROM backup.s3_profiles`},
 	}
 	for _, st := range steps {

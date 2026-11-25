@@ -7,7 +7,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
-Local Eml keeps your old email on your own computer and lets you search and read it offline. You can give it `.eml` files, a folder, a `.zip`, an `.mbox` or an Outlook `.pst`, or pull mail from an IMAP account or an S3 bucket. Your mail never leaves your machine.
+Local Eml keeps your old email on your own computer and lets you search and read it offline. You can give it `.eml` files, a folder, a `.zip`, an `.mbox` or an Outlook `.pst`, or pull mail from an IMAP account or an S3 bucket (AWS or an S3-compatible service such as MinIO, Cloudflare R2 or Backblaze B2). Your mail never leaves your machine.
 
 It's meant for archiving. If your mailbox is full, you can copy the old messages out, keep them as ordinary `.eml` files, and still find them later.
 

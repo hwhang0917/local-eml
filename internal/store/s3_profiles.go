@@ -14,15 +14,19 @@ type S3Profile struct {
 	Prefix      *string `json:"prefix,omitempty"`
 	Region      *string `json:"region,omitempty"`
 	AccessKeyID *string `json:"access_key_id,omitempty"`
-	CreatedAt   int64   `json:"created_at"`
-	UpdatedAt   int64   `json:"updated_at"`
+	// Endpoint is set for S3-compatible services; nil means AWS.
+	Endpoint  *string `json:"endpoint,omitempty"`
+	PathStyle bool    `json:"path_style"`
+	CreatedAt int64   `json:"created_at"`
+	UpdatedAt int64   `json:"updated_at"`
 }
 
 var ErrS3ProfileNotFound = errors.New("s3 profile not found")
 
 func (s *Store) ListS3Profiles(ctx context.Context) ([]S3Profile, error) {
 	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, name, bucket, prefix, region, access_key_id, created_at, updated_at
+		SELECT id, name, bucket, prefix, region, access_key_id, endpoint, path_style,
+		       created_at, updated_at
 		FROM s3_profiles
 		ORDER BY name COLLATE NOCASE`)
 	if err != nil {
@@ -32,9 +36,9 @@ func (s *Store) ListS3Profiles(ctx context.Context) ([]S3Profile, error) {
 	out := []S3Profile{}
 	for rows.Next() {
 		var p S3Profile
-		var prefix, region, accessKey sql.NullString
+		var prefix, region, accessKey, endpoint sql.NullString
 		if err := rows.Scan(&p.ID, &p.Name, &p.Bucket, &prefix, &region, &accessKey,
-			&p.CreatedAt, &p.UpdatedAt); err != nil {
+			&endpoint, &p.PathStyle, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
 		if prefix.Valid {
@@ -48,6 +52,10 @@ func (s *Store) ListS3Profiles(ctx context.Context) ([]S3Profile, error) {
 		if accessKey.Valid {
 			v := accessKey.String
 			p.AccessKeyID = &v
+		}
+		if endpoint.Valid {
+			v := endpoint.String
+			p.Endpoint = &v
 		}
 		out = append(out, p)
 	}
@@ -65,6 +73,7 @@ func (s *Store) UpsertS3Profile(ctx context.Context, p S3Profile) (S3Profile, er
 	prefixVal := nullable(p.Prefix)
 	regionVal := nullable(p.Region)
 	accessKeyVal := nullable(p.AccessKeyID)
+	endpointVal := nullable(p.Endpoint)
 
 	var existingID int64
 	var existingCreated int64
@@ -74,9 +83,10 @@ func (s *Store) UpsertS3Profile(ctx context.Context, p S3Profile) (S3Profile, er
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		res, err := tx.ExecContext(ctx, `
-			INSERT INTO s3_profiles (name, bucket, prefix, region, access_key_id, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			p.Name, p.Bucket, prefixVal, regionVal, accessKeyVal, now, now)
+			INSERT INTO s3_profiles
+			  (name, bucket, prefix, region, access_key_id, endpoint, path_style, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			p.Name, p.Bucket, prefixVal, regionVal, accessKeyVal, endpointVal, p.PathStyle, now, now)
 		if err != nil {
 			return S3Profile{}, err
 		}
@@ -89,9 +99,10 @@ func (s *Store) UpsertS3Profile(ctx context.Context, p S3Profile) (S3Profile, er
 		p.UpdatedAt = now
 	case err == nil:
 		if _, err := tx.ExecContext(ctx, `
-			UPDATE s3_profiles SET bucket = ?, prefix = ?, region = ?, access_key_id = ?, updated_at = ?
+			UPDATE s3_profiles SET bucket = ?, prefix = ?, region = ?, access_key_id = ?,
+			  endpoint = ?, path_style = ?, updated_at = ?
 			WHERE id = ?`,
-			p.Bucket, prefixVal, regionVal, accessKeyVal, now, existingID); err != nil {
+			p.Bucket, prefixVal, regionVal, accessKeyVal, endpointVal, p.PathStyle, now, existingID); err != nil {
 			return S3Profile{}, err
 		}
 		p.ID = existingID

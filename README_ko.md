@@ -7,7 +7,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
-Local Eml은 오래된 메일을 내 컴퓨터에 보관해 두고 인터넷 없이 검색하고 읽을 수 있게 해 주는 프로그램입니다. `.eml` 파일이나 폴더, `.zip`, `.mbox`, Outlook `.pst`를 넣을 수 있고, IMAP 계정이나 S3 버킷에서 메일을 가져올 수도 있습니다. 메일은 내 컴퓨터 밖으로 나가지 않습니다.
+Local Eml은 오래된 메일을 내 컴퓨터에 보관해 두고 인터넷 없이 검색하고 읽을 수 있게 해 주는 프로그램입니다. `.eml` 파일이나 폴더, `.zip`, `.mbox`, Outlook `.pst`를 넣을 수 있고, IMAP 계정이나 S3 버킷(AWS 또는 MinIO, Cloudflare R2, Backblaze B2 같은 S3 호환 서비스)에서 메일을 가져올 수도 있습니다. 메일은 내 컴퓨터 밖으로 나가지 않습니다.
 
 메일 보관용 도구입니다. 메일함이 꽉 찼을 때 오래된 메일을 `.eml` 파일로 옮겨 두면, 나중에 필요할 때 언제든 찾아볼 수 있습니다.
 
