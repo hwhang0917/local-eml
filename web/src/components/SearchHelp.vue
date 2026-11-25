@@ -44,7 +44,7 @@ function pick(r: Row) {
       :aria-label="t('search_help.open')"
       :title="t('search_help.open')"
       data-testid="search-help"
-      class="inline-flex h-5 w-5 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground
+      class="inline-flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground
         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <SlidersHorizontal class="h-4 w-4" />
