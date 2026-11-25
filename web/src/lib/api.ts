@@ -242,9 +242,44 @@ export interface Stats {
   starred_count: number
   attachment_count: number
   undated_count: number
+  unread_count: number
+  spam_count: number
+  phishing_count: number
+  risky_count: number
+  uncategorized_count: number
   per_year: { year: string; count: number }[]
-  top_senders: { from: string; count: number }[]
+  /** "2024-06" in the browser's time zone; months without mail are absent. */
+  per_month: { month: string; count: number; bytes: number }[]
+  /** heatmap[weekday][hour], weekday 0 = Sunday, browser's time zone. */
+  heatmap: number[][]
+  top_senders: { address: string; name: string; count: number }[]
+  top_domains: { domain: string; count: number }[]
   per_category: { category_id: number; count: number }[]
+  /** Decoded attachment bytes; base64 makes them about a third bigger inside the .eml. */
+  attachment_bytes: number
+  per_kind: { kind: AttachmentKind; count: number; bytes: number }[]
+  largest: { sha256: string; subject: string; from: string; sent_at: number; size_bytes: number }[]
+}
+
+export interface AppStats {
+  memory_bytes: number
+  heap_bytes: number
+  /** Share of the whole machine (all cores) since the previous call. */
+  cpu_percent: number
+  num_cpu: number
+  goroutines: number
+  uptime_sec: number
+  go_version: string
+  version: string
+  disk: {
+    db_bytes: number
+    eml_bytes: number
+    eml_files: number
+    logs_bytes: number
+    free_bytes: number
+    total_bytes: number
+    measured_at: number
+  } | null
 }
 
 // service: started by the service manager. temporary: throwaway folder,
@@ -355,7 +390,11 @@ export const api = {
   },
 
   getStats() {
-    return fetch('/api/stats').then(jsonOrThrow<Stats>)
+    const tz = -new Date().getTimezoneOffset()
+    return fetch(`/api/stats?tz_offset=${tz}`).then(jsonOrThrow<Stats>)
+  },
+  getAppStats() {
+    return fetch('/api/stats/app').then(jsonOrThrow<AppStats>)
   },
 
   listCategories() {
