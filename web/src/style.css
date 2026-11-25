@@ -35,6 +35,16 @@
   --destructive-foreground: #ffffff;
   --tile-dark-1: #272729;
   --product-shadow: 0 5px 30px 3px rgba(0, 0, 0, 0.22);
+  /* Chart series, fixed order (checked for colour-blind separation on the
+     card surface). A kind or part keeps its slot; slots never cycle. */
+  --series-1: #257de0;
+  --series-2: #f47230;
+  --series-3: #00b894;
+  --series-4: #f2a600;
+  --series-5: #ee7fac;
+  --series-6: #008a17;
+  --series-neutral: #a1a1a6;
+  --chart-grid: #ececee;
 }
 
 .dark {
@@ -55,6 +65,14 @@
   --accent: #272729;
   --accent-foreground: #ffffff;
   --destructive: #ff453a;
+  --series-1: #338ced;
+  --series-2: #e76624;
+  --series-3: #00a888;
+  --series-4: #d28e05;
+  --series-5: #e24d8b;
+  --series-6: #0aac23;
+  --series-neutral: #6e6e73;
+  --chart-grid: #3a3a3c;
 }
 
 @theme inline {

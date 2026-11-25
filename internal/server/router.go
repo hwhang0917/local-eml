@@ -110,6 +110,7 @@ func (s *Server) Router() http.Handler {
 		api.Get("/attachments", s.handleListAttachments)
 
 		api.Get("/stats", s.handleStats)
+		api.Get("/stats/app", s.handleAppStats)
 
 		api.Get("/categories", s.handleListCategories)
 		api.Put("/categories/{id}", s.handleRenameCategory)
