@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/url"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -19,7 +21,19 @@ type S3Config struct {
 	Region          string
 	Bucket          string
 	Prefix          string
+	// Endpoint points the client at an S3-compatible service (MinIO,
+	// Cloudflare R2, Backblaze B2, Wasabi...) instead of AWS. Empty means AWS.
+	Endpoint string
+	// PathStyle addresses objects as <endpoint>/<bucket>/<key> rather than
+	// <bucket>.<endpoint>/<key>. Most self-hosted services, MinIO included,
+	// need it.
+	PathStyle bool
 }
+
+// defaultCompatRegion is signed into requests to a custom endpoint when no
+// region is given. The SDK refuses to sign without one, and S3-compatible
+// services either ignore it or treat us-east-1 as their default.
+const defaultCompatRegion = "us-east-1"
 
 // S3Lister is the one call key listing needs; *s3.Client and test fakes
 // satisfy it.
@@ -37,8 +51,12 @@ type s3API interface {
 // the SDK's usual credential chain (env, shared config, instance role) applies.
 func NewS3Client(ctx context.Context, cfg S3Config) (*s3.Client, error) {
 	var optFns []func(*config.LoadOptions) error
-	if cfg.Region != "" {
-		optFns = append(optFns, config.WithRegion(cfg.Region))
+	region := cfg.Region
+	if region == "" && cfg.Endpoint != "" {
+		region = defaultCompatRegion
+	}
+	if region != "" {
+		optFns = append(optFns, config.WithRegion(region))
 	}
 	if cfg.AccessKeyID != "" {
 		optFns = append(optFns, config.WithCredentialsProvider(
@@ -50,7 +68,51 @@ func NewS3Client(ctx context.Context, cfg S3Config) (*s3.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("aws config: %w", err)
 	}
-	return s3.NewFromConfig(awsCfg), nil
+	return s3.NewFromConfig(awsCfg, s3Options(cfg)), nil
+}
+
+// s3Options applies the endpoint settings. With no endpoint the client is
+// left exactly as before, so AWS profiles behave as they always have.
+func s3Options(cfg S3Config) func(*s3.Options) {
+	return func(o *s3.Options) {
+		o.UsePathStyle = cfg.PathStyle
+		if cfg.Endpoint == "" {
+			return
+		}
+		o.BaseEndpoint = aws.String(cfg.Endpoint)
+		// The SDK now adds CRC checksums to every upload by default. Several
+		// S3-compatible services reject or mishandle those headers, so only
+		// send them where the operation requires one.
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+	}
+}
+
+// NormalizeEndpoint validates a user-entered endpoint and returns it in the
+// form the SDK expects. A bare host gets https://; only http and https are
+// accepted, and a trailing slash is dropped.
+func NormalizeEndpoint(raw string) (string, error) {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return "", nil
+	}
+	if !strings.Contains(s, "://") {
+		s = "https://" + s
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return "", fmt.Errorf("invalid endpoint: %w", err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("invalid endpoint: scheme must be http or https")
+	}
+	if u.Host == "" {
+		return "", fmt.Errorf("invalid endpoint: missing host")
+	}
+	if u.RawQuery != "" || u.Fragment != "" || u.User != nil {
+		return "", fmt.Errorf("invalid endpoint: only scheme, host, port and path are allowed")
+	}
+	return strings.TrimRight(u.String(), "/"), nil
 }
 
 // ListKeys calls fn with every object key under bucket/prefix, following
@@ -89,7 +151,11 @@ func NewS3Source(cfg S3Config) Source { return &s3Source{cfg: cfg} }
 
 // Label names the destination the way the job list shows it.
 func (c S3Config) Label() string {
-	return fmt.Sprintf("s3://%s/%s", c.Bucket, c.Prefix)
+	label := fmt.Sprintf("s3://%s/%s", c.Bucket, c.Prefix)
+	if u, err := url.Parse(c.Endpoint); err == nil && u.Host != "" {
+		label += " (" + u.Host + ")"
+	}
+	return label
 }
 
 func (s *s3Source) Label() string { return s.cfg.Label() }

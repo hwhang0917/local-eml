@@ -4,7 +4,10 @@ import { toast } from 'vue-sonner'
 import { api, type S3ImportConfig, type S3Profile } from '@/lib/api'
 
 export function emptyS3(): S3ImportConfig {
-  return { accessKeyId: '', secretAccessKey: '', sessionToken: '', region: '', bucket: '', prefix: '' }
+  return {
+    accessKeyId: '', secretAccessKey: '', sessionToken: '', region: '', bucket: '', prefix: '',
+    endpoint: '', pathStyle: false,
+  }
 }
 
 // The bucket form, its saved profiles and the review step, shared by the S3
@@ -35,7 +38,15 @@ export function useS3Form() {
   // Secrets are never stored in a profile, so they always start blank.
   function applyProfile(p: S3Profile | null) {
     s3.value = p
-      ? { ...emptyS3(), accessKeyId: p.access_key_id ?? '', region: p.region ?? '', bucket: p.bucket, prefix: p.prefix ?? '' }
+      ? {
+          ...emptyS3(),
+          accessKeyId: p.access_key_id ?? '',
+          region: p.region ?? '',
+          bucket: p.bucket,
+          prefix: p.prefix ?? '',
+          endpoint: p.endpoint ?? '',
+          pathStyle: p.path_style ?? false,
+        }
       : emptyS3()
   }
 
@@ -61,6 +72,8 @@ export function useS3Form() {
         prefix: s3.value.prefix?.trim() || undefined,
         region: s3.value.region?.trim() || undefined,
         access_key_id: s3.value.accessKeyId?.trim() || undefined,
+        endpoint: s3.value.endpoint?.trim() || undefined,
+        path_style: !!s3.value.pathStyle,
       })
       await loadProfiles()
       selectedProfileId.value = saved.id
@@ -86,6 +99,10 @@ export function useS3Form() {
     s3.value.accessKeyId?.trim() ? t('import.s3_creds_form') : t('import.s3_creds_system'),
   )
 
+  // A custom endpoint means a non-AWS service, where the SDK has no region
+  // to discover, so the server signs with us-east-1 unless one is given.
+  const usesEndpoint = computed(() => !!s3.value.endpoint?.trim())
+
   function review() {
     if (valid.value) confirming.value = true
   }
@@ -102,13 +119,15 @@ export function useS3Form() {
       accessKeyId: s3.value.accessKeyId?.trim() || undefined,
       secretAccessKey: s3.value.secretAccessKey || undefined,
       sessionToken: s3.value.sessionToken || undefined,
+      endpoint: s3.value.endpoint?.trim() || undefined,
+      pathStyle: !!s3.value.pathStyle,
     }
     confirming.value = false
     await start(cfg)
   }
 
   return {
-    s3, confirming, valid, credsLabel,
+    s3, confirming, valid, credsLabel, usesEndpoint,
     profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
     selectProfile, saveProfile, deleteProfile,
     review, cancel, confirm,

@@ -212,6 +212,14 @@ func (s *Store) migrate(ctx context.Context) error {
 	if err := s.ensureColumn(ctx, "emails", "starred", "INTEGER NOT NULL DEFAULT 0"); err != nil {
 		return err
 	}
+	// endpoint/path_style: S3-compatible services (MinIO, R2, B2...). NULL
+	// endpoint keeps a profile on AWS, which is what every older profile is.
+	if err := s.ensureColumn(ctx, "s3_profiles", "endpoint", "TEXT"); err != nil {
+		return err
+	}
+	if err := s.ensureColumn(ctx, "s3_profiles", "path_style", "INTEGER NOT NULL DEFAULT 0"); err != nil {
+		return err
+	}
 	if _, err := s.DB.ExecContext(ctx,
 		`CREATE INDEX IF NOT EXISTS idx_emails_starred ON emails(starred) WHERE starred = 1`); err != nil {
 		return err
