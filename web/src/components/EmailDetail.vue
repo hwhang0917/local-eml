@@ -653,7 +653,10 @@ async function togglePreview(a: PartInfo) {
     </div>
 
     <div v-if="!email.blob_missing && tab === 'html'" role="tabpanel" class="border rounded-lg overflow-hidden bg-white">
-      <iframe v-if="parts?.has_html" :src="htmlSrc" sandbox="allow-same-origin"
+      <!-- Keyed on the URL: changing src on a live iframe adds a browser history
+           entry per email, so Back (and "Back to library") would step through
+           earlier emails. A fresh iframe's first load adds none. -->
+      <iframe v-if="parts?.has_html" :key="htmlSrc" :src="htmlSrc" sandbox="allow-same-origin"
         class="w-full h-[70vh]" referrerpolicy="no-referrer" @load="guardIframeLinks"></iframe>
       <p v-else class="p-6 text-muted-foreground">{{ t('viewer.no_html') }}</p>
     </div>
