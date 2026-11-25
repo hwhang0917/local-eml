@@ -405,6 +405,11 @@ export const api = {
     return fetch(`/api/emails/${sha}/text`).then(textOrThrow)
   },
 
+  /** The sanitized HTML body, as the viewer's frame loads it from htmlURL. */
+  getHTML(sha: string, remote = false, lang = 'en') {
+    return fetch(api.htmlURL(sha, remote, lang)).then(textOrThrow)
+  },
+
   getRaw(sha: string) {
     return fetch(`/api/emails/${sha}/raw`).then(textOrThrow)
   },
