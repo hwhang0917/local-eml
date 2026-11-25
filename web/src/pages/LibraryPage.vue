@@ -556,15 +556,15 @@ const pageInfo = computed(() => {
           type="search"
           :placeholder="t('library.search_placeholder')"
           :aria-label="t('library.search_placeholder')"
-          class="w-full pr-14 [&::-webkit-search-cancel-button]:appearance-none"
+          class="w-full pr-16 [&::-webkit-search-cancel-button]:appearance-none"
         />
-        <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        <div class="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
           <button
             v-if="searchInput"
             type="button"
             :aria-label="t('library.clear_search')"
             :title="t('library.clear_search')"
-            class="inline-flex h-5 w-5 items-center justify-center rounded-sm
+            class="inline-flex h-6 w-6 items-center justify-center rounded-sm
               text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             @click="searchInput = ''"
           >
