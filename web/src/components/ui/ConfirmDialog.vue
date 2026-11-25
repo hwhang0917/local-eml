@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -20,6 +19,14 @@ defineProps<{
 }>()
 const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ confirm: [] }>()
+
+// Confirm fires before the dialog closes. Reka's action button would close it
+// first, and a caller that keeps "what to act on" in the state behind `open`
+// (cleared on close) would then find nothing left to act on.
+function confirm() {
+  emit('confirm')
+  open.value = false
+}
 </script>
 
 <!--
@@ -49,11 +56,9 @@ const emit = defineEmits<{ confirm: [] }>()
           <AlertDialogCancel as-child>
             <Button variant="outline" size="sm">{{ cancelLabel }}</Button>
           </AlertDialogCancel>
-          <AlertDialogAction as-child>
-            <Button :variant="destructive ? 'destructive' : 'default'" size="sm" @click="emit('confirm')">
-              {{ confirmLabel }}
-            </Button>
-          </AlertDialogAction>
+          <Button :variant="destructive ? 'destructive' : 'default'" size="sm" @click="confirm">
+            {{ confirmLabel }}
+          </Button>
         </div>
       </AlertDialogContent>
     </AlertDialogPortal>

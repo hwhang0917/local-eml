@@ -11,24 +11,21 @@ import (
 	"time"
 
 	"github.com/hwhang0917/local-eml/internal/importer"
-	"github.com/hwhang0917/local-eml/internal/store"
 )
 
 // IMAP IDLE push. Every profile that background sync may log into gets one
 // long-lived connection idling on its folder; when the server says mail
 // arrived, the profile is synced straight away. The interval poll keeps
-// running beside it as the fallback: for servers without IDLE, and as a slow
-// safety net for anything a dropped connection missed.
+// running beside it at the interval the user picked, whatever IDLE reports:
+// some servers quietly stop answering an IDLE (one seen in the wild ends it on
+// its own and then rejects the DONE), and a host that sleeps leaves a
+// connection that looks live but is gone. "Live" is never proof that mail
+// will arrive, so it must not hold the poll back.
 
 // idleReconcileEvery is how often the set of watchers is compared with the
 // saved profiles, on top of the explicit kicks after a profile changes. It
 // catches changes made by paths that don't kick (a library wipe, say).
 const idleReconcileEvery = time.Minute
-
-// idleSafetyPoll is how stale a pushed profile may get before the interval
-// poll syncs it anyway. Short intervals would otherwise redo, every few
-// minutes, work IDLE already did.
-const idleSafetyPoll = 30 * time.Minute
 
 // idleWatchers tracks the running watchers by profile id. Its zero value is
 // ready to use.
@@ -181,13 +178,4 @@ func (s *Server) syncNow(id int64) {
 		}
 		// The running sync ended between the two calls; try again ourselves.
 	}
-}
-
-// pushCovered reports whether the interval poll can leave p to IDLE: a
-// watcher is live for it and it synced recently.
-func (s *Server) pushCovered(p *store.IMAPProfile) bool {
-	if s.pushState(p.ID) != importer.IdleLive || p.LastSyncedAt == nil {
-		return false
-	}
-	return time.Since(time.Unix(*p.LastSyncedAt, 0)) < idleSafetyPoll
 }
