@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { trackLibraryEntry } from '@/lib/libraryReturn'
 
 const routes = [
   { path: '/', name: 'library', component: () => import('@/pages/LibraryPage.vue'), meta: { titleKey: 'nav.library' } },
@@ -29,3 +30,5 @@ export const router = createRouter({
   history: createWebHistory(),
   routes,
 })
+
+trackLibraryEntry(router)
