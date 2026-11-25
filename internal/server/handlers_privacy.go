@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hwhang0917/local-eml/internal/paths"
 	"github.com/hwhang0917/local-eml/internal/prefs"
 )
 
@@ -98,9 +99,15 @@ func (s *Server) handleWipeData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "delete mail files: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// The logger holds the log open in append mode, so truncate rather than
-	// delete: its next write lands at offset zero of the same file.
-	if err := emptyDir(p.Logs, func(path string) error { return os.Truncate(path, 0) }); err != nil {
+	// The logger holds the active log open in append mode, so truncate it
+	// rather than delete: its next write lands at offset zero of the same
+	// file. Rotated days are closed and can simply go.
+	if err := emptyDir(p.Logs, func(path string) error {
+		if filepath.Base(path) == paths.LogName {
+			return os.Truncate(path, 0)
+		}
+		return os.RemoveAll(path)
+	}); err != nil {
 		http.Error(w, "clear logs: "+err.Error(), http.StatusInternalServerError)
 		return
 	}

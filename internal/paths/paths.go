@@ -55,6 +55,14 @@ func (p Paths) EnsureDirs() error {
 	return nil
 }
 
+// LogName is the active log file inside Logs. Older days sit beside it as
+// local-eml-YYYY-MM-DD.log; see package logrotate.
+const LogName = "local-eml.log"
+
+func (p Paths) LogFile() string {
+	return filepath.Join(p.Logs, LogName)
+}
+
 func (p Paths) DBFile() string {
 	return filepath.Join(p.DB, "local-eml.db")
 }

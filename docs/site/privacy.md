@@ -8,7 +8,7 @@ Everything is in one folder: `~/.local-eml/` on Linux and macOS, and `%USERPROFI
 |---|---|
 | `eml/` | Your messages, as ordinary `.eml` files |
 | `db/local-eml.db` | The database: message details, the search index, profiles and settings |
-| `logs/local-eml.log` | The log file. It includes subjects and email addresses |
+| `logs/local-eml.log` | The log file. It includes subjects and email addresses. Each day's log moves to `local-eml-YYYY-MM-DD.log` at midnight, and logs older than 30 days are deleted |
 | `keys/secret.key` | The key used to encrypt saved IMAP passwords |
 | `session-token` | The password your browser uses to sign in. See [session token](./settings-cli#session-token) |
 | `prefs.json` | Launch preferences (for now, only the temporary sessions switch) |

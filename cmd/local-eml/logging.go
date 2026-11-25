@@ -4,12 +4,14 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 
 	"github.com/kardianos/service"
 
+	"github.com/hwhang0917/local-eml/internal/logrotate"
 	"github.com/hwhang0917/local-eml/internal/paths"
 )
+
+const logRetentionDays = 30
 
 func setupLogger(p paths.Paths) (*slog.Logger, func()) {
 	interactive := service.Interactive()
@@ -25,9 +27,12 @@ func setupLogger(p paths.Paths) (*slog.Logger, func()) {
 	}
 
 	// Logs carry subjects and addresses, so they get the same owner-only mode
-	// as the rest of the data folder.
-	logPath := filepath.Join(p.Logs, "local-eml.log")
-	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
+	// as the rest of the data folder. The file rotates daily and rotated
+	// days older than logRetentionDays are deleted.
+	f, err := logrotate.Open(p.Logs, paths.LogName, logrotate.Options{
+		MaxAgeDays: logRetentionDays,
+		Perm:       0o600,
+	})
 
 	var w io.Writer = os.Stderr
 	cleanup := func() {}

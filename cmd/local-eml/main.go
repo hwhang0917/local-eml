@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -282,7 +281,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	logger, closeLog := setupLogger(p)
 	defer closeLog()
 	slog.SetDefault(logger)
-	slog.Info("paths ready", "base", p.Base, "log", filepath.Join(p.Logs, "local-eml.log"))
+	slog.Info("paths ready", "base", p.Base, "log", p.LogFile())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -62,10 +62,10 @@ On Linux, check your desktop's Do Not Disturb setting and its notification setti
 On Linux and macOS:
 
 ```bash
-tail -f ~/.local-eml/logs/local-eml.log
+tail -F ~/.local-eml/logs/local-eml.log
 ```
 
-On Windows, the file is `%USERPROFILE%\.local-eml\logs\local-eml.log`. For more detail, set `LOCAL_EML_LOG_LEVEL=debug` in the service's environment. The log includes subjects and email addresses, so remove anything private before you share it.
+`-F` keeps following the log after it rotates at midnight. Earlier days are in `local-eml-YYYY-MM-DD.log` next to it, kept for 30 days. On Windows, the file is `%USERPROFILE%\.local-eml\logs\local-eml.log`. For more detail, set `LOCAL_EML_LOG_LEVEL=debug` in the service's environment. The log includes subjects and email addresses, so remove anything private before you share it.
 
 ## Reporting a bug
 
