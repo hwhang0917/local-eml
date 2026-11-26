@@ -13,6 +13,7 @@ const { session, refresh } = useSession()
 
 const isService = computed(() => session.value?.mode === 'service')
 const isTemporary = computed(() => session.value?.mode === 'temporary')
+const keyStorage = computed(() => session.value?.key_storage || '')
 const busy = ref(false)
 
 const enableDialog = ref<HTMLDialogElement | null>(null)
@@ -105,6 +106,17 @@ async function wipe_() {
       <Button variant="destructive" size="sm" :disabled="busy" @click="openWipe">
         {{ t('privacy.wipe_button') }}
       </Button>
+    </Card>
+
+    <Card v-if="!isTemporary && keyStorage" class="p-6 space-y-3">
+      <h2 class="text-lg font-semibold">{{ t('privacy.key_title') }}</h2>
+      <p
+        class="text-sm"
+        :class="keyStorage === 'keychain_unavailable' ? 'rounded-sm bg-accent p-3' : 'text-muted-foreground'"
+      >
+        {{ t(`privacy.key_${keyStorage}`) }}
+      </p>
+      <p v-if="keyStorage !== 'file'" class="text-xs text-muted-foreground">{{ t('privacy.key_optout') }}</p>
     </Card>
 
     <p class="text-xs text-muted-foreground">{{ t('privacy.disk_note') }}</p>

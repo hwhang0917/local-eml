@@ -40,9 +40,14 @@ func (s *Server) handleSession(w http.ResponseWriter, _ *http.Request) {
 			slog.Warn("read prefs", "err", err)
 		}
 	}
+	keyStorage := ""
+	if s.Secret != nil {
+		keyStorage = s.Secret.Storage()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"mode":               s.mode(),
 		"temporary_launches": p.TemporaryLaunches,
+		"key_storage":        keyStorage,
 	})
 }
 

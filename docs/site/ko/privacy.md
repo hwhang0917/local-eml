@@ -9,7 +9,7 @@
 | `eml/` | 메일 (`.eml` 파일 그대로) |
 | `db/local-eml.db` | 데이터베이스: 메일 정보, 검색 색인, 프로필, 설정 |
 | `logs/local-eml.log` | 로그 파일. 메일 제목과 주소가 들어 있습니다. 자정마다 그날 로그는 `local-eml-YYYY-MM-DD.log`로 옮겨지고, 30일이 지난 로그는 삭제됩니다 |
-| `keys/secret.key` | 저장된 IMAP 비밀번호를 암호화하는 키 |
+| `keys/secret.key` | 저장된 IMAP 비밀번호를 암호화하는 키 (시스템 보안 저장소가 없을 때). 보안 저장소가 있으면 키는 자격 증명 관리자, 키체인, Linux Secret Service에 `local-eml` 이름으로 있고, `keys/`에는 그렇다는 안내 파일만 남습니다 |
 | `session-token` | 브라우저가 로그인할 때 쓰는 비밀번호. [세션 토큰](./settings-cli#세션-토큰) 참고 |
 | `prefs.json` | 실행 설정 (지금은 임시 세션 스위치 하나뿐) |
 

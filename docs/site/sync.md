@@ -26,7 +26,9 @@ When new mail comes in, an open **Library** page updates by itself. The new rows
 
 ## What happens to your password
 
-To sign in without you, Local Eml has to keep your password. When you turn sync on, it saves the password in the database, encrypted with AES-256-GCM. The key is kept in a separate file, `~/.local-eml/keys/secret.key`, that only your user account can read. Someone who gets a copy of the database alone, for example from a backup, still can't read the password without that key file.
+To sign in without you, Local Eml has to keep your password. When you turn sync on, it saves the password in the database, encrypted with AES-256-GCM. The key is kept apart from the database, in your system's secure storage: Windows Credential Manager, the macOS Keychain, or the secret service on Linux (GNOME Keyring, KWallet). Where there is none, as is common on WSL, servers and containers, the key goes in a file only your user account can read, `~/.local-eml/keys/secret.key`. Someone who gets a copy of the database alone, for example from a backup, still can't read the password without the key.
+
+**Settings → Privacy** shows where the key is kept. A key file from an older version moves into secure storage the first time it's available. To keep the key in a file instead, start Local Eml with `LOCAL_EML_KEYRING=off`, and the key moves back out on that start.
 
 Turning sync off deletes the stored password and forgets where the last check stopped, so the app asks you to confirm first. To turn it back on, run one import with the password again.
 
