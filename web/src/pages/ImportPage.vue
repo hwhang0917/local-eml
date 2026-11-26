@@ -13,6 +13,7 @@ import type { IMAPImportConfig, IMAPProfile } from '@/lib/api'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import PromptDialog from '@/components/ui/PromptDialog.vue'
 import S3FormCard from '@/components/S3FormCard.vue'
 import JobRunCard from '@/components/JobRunCard.vue'
 import ImapProfileCard from '@/components/ImapProfileCard.vue'
@@ -280,15 +281,31 @@ async function setImapSync(p: IMAPProfile, enabled: boolean) {
   }
 }
 
+// A new profile is named in a modal first; the loaded one keeps its name.
+const imapNameDialogOpen = ref(false)
+const imapSaving = ref(false)
+const imapSuggestedName = computed(() => {
+  const user = imapForm.value.username.trim()
+  const host = imapForm.value.host.trim()
+  return user && host ? `${user}@${host}` : user || host
+})
+
 async function saveImapProfile() {
   const existing = activeImapProfile.value
-  let name = existing?.name ?? ''
   if (!existing) {
-    const entered = window.prompt(t('import.imap_profile_save_prompt'), '')
-    if (entered == null) return
-    name = entered.trim()
-    if (!name) return
+    imapNameDialogOpen.value = true
+    return
   }
+  await persistImapProfile(existing.name)
+}
+
+async function saveImapProfileAs(name: string) {
+  if (await persistImapProfile(name)) imapNameDialogOpen.value = false
+}
+
+async function persistImapProfile(name: string): Promise<boolean> {
+  const existing = activeImapProfile.value
+  imapSaving.value = true
   try {
     const saved = await api.saveIMAPProfile({
       name,
@@ -301,8 +318,12 @@ async function saveImapProfile() {
     })
     await loadImapProfiles()
     selectedImapProfileId.value = saved.id
+    return true
   } catch (e) {
     toast.error(t('import.imap_profile_save_error'), { description: String(e) })
+    return false
+  } finally {
+    imapSaving.value = false
   }
 }
 
@@ -580,6 +601,17 @@ async function confirmImap() {
           <Button variant="outline" :disabled="!canSaveImapProfile" @click="saveImapProfile">
             {{ activeImapProfile ? t('import.imap_profile_save') : t('import.imap_profile_save_new') }}
           </Button>
+          <PromptDialog
+            v-model:open="imapNameDialogOpen"
+            :title="t('import.profile_name_title')"
+            :description="t('import.profile_name_body')"
+            :label="t('import.profile_name_label')"
+            :initial-value="imapSuggestedName"
+            :confirm-label="t('import.imap_profile_save')"
+            :cancel-label="t('import.cancel')"
+            :busy="imapSaving"
+            @submit="saveImapProfileAs"
+          />
           <Button v-if="activeImapProfile" variant="outline" @click="imapDeleteConfirmOpen = true">
             {{ t('import.imap_profile_delete') }}
           </Button>
