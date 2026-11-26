@@ -286,9 +286,13 @@ export interface AppStats {
 // deleted on exit. normal: double-click or terminal run on the real library.
 export type SessionMode = 'service' | 'temporary' | 'normal'
 
+// Where the key for saved IMAP passwords lives; see internal/secret.
+export type KeyStorage = 'keychain' | 'file' | 'keychain_unavailable' | ''
+
 export interface SessionInfo {
   mode: SessionMode
   temporary_launches: boolean
+  key_storage: KeyStorage
 }
 
 export interface ReadTracking {

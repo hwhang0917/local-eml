@@ -658,6 +658,11 @@
     "wipe_confirm": "모두 삭제",
     "wipe_done": "메일 {count}건을 삭제했습니다",
     "wipe_error": "데이터를 삭제하지 못했습니다",
+    "key_title": "저장된 비밀번호 보호",
+    "key_keychain": "저장된 IMAP 비밀번호는 시스템 보안 저장소(Windows 자격 증명 관리자, macOS 키체인, Linux Secret Service)에 보관된 키로 암호화되어 있습니다.",
+    "key_file": "저장된 IMAP 비밀번호는 내 계정만 읽을 수 있는 파일(keys/secret.key)에 보관된 키로 암호화되어 있습니다. 이 시스템에서 쓸 수 있는 보안 저장소를 찾지 못했기 때문이며, WSL·서버·컨테이너에서는 흔한 경우입니다.",
+    "key_keychain_unavailable": "저장된 IMAP 비밀번호의 키는 시스템 보안 저장소에 있지만, 지금은 응답하지 않습니다(잠겨 있을 수 있습니다). 잠금이 풀릴 때까지 백그라운드 동기화는 로그인할 수 없으며, Local Eml이 계속 다시 시도합니다.",
+    "key_optout": "키를 파일에 두려면 LOCAL_EML_KEYRING=off 로 Local Eml을 실행하세요. 그때 키가 보안 저장소에서 파일로 옮겨집니다.",
     "disk_note": "여기서의 삭제는 일반적인 파일 삭제이며 안전한 완전 삭제가 아닙니다. 특히 SSD에서는 삭제한 데이터가 복구될 수 있고, Local Eml로는 되살릴 수도 없습니다. 필요한 데이터는 따로 백업해 두세요. 어떠한 보증도 없이 있는 그대로 제공됩니다."
   },
   "search_help": {

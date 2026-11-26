@@ -53,7 +53,7 @@ crashed sessions are swept on the next launch. It is ignored when running as a s
 - `~/.local-eml/eml/<sha256>.eml`: raw messages, named by content hash
 - `~/.local-eml/db/local-eml.db`: SQLite with FTS5
 - `~/.local-eml/logs/local-eml.log`: append-only log, same as stderr. Rotates daily to `local-eml-YYYY-MM-DD.log`; rotated days older than 30 days are deleted (`internal/logrotate`)
-- `~/.local-eml/keys/secret.key`: key for stored IMAP passwords
+- `~/.local-eml/keys/secret.key`: key for stored IMAP passwords, only when no OS keychain answers. Otherwise the key is in the keychain (service `local-eml`, account = absolute key file path) and `keys/secret.key.in-keychain` marks that. `LOCAL_EML_KEYRING=off` forces the file; temporary sessions always use the file (`internal/secret`)
 - `~/.local-eml/session-token`: API session token
 
 `%USERPROFILE%\.local-eml\` on Windows.
