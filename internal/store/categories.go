@@ -40,22 +40,11 @@ func (s *Store) seedCategories(ctx context.Context) error {
 }
 
 func (s *Store) ListCategories(ctx context.Context) ([]Category, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT id, color, name, position FROM categories ORDER BY position`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := []Category{}
-	for rows.Next() {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (Category, error) {
 		var c Category
-		if err := rows.Scan(&c.ID, &c.Color, &c.Name, &c.Position); err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
+		err := rs.Scan(&c.ID, &c.Color, &c.Name, &c.Position)
+		return c, err
+	}, `SELECT id, color, name, position FROM categories ORDER BY position`)
 }
 
 // RenameCategory is the only write. Colours are the identity and the set is

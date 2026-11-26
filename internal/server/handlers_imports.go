@@ -43,20 +43,7 @@ func (s *Server) handleImportUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var src importer.Source
-	switch kind {
-	case kindZip:
-		src = importer.NewZipSource(paths[0])
-	case kindMbox:
-		src = importer.NewMboxSource(paths[0])
-	case kindPst:
-		src = importer.NewPstSource(paths[0])
-	case kindFile:
-		src = importer.NewLocalSource(sourceName, paths, names)
-	default: // kindDir
-		src = importer.NewLocalEMLSource(sourceName, paths, names)
-	}
-
+	src := uploadSource(kind, sourceName, paths, names)
 	slog.Info("import requested",
 		slog.String("import_id", id),
 		slog.String("kind", kind),
@@ -208,6 +195,23 @@ func detectKind(files []*multipart.FileHeader) string {
 		return kindPst
 	}
 	return kindFile
+}
+
+// uploadSource opens the saved uploads as the importer source for kind. An
+// archive kind always holds exactly one file.
+func uploadSource(kind, sourceName string, paths, names []string) importer.Source {
+	switch kind {
+	case kindZip:
+		return importer.NewZipSource(paths[0])
+	case kindMbox:
+		return importer.NewMboxSource(paths[0])
+	case kindPst:
+		return importer.NewPstSource(paths[0])
+	case kindFile:
+		return importer.NewLocalSource(sourceName, paths, names)
+	default: // kindDir
+		return importer.NewLocalEMLSource(sourceName, paths, names)
+	}
 }
 
 func saveUploads(files []*multipart.FileHeader) ([]string, []string, error) {

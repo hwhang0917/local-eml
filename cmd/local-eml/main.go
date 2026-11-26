@@ -38,6 +38,14 @@ const defaultPort = 7878
 // to ~1/min, so anything under a couple of minutes would false-positive.
 const idleGrace = 3 * time.Minute
 
+// idleCheckInterval is how often app mode compares the last ping to idleGrace.
+const idleCheckInterval = 30 * time.Second
+
+// shutdownTimeout bounds how long in-flight requests get to finish on exit.
+const shutdownTimeout = 5 * time.Second
+
+const readHeaderTimeout = 10 * time.Second
+
 // ephemeralEnv requests a temporary session without a flag, for launchers
 // that can set the environment but not arguments.
 const ephemeralEnv = "LOCAL_EML_EPHEMERAL"
@@ -47,14 +55,16 @@ func ephemeralFromEnv() bool {
 	return v == "1" || strings.EqualFold(v, "true")
 }
 
+// defaultSyncInterval is small enough to feel like "incoming mail," large
+// enough to be polite to remote IMAP servers.
+const defaultSyncInterval = 10 * time.Minute
+
 // syncInterval lets ops tune the IMAP background poll without rebuilding.
 // LOCAL_EML_SYNC_INTERVAL: a Go duration (e.g. "5m", "30s") or "off" to disable.
-// Default: 10 minutes — small enough to feel like "incoming mail," large enough
-// to be polite to remote IMAP servers.
 func syncInterval() time.Duration {
 	switch v := os.Getenv("LOCAL_EML_SYNC_INTERVAL"); v {
 	case "":
-		return 10 * time.Minute
+		return defaultSyncInterval
 	case "off", "0", "disabled":
 		return 0
 	default:
@@ -62,7 +72,7 @@ func syncInterval() time.Duration {
 		if err != nil || d < 0 {
 			slog.Warn("bad LOCAL_EML_SYNC_INTERVAL, using default",
 				slog.String("value", v))
-			return 10 * time.Minute
+			return defaultSyncInterval
 		}
 		return d
 	}
@@ -317,39 +327,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		PrefsFile:          prefsFile,
 	}
 	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
-
-	// One-time data repairs (attachment counts, thread ids), each gated on
-	// PRAGMA user_version; run in the background so a large library doesn't
-	// delay startup.
-	go func() {
-		// A blob the parser chokes on would otherwise crash every start, since
-		// the version gate only advances after a full pass.
-		defer func() {
-			if rec := recover(); rec != nil {
-				slog.Error("backfill panic", "panic", rec)
-			}
-		}()
-		if n, err := imp.BackfillAttachmentCounts(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Warn("attachment count backfill", "err", err)
-		} else if n > 0 {
-			slog.Info("attachment count backfill done", "updated", n)
-		}
-		if n, err := imp.BackfillThreadIDs(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Warn("thread id backfill", "err", err)
-		} else if n > 0 {
-			slog.Info("thread id backfill done", "updated", n)
-		}
-		if n, err := imp.BackfillRisk(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Warn("phishing risk backfill", "err", err)
-		} else if n > 0 {
-			slog.Info("phishing risk backfill done", "assessed", n)
-		}
-		if n, err := imp.BackfillAttachments(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			slog.Warn("attachment list backfill", "err", err)
-		} else if n > 0 {
-			slog.Info("attachment list backfill done", "emails", n)
-		}
-	}()
+	go runBackfills(ctx, imp)
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.port))
 	if err != nil {
@@ -362,7 +340,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	handler := http.Handler(srv.Router())
 	httpSrv := &http.Server{
 		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: readHeaderTimeout,
 	}
 	httpSrv.RegisterOnShutdown(srv.CloseStreams)
 
@@ -372,7 +350,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		shutdownOnce.Do(func() {
 			defer close(shutdownDone)
 			slog.Info("shutting down", "reason", reason)
-			shutCtx, c := context.WithTimeout(context.Background(), 5*time.Second)
+			shutCtx, c := context.WithTimeout(context.Background(), shutdownTimeout)
 			defer c()
 			_ = httpSrv.Shutdown(shutCtx)
 			// Jobs run on their own contexts. A temporary folder can only be
@@ -410,6 +388,41 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	return 0
 }
 
+// backfill is a one-time data repair, gated on PRAGMA user_version. countKey
+// names what n counts in the log line.
+type backfill struct {
+	name     string
+	countKey string
+	run      func(context.Context) (int, error)
+}
+
+// runBackfills applies the data repairs in order. It runs in the background
+// so a large library doesn't delay startup.
+func runBackfills(ctx context.Context, imp *importer.Importer) {
+	// A blob the parser chokes on would otherwise crash every start, since
+	// the version gate only advances after a full pass.
+	defer func() {
+		if rec := recover(); rec != nil {
+			slog.Error("backfill panic", "panic", rec)
+		}
+	}()
+	backfills := []backfill{
+		{"attachment count backfill", "updated", imp.BackfillAttachmentCounts},
+		{"thread id backfill", "updated", imp.BackfillThreadIDs},
+		{"phishing risk backfill", "assessed", imp.BackfillRisk},
+		{"attachment list backfill", "emails", imp.BackfillAttachments},
+	}
+	for _, b := range backfills {
+		n, err := b.run(ctx)
+		switch {
+		case err != nil && !errors.Is(err, context.Canceled):
+			slog.Warn(b.name, "err", err)
+		case n > 0:
+			slog.Info(b.name+" done", b.countKey, n)
+		}
+	}
+}
+
 // touchHealth stamps lastSeen on every /healthz hit. The UI polls it every 30s
 // while a tab is open, so it doubles as an "is anyone still looking" heartbeat.
 func touchHealth(next http.Handler, lastSeen *atomic.Int64) http.Handler {
@@ -422,7 +435,7 @@ func touchHealth(next http.Handler, lastSeen *atomic.Int64) http.Handler {
 }
 
 func watchIdle(ctx context.Context, lastSeen *atomic.Int64, shutdown func(string)) {
-	t := time.NewTicker(30 * time.Second)
+	t := time.NewTicker(idleCheckInterval)
 	defer t.Stop()
 	for {
 		select {

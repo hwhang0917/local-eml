@@ -1,8 +1,6 @@
 package server
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jhillyerd/enmime"
 
+	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/parser"
 	"github.com/hwhang0917/local-eml/internal/sanitize"
 	"github.com/hwhang0917/local-eml/internal/store"
@@ -33,12 +32,12 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 		Order:        q.Get("order"),
 		Limit:        store.ClampPageSize(intParam(q.Get("limit"), store.DefaultPageSize)),
 		Offset:       intParam(q.Get("offset"), 0),
-		From:         dayBound(q.Get("from"), false),
-		To:           dayBound(q.Get("to"), true),
+		From:         dayStart(q.Get("from")),
+		To:           dayEnd(q.Get("to")),
 		GroupThreads: q.Get("group") == "thread",
 	}
 	// "none" selects uncategorized mail; a bare id selects that category.
-	// Anything else falls through to "any", matching how dayBound treats junk —
+	// Anything else falls through to "any", matching how dayStart treats junk —
 	// a half-typed filter should not blank the library.
 	if cat := q.Get("category"); cat == "none" {
 		opts.Uncategorized = true
@@ -117,19 +116,6 @@ func (s *Server) handleGetEmail(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, emailResponse{Email: unindexed, NotIndexed: true})
 }
 
-func hashFile(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 func (s *Server) blobExists(sha string) bool {
 	_, err := os.Stat(s.Importer.Paths.BlobFor(sha))
 	return err == nil
@@ -201,7 +187,7 @@ func (s *Server) handleIndexEmail(w http.ResponseWriter, r *http.Request) {
 	// Blobs are named by content hash. Importing a file whose contents hash to
 	// something else would index it under its real hash and leave this one
 	// behind as a second, unreferenced copy, so refuse instead.
-	sum, err := hashFile(path)
+	sum, err := importer.HashFile(path)
 	if err != nil {
 		http.Error(w, "hash: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -505,23 +491,30 @@ func findPartByCID(env *enmime.Envelope, cid string) *enmime.Part {
 	return nil
 }
 
-// dayBound turns a YYYY-MM-DD filter value into a unix second. The dates come
-// from a browser <input type="date">, which has no timezone, and the browser
-// and server are the same machine — so a day means a local day. endOfDay
-// pushes to 23:59:59 so a from/to pair with the same date selects that whole
-// day rather than an empty instant. Unparseable input yields 0 (unbounded)
-// rather than an error: a half-typed date should not blank the library.
-func dayBound(v string, endOfDay bool) int64 {
-	v = strings.TrimSpace(v)
-	if v == "" {
+// dayStart and dayEnd turn a YYYY-MM-DD filter value into the first and last
+// unix second of that day. The dates come from a browser <input type="date">,
+// which has no timezone, and the browser and server are the same machine — so
+// a day means a local day. Ending at 23:59:59 makes a from/to pair with the
+// same date select that whole day rather than an empty instant. Unparseable
+// input yields 0 (unbounded) rather than an error: a half-typed date should
+// not blank the library.
+func dayStart(v string) int64 {
+	d, ok := parseDay(v)
+	if !ok {
 		return 0
-	}
-	d, err := time.ParseInLocation(time.DateOnly, v, time.Local)
-	if err != nil {
-		return 0
-	}
-	if endOfDay {
-		d = d.AddDate(0, 0, 1).Add(-time.Second)
 	}
 	return d.Unix()
+}
+
+func dayEnd(v string) int64 {
+	d, ok := parseDay(v)
+	if !ok {
+		return 0
+	}
+	return d.AddDate(0, 0, 1).Add(-time.Second).Unix()
+}
+
+func parseDay(v string) (time.Time, bool) {
+	d, err := time.ParseInLocation(time.DateOnly, strings.TrimSpace(v), time.Local)
+	return d, err == nil
 }

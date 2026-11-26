@@ -121,3 +121,35 @@ func TestIMAPProfiles_NullablePortAndFolder(t *testing.T) {
 		t.Fatalf("expected nil folder, got %v", list[0].Folder)
 	}
 }
+
+// The sync cursor is stored as integers and read back as *uint32; a value
+// above MaxInt32 must survive the round trip.
+func TestIMAPProfiles_SyncStateRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	p, err := s.UpsertIMAPProfile(ctx, IMAPProfile{
+		Name: "Sync", Host: "imap.example.com", Username: "u", SyncEnabled: true,
+	})
+	if err != nil {
+		t.Fatalf("upsert: %v", err)
+	}
+	if err := s.UpdateIMAPProfileSyncState(ctx, p.ID, 4_000_000_000, 42, 1_700_000_000); err != nil {
+		t.Fatalf("sync state: %v", err)
+	}
+	got, err := s.GetIMAPProfile(ctx, p.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if !got.SyncEnabled {
+		t.Errorf("sync_enabled lost")
+	}
+	if got.UIDValidity == nil || *got.UIDValidity != 4_000_000_000 {
+		t.Errorf("uid_validity = %v, want 4000000000", got.UIDValidity)
+	}
+	if got.LastUID == nil || *got.LastUID != 42 {
+		t.Errorf("last_uid = %v, want 42", got.LastUID)
+	}
+	if got.LastSyncedAt == nil || *got.LastSyncedAt != 1_700_000_000 {
+		t.Errorf("last_synced_at = %v, want 1700000000", got.LastSyncedAt)
+	}
+}

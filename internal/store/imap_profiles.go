@@ -51,21 +51,8 @@ func (s *Store) ListIMAPProfilesForSync(ctx context.Context) ([]IMAPProfile, err
 }
 
 func (s *Store) queryIMAPProfiles(ctx context.Context, where string) ([]IMAPProfile, error) {
-	rows, err := s.DB.QueryContext(ctx,
+	return queryAll(ctx, s.DB, scanIMAPProfile,
 		`SELECT `+imapProfileCols+` FROM imap_profiles `+where+` ORDER BY name COLLATE NOCASE`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []IMAPProfile{}
-	for rows.Next() {
-		p, err := scanIMAPProfile(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
 }
 
 func (s *Store) GetIMAPProfile(ctx context.Context, id int64) (*IMAPProfile, error) {
@@ -187,38 +174,19 @@ func (s *Store) DeleteIMAPProfile(ctx context.Context, id int64) error {
 
 func scanIMAPProfile(rs rowScanner) (IMAPProfile, error) {
 	var p IMAPProfile
-	var port sql.NullInt64
-	var folder sql.NullString
-	var syncFlag int
-	var uidValidity, lastUID sql.NullInt64
-	var lastSyncedAt sql.NullInt64
-	var hasPassword bool
+	var port sql.Null[int]
+	var folder sql.Null[string]
+	var uidValidity, lastUID sql.Null[uint32]
+	var lastSyncedAt sql.Null[int64]
 	if err := rs.Scan(&p.ID, &p.Name, &p.Host, &port, &p.Username, &folder,
-		&syncFlag, &uidValidity, &lastUID, &lastSyncedAt, &hasPassword,
+		&p.SyncEnabled, &uidValidity, &lastUID, &lastSyncedAt, &p.HasPassword,
 		&p.CreatedAt, &p.UpdatedAt); err != nil {
 		return IMAPProfile{}, err
 	}
-	if port.Valid {
-		v := int(port.Int64)
-		p.Port = &v
-	}
-	if folder.Valid {
-		v := folder.String
-		p.Folder = &v
-	}
-	p.SyncEnabled = syncFlag != 0
-	if uidValidity.Valid {
-		v := uint32(uidValidity.Int64)
-		p.UIDValidity = &v
-	}
-	if lastUID.Valid {
-		v := uint32(lastUID.Int64)
-		p.LastUID = &v
-	}
-	if lastSyncedAt.Valid {
-		v := lastSyncedAt.Int64
-		p.LastSyncedAt = &v
-	}
-	p.HasPassword = hasPassword
+	p.Port = nullPtr(port)
+	p.Folder = nullPtr(folder)
+	p.UIDValidity = nullPtr(uidValidity)
+	p.LastUID = nullPtr(lastUID)
+	p.LastSyncedAt = nullPtr(lastSyncedAt)
 	return p, nil
 }

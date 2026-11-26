@@ -92,24 +92,11 @@ func (s *Store) GetImport(ctx context.Context, id string) (*Import, error) {
 // status at or after since (Unix seconds), oldest first, at most limit of
 // them. The SPA polls it for background syncs that brought in new mail.
 func (s *Store) ListFinishedImports(ctx context.Context, kind string, since int64, limit int) ([]Import, error) {
-	rows, err := s.DB.QueryContext(ctx, `
+	return queryAll(ctx, s.DB, scanImport, `
 		SELECT `+importCols+` FROM imports
 		WHERE source_kind = ? AND finished_at IS NOT NULL AND finished_at >= ?
 		ORDER BY finished_at, id
 		LIMIT ?`, kind, since, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Import{}
-	for rows.Next() {
-		imp, err := scanImport(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, imp)
-	}
-	return out, rows.Err()
 }
 
 func (s *Store) RecordImportError(ctx context.Context, id, path, message string) error {

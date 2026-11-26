@@ -65,11 +65,10 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 	}
 	defer f.Close()
 
-	hasher := sha256.New()
-	if _, err := io.Copy(hasher, f); err != nil {
+	sum, err := hashReader(f)
+	if err != nil {
 		return nil, fmt.Errorf("hash: %w", err)
 	}
-	sum := hex.EncodeToString(hasher.Sum(nil))
 
 	exists, err := im.Store.EmailExists(ctx, sum)
 	if err != nil {
@@ -126,6 +125,25 @@ func (im *Importer) ImportFile(ctx context.Context, srcPath, originalName string
 		return nil, fmt.Errorf("insert: %w", err)
 	}
 	return &Result{SHA256: sum, EmailID: id}, nil
+}
+
+// HashFile returns the hex SHA-256 of the file at path: the name its blob is
+// stored under.
+func HashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	return hashReader(f)
+}
+
+func hashReader(r io.Reader) (string, error) {
+	h := sha256.New()
+	if _, err := io.Copy(h, r); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // attachmentMeta converts the parser's view of the attachments into rows for
