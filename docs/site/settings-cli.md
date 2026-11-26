@@ -12,7 +12,7 @@ Open **Settings** from the top bar. The book icon at the right of the top bar op
 | **Reading** | Turn on read tracking (off by default). Unread subjects then show in bold, opening a message marks it read, and the list gets an **Unread** filter and a read/unread button on each row. When you first turn it on, you choose whether your existing mail starts as read or unread. After a big import, **Mark all as read** clears the backlog. |
 | **Restore from backup** | Bring back stars, categories, settings and profiles from an exported `.zip`. |
 | **Spam & phishing** | See the messages you've marked, and turn phishing warnings on or off. |
-| **Privacy** | Temporary sessions, and Delete all data. |
+| **Privacy** | Temporary sessions, Delete all data, and where the key for saved IMAP passwords is kept. |
 | **Attributions** | Licenses of the open-source libraries Local Eml uses. |
 
 ## Command line
@@ -55,6 +55,7 @@ A [temporary session](./privacy#temporary-sessions) gets its own token, and doub
 | `LOCAL_EML_PORT` | The port the install script sets up. Default `7878`. |
 | `LOCAL_EML_SYNC_INTERVAL` | How often background sync checks for new IMAP mail, for example `5m`, or `off`. A value set in the app takes priority. |
 | `LOCAL_EML_EPHEMERAL` | `1` starts a [temporary session](./privacy#temporary-sessions). The background service ignores it. |
+| `LOCAL_EML_KEYRING` | `off` keeps the key that encrypts saved IMAP passwords in a file instead of your system's secure storage, and moves it back out if it was there. See [What happens to your password](./sync#what-happens-to-your-password). |
 | `LOCAL_EML_LOG_LEVEL` | `debug`, `info`, `warn` or `error`. Default `info`. |
 
 For the background service, set these in the service's own configuration: the systemd unit on Linux, the LaunchAgent plist on macOS, or the Windows service settings.

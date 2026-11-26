@@ -20,7 +20,7 @@ It is not an email client. You can't write, send or reply to mail, and it never 
 - **Search all your mail at once.** Sender, recipients, subject, body and attachment names, with filters like `from:alice`, `has:attachment` or `after:2019`. Korean, Japanese and Chinese work out of the box, and so does 초성검색 (typing `ㅎㄱ` finds 한국).
 - **Read safely.** HTML mail opens in a locked-down frame with remote images blocked, links show where they really go, and messages that look like phishing get a warning.
 - **Find any attachment.** The Attachments page lists every file in every message, so you can find that PDF by name, type, sender or date without remembering which email it came in.
-- **Keep up with new mail.** Turn on background sync for an IMAP profile and new mail arrives within seconds on servers that support IMAP IDLE, with an optional desktop notification.
+- **Keep up with new mail.** Turn on background sync for an IMAP profile and new mail arrives within seconds on servers that support IMAP IDLE, with an optional desktop notification. The password is stored encrypted, and its key sits in your system's keychain (Credential Manager, Keychain or the Linux secret service), or in a private file where there isn't one.
 - **Tidy up.** Select many messages to mark them read or unread or delete them, or delete one while you read it. Print a whole message, or save it as a PDF.
 - **See what you have.** The Stats page charts your mail over time, shows when mail arrives, who sends the most, and what takes up space.
 - **Take it with you.** Export everything as one `.zip`, or upload it to AWS S3 or an S3-compatible service.

@@ -57,7 +57,7 @@
         'Full-text search over sender, subject, body and attachment names, with filters like <code>from:</code> and <code>has:attachment</code>. Korean, Japanese and Chinese work out of the box, and typing just the initial consonants (<code>ㅎㄱ</code> → 한국) finds it too.',
       'f.private.t': 'Private by design',
       'f.private.b':
-        'Listens only on <code>127.0.0.1</code>. No account, no telemetry, no cloud. IMAP passwords are never stored unless you opt in, and then only encrypted with a key that stays on your disk.',
+        'Listens only on <code>127.0.0.1</code>. No account, no telemetry, no cloud. IMAP passwords are never stored unless you opt in, and then only encrypted, with the key kept in your system\'s keychain where there is one.',
       'f.safe.t': 'Reads HTML safely',
       'f.safe.b': 'Messages render in a sandboxed frame with remote images blocked by default, so tracking pixels stay blind.',
       'f.sync.t': 'Keeps up with new mail',
@@ -130,7 +130,7 @@
         '보낸 사람, 제목, 본문, 첨부파일 이름을 한 번에 검색하고 <code>from:</code>, <code>has:attachment</code> 같은 필터도 씁니다. 한국어·일본어·중국어가 그대로 검색되고, 초성만 입력해도(<code>ㅎㄱ</code> → 한국) 찾아냅니다.',
       'f.private.t': '내 정보는 내 컴퓨터에만',
       'f.private.b':
-        '내 컴퓨터(<code>127.0.0.1</code>)에서 오는 접속만 받습니다. 계정도, 사용 기록 수집도, 클라우드도 없습니다. IMAP 비밀번호는 직접 켜지 않는 한 저장하지 않고, 켜더라도 내 디스크에만 있는 키로 암호화합니다.',
+        '내 컴퓨터(<code>127.0.0.1</code>)에서 오는 접속만 받습니다. 계정도, 사용 기록 수집도, 클라우드도 없습니다. IMAP 비밀번호는 직접 켜지 않는 한 저장하지 않고, 켜더라도 암호화하며 그 키는 운영체제의 보안 저장소(없으면 내 계정만 읽을 수 있는 파일)에 둡니다.',
       'f.safe.t': 'HTML도 안전하게',
       'f.safe.b': '메일은 격리된 영역에 표시되고 외부 이미지는 기본으로 막혀 있어서, 메일을 열었는지 몰래 확인하는 추적 이미지가 동작하지 않습니다.',
       'f.sync.t': '새 메일도 놓치지 않게',
