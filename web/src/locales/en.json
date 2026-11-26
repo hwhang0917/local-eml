@@ -7,7 +7,8 @@
     "server_offline": "Can't reach the local-eml server. Is it running?",
     "server_retry": "Retry",
     "server_checking": "Checking…",
-    "temporary_banner": "Temporary session: nothing is kept after you close this window."
+    "temporary_banner": "Temporary session: nothing is kept after you close this window.",
+    "temporary_banner_kept": "Temporary session: this window's mail will be added to your library when you close it."
   },
   "auth": {
     "title": "Sign in to Local Eml",
@@ -640,6 +641,10 @@
     "temp_toggle": "Double-click sessions are temporary",
     "temp_toggle_help": "Takes effect from the next launch. The only thing kept on disk is a small file that remembers this switch.",
     "temp_now": "You're in a temporary session right now. Nothing from this window is kept after it closes.",
+    "temp_now_kept": "You're in a temporary session right now. Because you chose to keep it, its mail will be added to your library when this window closes.",
+    "keep_toggle": "Keep the mail from this window",
+    "keep_toggle_help": "When this window closes, its mail, stars, read marks and categories are added to your library instead of deleted. Saved profiles come along without their passwords.",
+    "keep_now_on": "The mail in this window will be added to your library when you close it.",
     "temp_service": "Not available while Local Eml runs as a background service, because the service never closes. To use a temporary session on this computer, stop the service or start Local Eml with --ephemeral.",
     "temp_on": "Temporary sessions turned on",
     "temp_off": "Temporary sessions turned off",

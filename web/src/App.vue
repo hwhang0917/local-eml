@@ -162,7 +162,7 @@ watchEffect(() => {
         role="status"
         class="bg-amber-500/15 text-amber-900 dark:text-amber-200 px-6 py-1.5 text-sm text-center"
       >
-        {{ t('app.temporary_banner') }}
+        {{ t(session.session_kept ? 'app.temporary_banner_kept' : 'app.temporary_banner') }}
         <RouterLink :to="{ name: 'settings-privacy' }" class="ml-1 underline">{{ t('nav.settings') }}</RouterLink>
       </div>
     </div>

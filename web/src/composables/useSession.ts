@@ -15,8 +15,11 @@ async function refresh() {
 }
 
 // A temporary session throws the whole library away on exit, so deleting
-// single messages is pointless there. False until the mode is known.
-const canDeleteMail = computed(() => session.value != null && session.value.mode !== 'temporary')
+// single messages is pointless there, unless the session is being kept.
+// False until the mode is known.
+const canDeleteMail = computed(
+  () => session.value != null && (session.value.mode !== 'temporary' || session.value.session_kept),
+)
 
 export function useSession() {
   if (!loaded) loaded = refresh()

@@ -2,6 +2,10 @@
 // sessions. Each lives under the OS temp directory with a pid file naming its
 // owner, so a later launch can tell a crashed session's leftovers from a
 // session that is still running.
+//
+// A session the user decided to keep (by turning temporary sessions off from
+// inside it) carries a keep file too. Its folder is never swept: its mail is
+// merged into the real library instead, see Merge.
 package tempsession
 
 import (
@@ -15,6 +19,7 @@ import (
 const (
 	prefix      = "local-eml-session-"
 	pidFileName = "session.pid"
+	keepName    = "keep"
 
 	// A folder with no pid file may belong to a launch that is between
 	// MkdirTemp and writing it; give it this long before calling it orphaned.
@@ -49,7 +54,7 @@ func Sweep(root string) []string {
 	matches, _ := filepath.Glob(filepath.Join(root, prefix+"*"))
 	var removed []string
 	for _, dir := range matches {
-		if info, err := os.Stat(dir); err != nil || !info.IsDir() || inUse(dir, info) {
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() || IsKept(dir) || inUse(dir, info) {
 			continue
 		}
 		if os.RemoveAll(dir) == nil {
@@ -57,6 +62,41 @@ func Sweep(root string) []string {
 		}
 	}
 	return removed
+}
+
+// SetKeep marks dir's data to be kept, or clears the mark. The mark is written
+// as soon as the user asks, not at exit, so a crash afterwards keeps the data
+// too.
+func SetKeep(dir string, keep bool) error {
+	p := filepath.Join(dir, keepName)
+	if keep {
+		return os.WriteFile(p, nil, 0o600)
+	}
+	if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+// IsKept reports whether dir is marked to be kept.
+func IsKept(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, keepName))
+	return err == nil
+}
+
+// Kept lists the kept session folders under root whose owner is gone: the
+// ones waiting to be merged into the library.
+func Kept(root string) []string {
+	matches, _ := filepath.Glob(filepath.Join(root, prefix+"*"))
+	var kept []string
+	for _, dir := range matches {
+		info, err := os.Stat(dir)
+		if err != nil || !info.IsDir() || !IsKept(dir) || inUse(dir, info) {
+			continue
+		}
+		kept = append(kept, dir)
+	}
+	return kept
 }
 
 func inUse(dir string, info os.FileInfo) bool {

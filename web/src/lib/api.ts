@@ -292,6 +292,8 @@ export type KeyStorage = 'keychain' | 'file' | 'keychain_unavailable' | ''
 export interface SessionInfo {
   mode: SessionMode
   temporary_launches: boolean
+  /** In a temporary session: its mail is added to the library when it closes instead of deleted. */
+  session_kept: boolean
   key_storage: KeyStorage
 }
 
@@ -356,6 +358,10 @@ export const api = {
 
   setTemporaryLaunches(enabled: boolean) {
     return fetch('/api/session/temporary-launches', jsonBody('PUT', { enabled })).then(okOrThrow)
+  },
+
+  setKeepSession(keep: boolean) {
+    return fetch('/api/session/keep', jsonBody('PUT', { keep })).then(okOrThrow)
   },
 
   wipeData() {
