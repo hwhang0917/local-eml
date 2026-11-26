@@ -156,22 +156,9 @@ func (s *Store) GetEmailBySHA(ctx context.Context, sha string) (*Email, error) {
 
 // ListThread returns every email sharing threadID, oldest first.
 func (s *Store) ListThread(ctx context.Context, threadID string) ([]Email, error) {
-	rows, err := s.DB.QueryContext(ctx,
+	return queryAll(ctx, s.DB, scanEmailValue,
 		`SELECT `+emailCols+` FROM emails WHERE thread_id = ? AND `+notQuarantined+
 			` ORDER BY sent_at ASC, id ASC`, threadID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []Email{}
-	for rows.Next() {
-		e, err := scanEmail(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, *e)
-	}
-	return out, rows.Err()
 }
 
 var ErrEmailNotFound = errors.New("email not found")
@@ -182,21 +169,11 @@ type ExportEntry struct {
 }
 
 func (s *Store) AllExportEntries(ctx context.Context) ([]ExportEntry, error) {
-	rows, err := s.DB.QueryContext(ctx, `
-		SELECT sha256, COALESCE(filename, '') FROM emails ORDER BY sent_at DESC, id DESC`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []ExportEntry{}
-	for rows.Next() {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (ExportEntry, error) {
 		var e ExportEntry
-		if err := rows.Scan(&e.SHA256, &e.Filename); err != nil {
-			return nil, err
-		}
-		out = append(out, e)
-	}
-	return out, rows.Err()
+		err := rs.Scan(&e.SHA256, &e.Filename)
+		return e, err
+	}, `SELECT sha256, COALESCE(filename, '') FROM emails ORDER BY sent_at DESC, id DESC`)
 }
 
 // EmailAttachmentRow is the minimal projection the attachment-count backfill
@@ -208,21 +185,11 @@ type EmailAttachmentRow struct {
 }
 
 func (s *Store) ListEmailAttachmentCounts(ctx context.Context) ([]EmailAttachmentRow, error) {
-	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, sha256, COALESCE(attachment_count, 0) FROM emails`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []EmailAttachmentRow{}
-	for rows.Next() {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (EmailAttachmentRow, error) {
 		var r EmailAttachmentRow
-		if err := rows.Scan(&r.ID, &r.SHA256, &r.AttachmentCount); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+		err := rs.Scan(&r.ID, &r.SHA256, &r.AttachmentCount)
+		return r, err
+	}, `SELECT id, sha256, COALESCE(attachment_count, 0) FROM emails`)
 }
 
 func (s *Store) SetEmailAttachmentCount(ctx context.Context, id int64, count int) error {
@@ -249,20 +216,11 @@ func (s *Store) ListEmailsMissingRisk(ctx context.Context) ([]BackfillRow, error
 }
 
 func (s *Store) listBackfillRows(ctx context.Context, where string) ([]BackfillRow, error) {
-	rows, err := s.DB.QueryContext(ctx, `SELECT id, sha256 FROM emails WHERE `+where)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := []BackfillRow{}
-	for rows.Next() {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (BackfillRow, error) {
 		var r BackfillRow
-		if err := rows.Scan(&r.ID, &r.SHA256); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+		err := rs.Scan(&r.ID, &r.SHA256)
+		return r, err
+	}, `SELECT id, sha256 FROM emails WHERE `+where)
 }
 
 func (s *Store) SetEmailThreadID(ctx context.Context, id int64, threadID string) error {
@@ -352,10 +310,7 @@ func (s *Store) ListEmails(ctx context.Context, opts ListOptions) ([]Email, int,
 	case "from_addr", "subject", "size_bytes", "imported_at", "sent_at":
 		sortCol = opts.Sort
 	}
-	order := "DESC"
-	if strings.EqualFold(opts.Order, "asc") {
-		order = "ASC"
-	}
+	order := sqlOrder(opts.Order)
 	where, args := listWhere(opts)
 
 	// Rows without a thread key group with themselves, so singletons still list.
@@ -461,8 +416,13 @@ func (s extraScanner) Scan(dest ...any) error {
 	return s.rows.Scan(append(dest, s.extra...)...)
 }
 
-type rowScanner interface {
-	Scan(dest ...any) error
+// scanEmailValue adapts scanEmail to queryAll.
+func scanEmailValue(rs rowScanner) (Email, error) {
+	e, err := scanEmail(rs)
+	if err != nil {
+		return Email{}, err
+	}
+	return *e, nil
 }
 
 func scanEmail(rs rowScanner) (*Email, error) {

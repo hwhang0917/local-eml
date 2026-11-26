@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api, type SessionInfo } from '@/lib/api'
 
 // One fetch per page life, shared by the banner and the Privacy page. The mode
@@ -14,7 +14,11 @@ async function refresh() {
   }
 }
 
+// A temporary session throws the whole library away on exit, so deleting
+// single messages is pointless there. False until the mode is known.
+const canDeleteMail = computed(() => session.value != null && session.value.mode !== 'temporary')
+
 export function useSession() {
   if (!loaded) loaded = refresh()
-  return { session, refresh }
+  return { session, canDeleteMail, refresh }
 }

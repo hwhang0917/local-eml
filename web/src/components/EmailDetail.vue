@@ -247,9 +247,7 @@ async function deleteDangling() {
 // previous one, else back to the library.
 const deleteConfirmOpen = ref(false)
 const deleting = ref(false)
-// Not offered in a temporary session: the whole library goes on exit anyway.
-const { session } = useSession()
-const canDelete = computed(() => session.value != null && session.value.mode !== 'temporary')
+const { canDeleteMail: canDelete } = useSession()
 
 async function deleteThis() {
   if (deleting.value) return

@@ -24,42 +24,25 @@ type S3Profile struct {
 var ErrS3ProfileNotFound = errors.New("s3 profile not found")
 
 func (s *Store) ListS3Profiles(ctx context.Context) ([]S3Profile, error) {
-	rows, err := s.DB.QueryContext(ctx, `
+	return queryAll(ctx, s.DB, scanS3Profile, `
 		SELECT id, name, bucket, prefix, region, access_key_id, endpoint, path_style,
 		       created_at, updated_at
 		FROM s3_profiles
 		ORDER BY name COLLATE NOCASE`)
-	if err != nil {
-		return nil, err
+}
+
+func scanS3Profile(rs rowScanner) (S3Profile, error) {
+	var p S3Profile
+	var prefix, region, accessKey, endpoint sql.Null[string]
+	if err := rs.Scan(&p.ID, &p.Name, &p.Bucket, &prefix, &region, &accessKey,
+		&endpoint, &p.PathStyle, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		return S3Profile{}, err
 	}
-	defer rows.Close()
-	out := []S3Profile{}
-	for rows.Next() {
-		var p S3Profile
-		var prefix, region, accessKey, endpoint sql.NullString
-		if err := rows.Scan(&p.ID, &p.Name, &p.Bucket, &prefix, &region, &accessKey,
-			&endpoint, &p.PathStyle, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			return nil, err
-		}
-		if prefix.Valid {
-			v := prefix.String
-			p.Prefix = &v
-		}
-		if region.Valid {
-			v := region.String
-			p.Region = &v
-		}
-		if accessKey.Valid {
-			v := accessKey.String
-			p.AccessKeyID = &v
-		}
-		if endpoint.Valid {
-			v := endpoint.String
-			p.Endpoint = &v
-		}
-		out = append(out, p)
-	}
-	return out, rows.Err()
+	p.Prefix = nullPtr(prefix)
+	p.Region = nullPtr(region)
+	p.AccessKeyID = nullPtr(accessKey)
+	p.Endpoint = nullPtr(endpoint)
+	return p, nil
 }
 
 func (s *Store) UpsertS3Profile(ctx context.Context, p S3Profile) (S3Profile, error) {
@@ -124,12 +107,4 @@ func (s *Store) DeleteS3Profile(ctx context.Context, id int64) error {
 		return err
 	}
 	return requireRow(res, ErrS3ProfileNotFound)
-}
-
-// nullable binds an optional field as SQL NULL when it is unset.
-func nullable[T any](v *T) any {
-	if v == nil {
-		return nil
-	}
-	return *v
 }

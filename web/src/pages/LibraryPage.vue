@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
-import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, Mail, MailOpen, MessagesSquare, RotateCcw, Star, Trash2, TriangleAlert, X } from 'lucide-vue-next'
@@ -20,6 +20,7 @@ import {
 import { api, type BulkAction, type Email, type EmailListParams, type PartInfo } from '@/lib/api'
 import { attachmentName, dateFormat, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
+import { PAGE_SIZES, useListQuery } from '@/composables/useListQuery'
 import { useTour } from '@/composables/useTour'
 import { ANY_CATEGORY, NO_CATEGORY, parseCategoryValue, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
@@ -43,24 +44,20 @@ import PageNav from '@/components/ui/PageNav.vue'
 import SortHeader from '@/components/ui/SortHeader.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
-// 500 is the server's ceiling; anything larger is silently clamped back to 50.
-const PAGE_SIZES = [10, 25, 50, 100, 200, 500] as const
-type PageSize = (typeof PAGE_SIZES)[number]
-const DEFAULT_PAGE_SIZE: PageSize = 50
 const SEARCH_DEBOUNCE_MS = 250
 
 type SortCol = 'sent_at' | 'from_addr' | 'subject' | 'size_bytes'
 type Order = NonNullable<EmailListParams['order']>
 
-const route = useRoute()
 const router = useRouter()
+const {
+  param, pushQuery, offset, limit, goPrevPage, goNextPage, setPageSize, setDateRange, pageLabel,
+} = useListQuery('library-page-size')
 const { t } = useI18n()
 
 const items = ref<Email[]>([])
 const total = ref(0)
 const loading = ref(false)
-
-const storedPageSize = useStorage<PageSize>('library-page-size', DEFAULT_PAGE_SIZE)
 
 // Subject is not hideable: it's the row's identity and its link to the viewer.
 const HIDEABLE_COLS = ['starred', 'attachments', 'category', 'date', 'from', 'size'] as const
@@ -79,28 +76,14 @@ const { enabled: readTracking } = useReadTracking()
 // The leading 2 are the selection checkbox and the subject.
 const colCount = computed(() => 2 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
 
-function str(v: unknown, def = ''): string {
-  return typeof v === 'string' ? v : def
-}
-
-function normalizePageSize(n: number): PageSize {
-  return (PAGE_SIZES as readonly number[]).includes(n) ? (n as PageSize) : DEFAULT_PAGE_SIZE
-}
-
-const q = computed(() => str(route.query.q))
-const starredOnly = computed(() => str(route.query.starred) === '1')
-const unreadOnly = computed(() => str(route.query.unread) === '1')
-const category = computed(() => str(route.query.category))
-const from = computed(() => str(route.query.from))
-const to = computed(() => str(route.query.to))
-const sort = computed<SortCol>(() => str(route.query.sort, 'sent_at') as SortCol)
-const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
-const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
-const limit = computed<PageSize>(() => {
-  const fromQuery = Number(str(route.query.limit))
-  if (fromQuery > 0) return normalizePageSize(fromQuery)
-  return normalizePageSize(storedPageSize.value)
-})
+const q = computed(() => param('q'))
+const starredOnly = computed(() => param('starred') === '1')
+const unreadOnly = computed(() => param('unread') === '1')
+const category = computed(() => param('category'))
+const from = computed(() => param('from'))
+const to = computed(() => param('to'))
+const sort = computed<SortCol>(() => param('sort', 'sent_at') as SortCol)
+const order = computed<Order>(() => param('order', 'desc') as Order)
 
 const searchInput = ref(q.value)
 let lastPushedQ: string | null = null
@@ -118,22 +101,6 @@ watch(q, (val) => {
 const subjectHighlight = computed(() => highlightTerms(q.value, 'subject'))
 const fromHighlight = computed(() => highlightTerms(q.value, 'from'))
 
-function mergeQuery(patch: Record<string, string | undefined>): LocationQueryRaw {
-  const next: Record<string, string> = {}
-  for (const [k, v] of Object.entries(route.query)) {
-    if (typeof v === 'string') next[k] = v
-  }
-  for (const [k, v] of Object.entries(patch)) {
-    if (v === undefined || v === '') delete next[k]
-    else next[k] = v
-  }
-  return next
-}
-
-function pushQuery(patch: Record<string, string | undefined>) {
-  router.push({ query: mergeQuery(patch) })
-}
-
 // Filter and sort only; the page (limit/offset) is added where it matters, so
 // the viewer's prev/next can re-run the same query around any index.
 const listParams = computed<EmailListParams>(() => ({
@@ -147,6 +114,8 @@ const listParams = computed<EmailListParams>(() => ({
   order: order.value,
   group: groupThreads.value ? 'thread' : undefined,
 }))
+// The query for the page on screen.
+const pageParams = computed<EmailListParams>(() => ({ ...listParams.value, limit: limit.value, offset: offset.value }))
 
 async function load() {
   loading.value = true
@@ -154,7 +123,7 @@ async function load() {
   // A selection belongs to the page it was made on; a new query is a new page.
   selected.value.clear()
   try {
-    const r = await api.listEmails({ ...listParams.value, limit: limit.value, offset: offset.value })
+    const r = await api.listEmails(pageParams.value)
     items.value = r.items
     total.value = r.total
   } catch (e) {
@@ -208,7 +177,7 @@ async function refreshInPlace() {
     refreshSoon()
     return
   }
-  const params = { ...listParams.value, limit: limit.value, offset: offset.value }
+  const params = pageParams.value
   const asked = JSON.stringify(params)
   const before = new Set(items.value.map((e) => e.sha256))
   let r
@@ -218,7 +187,7 @@ async function refreshInPlace() {
     return // the next event or a manual reload will try again
   }
   // The person moved to another query meanwhile; its own load wins.
-  if (loading.value || JSON.stringify({ ...listParams.value, limit: limit.value, offset: offset.value }) !== asked) return
+  if (loading.value || JSON.stringify(pageParams.value) !== asked) return
 
   const now = new Set(r.items.map((e) => e.sha256))
   items.value = r.items
@@ -344,20 +313,8 @@ function setSort(col: SortCol) {
   else pushQuery({ sort: col, order: 'desc', offset: undefined })
 }
 
-function setOffset(value: number) {
-  pushQuery({ offset: value > 0 ? String(value) : undefined })
-}
-
 const canPrevPage = computed(() => offset.value > 0)
 const canNextPage = computed(() => offset.value + limit.value < total.value)
-
-function goPrevPage() {
-  setOffset(Math.max(0, offset.value - limit.value))
-}
-
-function goNextPage() {
-  setOffset(offset.value + limit.value)
-}
 
 function toggleStarredFilter() {
   pushQuery({ starred: starredOnly.value ? undefined : '1', offset: undefined })
@@ -398,20 +355,6 @@ function resetFilters() {
 
 function setCategoryFilter(v: string) {
   pushQuery({ category: v === ANY_CATEGORY ? undefined : v, offset: undefined })
-}
-
-function setDateRange(range: { from: string; to: string }) {
-  pushQuery({ from: range.from || undefined, to: range.to || undefined, offset: undefined })
-}
-
-function setPageSize(v: unknown) {
-  if (v === null || v === undefined || v === '') return
-  const size = normalizePageSize(Number(v))
-  storedPageSize.value = size
-  pushQuery({
-    limit: size === DEFAULT_PAGE_SIZE ? undefined : String(size),
-    offset: undefined,
-  })
 }
 
 function emailHref(sha: string) {
@@ -464,10 +407,7 @@ const selectionHasThreads = computed(
   () => groupThreads.value && items.value.some((e) => selected.value.has(e.sha256) && (e.thread_count ?? 0) > 1),
 )
 const bulkBusy = ref(false)
-// A temporary session throws the whole library away on exit, so deleting
-// single messages is pointless there. Hidden until the mode is known.
-const { session } = useSession()
-const canDelete = computed(() => session.value != null && session.value.mode !== 'temporary')
+const { canDeleteMail: canDelete } = useSession()
 // Compact so the action row fits the header's height; Button's sizes don't go this small.
 const bulkBtn = 'inline-flex h-7 items-center gap-1.5 rounded-sm border border-hairline bg-pearl px-2.5 text-xs '
   + 'text-foreground hover:bg-accent disabled:opacity-50 disabled:pointer-events-none '
@@ -539,11 +479,7 @@ async function loadAttachments(sha: string) {
   }
 }
 
-const pageInfo = computed(() => {
-  if (total.value === 0) return t('library.page_count_zero')
-  const end = Math.min(offset.value + items.value.length, total.value)
-  return t('library.page_count', { start: offset.value + 1, end, total: total.value })
-})
+const pageInfo = computed(() => pageLabel(items.value.length, total.value))
 </script>
 
 <template>

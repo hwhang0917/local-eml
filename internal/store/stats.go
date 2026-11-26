@@ -98,148 +98,153 @@ func (s *Store) Stats(ctx context.Context, tzOffsetMinutes int) (*Stats, error) 
 	if tzOffsetMinutes > maxTZOffsetMinutes || tzOffsetMinutes < -maxTZOffsetMinutes {
 		tzOffsetMinutes = 0
 	}
+	// An SQLite date modifier that moves a unix timestamp into the caller's zone.
 	shift := fmt.Sprintf("%+d minutes", tzOffsetMinutes)
 
-	st := &Stats{
-		PerYear:     []YearCount{},
-		PerMonth:    []MonthCount{},
-		TopSenders:  []SenderCount{},
-		TopDomains:  []DomainCount{},
-		PerCategory: []CategoryCount{},
-		PerKind:     []KindUsage{},
-		Largest:     []LargeEmail{},
+	st := &Stats{}
+	if err := s.statsTotals(ctx, st); err != nil {
+		return nil, err
 	}
+	var err error
+	if st.PerYear, err = s.statsPerYear(ctx, shift); err != nil {
+		return nil, err
+	}
+	if st.PerMonth, err = s.statsPerMonth(ctx, shift); err != nil {
+		return nil, err
+	}
+	if st.Heatmap, err = s.statsHeatmap(ctx, shift); err != nil {
+		return nil, err
+	}
+	if st.TopSenders, st.TopDomains, err = s.statsTopSenders(ctx); err != nil {
+		return nil, err
+	}
+	if st.PerCategory, err = s.statsPerCategory(ctx); err != nil {
+		return nil, err
+	}
+	if st.PerKind, st.AttachmentBytes, err = s.statsPerKind(ctx); err != nil {
+		return nil, err
+	}
+	if st.Largest, err = s.statsLargest(ctx); err != nil {
+		return nil, err
+	}
+	return st, nil
+}
 
-	if err := s.DB.QueryRowContext(ctx, `
+func (s *Store) statsTotals(ctx context.Context, st *Stats) error {
+	return s.DB.QueryRowContext(ctx, `
 		SELECT COUNT(*), IFNULL(SUM(size_bytes), 0), IFNULL(SUM(starred), 0),
 			IFNULL(SUM(has_attachments), 0), IFNULL(SUM(sent_at = 0), 0),
-			IFNULL(SUM(read = 0), 0), IFNULL(SUM(flag = 'spam'), 0),
-			IFNULL(SUM(flag = 'phishing'), 0),
+			IFNULL(SUM(read = 0), 0), IFNULL(SUM(flag = ?), 0),
+			IFNULL(SUM(flag = ?), 0),
 			IFNULL(SUM(risk IS NOT NULL AND risk NOT IN ('', '[]', 'null')), 0),
 			IFNULL(SUM(category_id IS NULL), 0)
-		FROM emails`).Scan(
+		FROM emails`, FlagSpam, FlagPhishing).Scan(
 		&st.TotalCount, &st.TotalBytes, &st.StarredCount,
 		&st.AttachmentCount, &st.UndatedCount,
 		&st.UnreadCount, &st.SpamCount, &st.PhishingCount, &st.RiskyCount,
 		&st.UncategorizedCount,
-	); err != nil {
-		return nil, err
-	}
+	)
+}
 
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
+func (s *Store) statsPerYear(ctx context.Context, shift string) ([]YearCount, error) {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (YearCount, error) {
 		var yc YearCount
-		if err := scan(&yc.Year, &yc.Count); err != nil {
-			return err
-		}
-		st.PerYear = append(st.PerYear, yc)
-		return nil
+		err := rs.Scan(&yc.Year, &yc.Count)
+		return yc, err
 	}, `
 		SELECT strftime('%Y', sent_at, 'unixepoch', ?), COUNT(*)
-		FROM emails WHERE sent_at > 0 GROUP BY 1 ORDER BY 1`, shift); err != nil {
-		return nil, err
-	}
+		FROM emails WHERE sent_at > 0 GROUP BY 1 ORDER BY 1`, shift)
+}
 
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
+func (s *Store) statsPerMonth(ctx context.Context, shift string) ([]MonthCount, error) {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (MonthCount, error) {
 		var mc MonthCount
-		if err := scan(&mc.Month, &mc.Count, &mc.Bytes); err != nil {
-			return err
-		}
-		st.PerMonth = append(st.PerMonth, mc)
-		return nil
+		err := rs.Scan(&mc.Month, &mc.Count, &mc.Bytes)
+		return mc, err
 	}, `
 		SELECT strftime('%Y-%m', sent_at, 'unixepoch', ?), COUNT(*), IFNULL(SUM(size_bytes), 0)
-		FROM emails WHERE sent_at > 0 GROUP BY 1 ORDER BY 1`, shift); err != nil {
-		return nil, err
-	}
+		FROM emails WHERE sent_at > 0 GROUP BY 1 ORDER BY 1`, shift)
+}
 
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
-		var wd, hr, c int
-		if err := scan(&wd, &hr, &c); err != nil {
-			return err
-		}
-		if wd >= 0 && wd < 7 && hr >= 0 && hr < 24 {
-			st.Heatmap[wd][hr] = c
-		}
-		return nil
+func (s *Store) statsHeatmap(ctx context.Context, shift string) ([7][24]int, error) {
+	type cell struct{ weekday, hour, count int }
+	var heatmap [7][24]int
+	cells, err := queryAll(ctx, s.DB, func(rs rowScanner) (cell, error) {
+		var c cell
+		err := rs.Scan(&c.weekday, &c.hour, &c.count)
+		return c, err
 	}, `
 		SELECT CAST(strftime('%w', sent_at, 'unixepoch', ?1) AS INTEGER),
 			CAST(strftime('%H', sent_at, 'unixepoch', ?1) AS INTEGER), COUNT(*)
-		FROM emails WHERE sent_at > 0 GROUP BY 1, 2`, shift); err != nil {
-		return nil, err
+		FROM emails WHERE sent_at > 0 GROUP BY 1, 2`, shift)
+	if err != nil {
+		return heatmap, err
 	}
-
-	var raw []SenderCount
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
-		var sc SenderCount
-		if err := scan(&sc.Name, &sc.Count); err != nil {
-			return err
-		}
-		raw = append(raw, sc)
-		return nil
-	}, `SELECT from_addr, COUNT(*) FROM emails WHERE from_addr != '' GROUP BY from_addr`); err != nil {
-		return nil, err
-	}
-	st.TopSenders, st.TopDomains = groupSenders(raw)
-
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
-		var cc CategoryCount
-		if err := scan(&cc.CategoryID, &cc.Count); err != nil {
-			return err
-		}
-		st.PerCategory = append(st.PerCategory, cc)
-		return nil
-	}, `SELECT category_id, COUNT(*) FROM emails WHERE category_id IS NOT NULL GROUP BY category_id`); err != nil {
-		return nil, err
-	}
-
-	byKind := map[string]KindUsage{}
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
-		var k KindUsage
-		if err := scan(&k.Kind, &k.Count, &k.Bytes); err != nil {
-			return err
-		}
-		byKind[k.Kind] = k
-		st.AttachmentBytes += k.Bytes
-		return nil
-	}, `SELECT `+kindExpr+`, COUNT(*), IFNULL(SUM(a.size_bytes), 0) FROM attachments a GROUP BY 1`); err != nil {
-		return nil, err
-	}
-	for _, kind := range AttachmentKinds {
-		if k, ok := byKind[kind]; ok {
-			st.PerKind = append(st.PerKind, k)
+	for _, c := range cells {
+		if c.weekday >= 0 && c.weekday < 7 && c.hour >= 0 && c.hour < 24 {
+			heatmap[c.weekday][c.hour] = c.count
 		}
 	}
-	sort.SliceStable(st.PerKind, func(i, j int) bool { return st.PerKind[i].Bytes > st.PerKind[j].Bytes })
-
-	if err := s.eachRow(ctx, func(scan func(...any) error) error {
-		var e LargeEmail
-		if err := scan(&e.SHA256, &e.Subject, &e.From, &e.SentAt, &e.SizeBytes); err != nil {
-			return err
-		}
-		st.Largest = append(st.Largest, e)
-		return nil
-	}, fmt.Sprintf(`
-		SELECT sha256, IFNULL(subject, ''), IFNULL(from_addr, ''), IFNULL(sent_at, 0), IFNULL(size_bytes, 0)
-		FROM emails ORDER BY size_bytes DESC, id LIMIT %d`, largestLimit)); err != nil {
-		return nil, err
-	}
-
-	return st, nil
+	return heatmap, nil
 }
 
-// eachRow runs query and hands each row's Scan to fn.
-func (s *Store) eachRow(ctx context.Context, fn func(scan func(...any) error) error, query string, args ...any) error {
-	rows, err := s.DB.QueryContext(ctx, query, args...)
+func (s *Store) statsTopSenders(ctx context.Context) ([]SenderCount, []DomainCount, error) {
+	raw, err := queryAll(ctx, s.DB, func(rs rowScanner) (SenderCount, error) {
+		var sc SenderCount
+		err := rs.Scan(&sc.Name, &sc.Count)
+		return sc, err
+	}, `SELECT from_addr, COUNT(*) FROM emails WHERE from_addr != '' GROUP BY from_addr`)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		if err := fn(rows.Scan); err != nil {
-			return err
+	senders, domains := groupSenders(raw)
+	return senders, domains, nil
+}
+
+func (s *Store) statsPerCategory(ctx context.Context) ([]CategoryCount, error) {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (CategoryCount, error) {
+		var cc CategoryCount
+		err := rs.Scan(&cc.CategoryID, &cc.Count)
+		return cc, err
+	}, `SELECT category_id, COUNT(*) FROM emails WHERE category_id IS NOT NULL GROUP BY category_id`)
+}
+
+// statsPerKind lists attachment usage by kind, largest first, along with the
+// total attachment bytes.
+func (s *Store) statsPerKind(ctx context.Context) ([]KindUsage, int64, error) {
+	usage, err := queryAll(ctx, s.DB, func(rs rowScanner) (KindUsage, error) {
+		var k KindUsage
+		err := rs.Scan(&k.Kind, &k.Count, &k.Bytes)
+		return k, err
+	}, `SELECT `+kindExpr+`, COUNT(*), IFNULL(SUM(a.size_bytes), 0) FROM attachments a GROUP BY 1`)
+	if err != nil {
+		return nil, 0, err
+	}
+	byKind := map[string]KindUsage{}
+	var totalBytes int64
+	for _, k := range usage {
+		byKind[k.Kind] = k
+		totalBytes += k.Bytes
+	}
+	// Walk the fixed kind order first so equal sizes keep a stable order.
+	perKind := []KindUsage{}
+	for _, kind := range AttachmentKinds {
+		if k, ok := byKind[kind]; ok {
+			perKind = append(perKind, k)
 		}
 	}
-	return rows.Err()
+	sort.SliceStable(perKind, func(i, j int) bool { return perKind[i].Bytes > perKind[j].Bytes })
+	return perKind, totalBytes, nil
+}
+
+func (s *Store) statsLargest(ctx context.Context) ([]LargeEmail, error) {
+	return queryAll(ctx, s.DB, func(rs rowScanner) (LargeEmail, error) {
+		var e LargeEmail
+		err := rs.Scan(&e.SHA256, &e.Subject, &e.From, &e.SentAt, &e.SizeBytes)
+		return e, err
+	}, `
+		SELECT sha256, IFNULL(subject, ''), IFNULL(from_addr, ''), IFNULL(sent_at, 0), IFNULL(size_bytes, 0)
+		FROM emails ORDER BY size_bytes DESC, id LIMIT ?`, largestLimit)
 }
 
 // groupSenders folds raw From headers (Name holds the header, Count its

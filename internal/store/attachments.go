@@ -252,10 +252,7 @@ func (s *Store) ListAttachments(ctx context.Context, opts AttachmentListOptions)
 	if !ok {
 		sortCol = attachmentSortCols["date"]
 	}
-	order := "DESC"
-	if strings.EqualFold(opts.Order, "asc") {
-		order = "ASC"
-	}
+	order := sqlOrder(opts.Order)
 
 	conds := []string{"e." + notQuarantined}
 	args := []any{}
@@ -277,7 +274,7 @@ func (s *Store) ListAttachments(ctx context.Context, opts AttachmentListOptions)
 	}
 	base := `FROM attachments a JOIN emails e ON e.id = a.email_id WHERE ` + strings.Join(conds, " AND ")
 
-	out := &AttachmentList{Items: []Attachment{}, Kinds: map[string]int{}}
+	out := &AttachmentList{Kinds: map[string]int{}}
 	for _, k := range AttachmentKinds {
 		out.Kinds[k] = 0
 	}
@@ -319,20 +316,17 @@ func (s *Store) ListAttachments(ctx context.Context, opts AttachmentListOptions)
 	listQ += ` ORDER BY ` + sortCol + ` ` + order + `, sent_at DESC, email_id DESC, idx ASC LIMIT ? OFFSET ?`
 	listArgs = append(listArgs, opts.Limit, opts.Offset)
 
-	rows, err = s.DB.QueryContext(ctx, listQ, listArgs...)
+	items, err := queryAll(ctx, s.DB, func(rs rowScanner) (Attachment, error) {
+		var a Attachment
+		err := rs.Scan(&a.EmailSHA256, &a.EmailSubject, &a.EmailFrom, &a.SentAt, &a.Index,
+			&a.Filename, &a.ContentType, &a.Size, &a.Kind)
+		return a, err
+	}, listQ, listArgs...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var a Attachment
-		if err := rows.Scan(&a.EmailSHA256, &a.EmailSubject, &a.EmailFrom, &a.SentAt, &a.Index,
-			&a.Filename, &a.ContentType, &a.Size, &a.Kind); err != nil {
-			return nil, err
-		}
-		out.Items = append(out.Items, a)
-	}
-	return out, rows.Err()
+	out.Items = items
+	return out, nil
 }
 
 // escapeLike makes s match literally inside a LIKE pattern with ESCAPE '\'.
