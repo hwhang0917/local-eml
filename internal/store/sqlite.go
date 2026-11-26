@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -12,8 +13,34 @@ type Store struct {
 	DB *sql.DB
 }
 
+// connParams are applied by the driver to every connection it opens. They
+// cannot go through db.ExecContext like the pragmas in Open: database/sql
+// keeps a pool, and an Exec reaches only whichever connection served it. The
+// rest would run with busy_timeout 0 and fail with "database is locked" the
+// moment another connection (an import, IMAP sync, a backfill) is writing.
+//
+// _txlock=immediate makes BeginTx take the write lock up front. Our
+// transactions read before they write (Upsert checks for an existing row
+// first), and a deferred one that has to upgrade its lock after another
+// writer committed gets SQLITE_BUSY straight away, without the busy wait.
+var connParams = []string{
+	"_pragma=busy_timeout(10000)",
+	"_pragma=synchronous(NORMAL)",
+	"_txlock=immediate",
+}
+
+// withConnParams appends connParams to dsn, which may be a plain path or a
+// file: URI that already carries a query.
+func withConnParams(dsn string) string {
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	return dsn + sep + strings.Join(connParams, "&")
+}
+
 func Open(ctx context.Context, dsn string) (*Store, error) {
-	db, err := sql.Open("sqlite", dsn)
+	db, err := sql.Open("sqlite", withConnParams(dsn))
 	if err != nil {
 		return nil, err
 	}
@@ -21,11 +48,13 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 		db.Close()
 		return nil, fmt.Errorf("ping: %w", err)
 	}
+	// journal_mode is stored in the database file, so once is enough.
+	// foreign_keys stays one-shot on purpose: code already avoids relying on
+	// it (see SetEmailCategory), and turning it on for every connection is a
+	// behaviour change of its own.
 	for _, pragma := range []string{
 		"PRAGMA journal_mode = WAL",
 		"PRAGMA foreign_keys = ON",
-		"PRAGMA busy_timeout = 5000",
-		"PRAGMA synchronous = NORMAL",
 	} {
 		if _, err := db.ExecContext(ctx, pragma); err != nil {
 			db.Close()
