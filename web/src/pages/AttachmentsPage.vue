@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
-import { useDebounceFn, useStorage } from '@vueuse/core'
+import { useDebounceFn } from '@vueuse/core'
 import {
   Download,
   ExternalLink,
@@ -27,6 +26,7 @@ import {
 } from '@/lib/api'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName } from '@/lib/format'
 import { onMailSignal } from '@/composables/useMailEvents'
+import { PAGE_SIZES, useListQuery } from '@/composables/useListQuery'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -35,18 +35,12 @@ import PageNav from '@/components/ui/PageNav.vue'
 import SortHeader from '@/components/ui/SortHeader.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 
-// Same page sizes as the library; 500 is the server's ceiling.
-const PAGE_SIZES = [10, 25, 50, 100, 200, 500] as const
-type PageSize = (typeof PAGE_SIZES)[number]
-const DEFAULT_PAGE_SIZE: PageSize = 50
 const TYPING_DEBOUNCE_MS = 250
 const ALL_KINDS = 'all'
 
 type SortCol = NonNullable<AttachmentListParams['sort']>
 type Order = NonNullable<AttachmentListParams['order']>
 
-const route = useRoute()
-const router = useRouter()
 const { t, locale } = useI18n()
 const n = (v: number) => v.toLocaleString(locale.value)
 
@@ -55,44 +49,20 @@ const total = ref(0)
 const totalBytes = ref(0)
 const kindCounts = ref<Partial<Record<AttachmentKind, number>>>({})
 const loading = ref(false)
-const storedPageSize = useStorage<PageSize>('attachments-page-size', DEFAULT_PAGE_SIZE)
+const {
+  param, pushQuery, offset, limit, goPrevPage, goNextPage, setPageSize, setDateRange, pageLabel,
+} = useListQuery('attachments-page-size')
 
-function str(v: unknown, def = ''): string {
-  return typeof v === 'string' ? v : def
-}
-function normalizePageSize(v: number): PageSize {
-  return (PAGE_SIZES as readonly number[]).includes(v) ? (v as PageSize) : DEFAULT_PAGE_SIZE
-}
-
-// The whole view lives in the query string, so a filtered list survives a
-// trip to a message and back, and can be bookmarked.
-const q = computed(() => str(route.query.q))
-const sender = computed(() => str(route.query.sender))
+const q = computed(() => param('q'))
+const sender = computed(() => param('sender'))
 const kind = computed(() => {
-  const k = str(route.query.kind)
+  const k = param('kind')
   return (ATTACHMENT_KINDS as readonly string[]).includes(k) ? (k as AttachmentKind) : undefined
 })
-const from = computed(() => str(route.query.from))
-const to = computed(() => str(route.query.to))
-const sort = computed<SortCol>(() => str(route.query.sort, 'date') as SortCol)
-const order = computed<Order>(() => str(route.query.order, 'desc') as Order)
-const offset = computed(() => Number(str(route.query.offset, '0')) || 0)
-const limit = computed<PageSize>(() => {
-  const fromQuery = Number(str(route.query.limit))
-  return normalizePageSize(fromQuery > 0 ? fromQuery : storedPageSize.value)
-})
-
-function pushQuery(patch: Record<string, string | undefined>) {
-  const next: Record<string, string> = {}
-  for (const [k, v] of Object.entries(route.query)) {
-    if (typeof v === 'string') next[k] = v
-  }
-  for (const [k, v] of Object.entries(patch)) {
-    if (v === undefined || v === '') delete next[k]
-    else next[k] = v
-  }
-  router.push({ query: next as LocationQueryRaw })
-}
+const from = computed(() => param('from'))
+const to = computed(() => param('to'))
+const sort = computed<SortCol>(() => param('sort', 'date') as SortCol)
+const order = computed<Order>(() => param('order', 'desc') as Order)
 
 // Typed filters update the URL after a pause; an outside change to the URL
 // (back button, reset) flows back into the box.
@@ -156,18 +126,6 @@ function setKind(v: unknown) {
   const k = String(v ?? '')
   pushQuery({ kind: k === ALL_KINDS ? undefined : k, offset: undefined })
 }
-function setDateRange(range: { from: string; to: string }) {
-  pushQuery({ from: range.from || undefined, to: range.to || undefined, offset: undefined })
-}
-function setPageSize(v: unknown) {
-  if (v === null || v === undefined || v === '') return
-  const size = normalizePageSize(Number(v))
-  storedPageSize.value = size
-  pushQuery({ limit: size === DEFAULT_PAGE_SIZE ? undefined : String(size), offset: undefined })
-}
-function setOffset(v: number) {
-  pushQuery({ offset: v > 0 ? String(v) : undefined })
-}
 
 const hasActiveFilters = computed(() => !!(q.value || sender.value || kind.value || from.value || to.value))
 function resetFilters() {
@@ -176,11 +134,7 @@ function resetFilters() {
   pushQuery({ q: undefined, sender: undefined, kind: undefined, from: undefined, to: undefined, offset: undefined })
 }
 
-const pageInfo = computed(() => {
-  if (total.value === 0) return t('library.page_count_zero')
-  const end = Math.min(offset.value + items.value.length, total.value)
-  return t('library.page_count', { start: offset.value + 1, end, total: total.value })
-})
+const pageInfo = computed(() => pageLabel(items.value.length, total.value))
 const kindTotal = computed(() => ATTACHMENT_KINDS.reduce((sum, k) => sum + (kindCounts.value[k] ?? 0), 0))
 
 const KIND_ICONS: Record<AttachmentKind, unknown> = {
@@ -243,8 +197,8 @@ function emailRoute(a: AttachmentItem) {
           :info="pageInfo"
           :can-prev="offset > 0"
           :can-next="offset + limit < total"
-          @prev="setOffset(Math.max(0, offset - limit))"
-          @next="setOffset(offset + limit)"
+          @prev="goPrevPage"
+          @next="goNextPage"
         />
       </div>
     </div>
@@ -422,8 +376,8 @@ function emailRoute(a: AttachmentItem) {
         :info="pageInfo"
         :can-prev="offset > 0"
         :can-next="offset + limit < total"
-        @prev="setOffset(Math.max(0, offset - limit))"
-        @next="setOffset(offset + limit)"
+        @prev="goPrevPage"
+        @next="goNextPage"
       />
     </div>
   </section>

@@ -335,6 +335,16 @@ function jsonBody(method: 'POST' | 'PUT', body: unknown): RequestInit {
   }
 }
 
+/** Query string for a listing: unset filters are left out, true is sent as 1. */
+function listQuery(params: object): URLSearchParams {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === '' || v === false) continue
+    qs.set(k, v === true ? '1' : String(v))
+  }
+  return qs
+}
+
 export const api = {
   getSession() {
     return fetch('/api/session').then(jsonOrThrow<SessionInfo>)
@@ -349,12 +359,7 @@ export const api = {
   },
 
   listEmails(params: EmailListParams = {}) {
-    const qs = new URLSearchParams()
-    for (const [k, v] of Object.entries(params)) {
-      if (v === undefined || v === '' || v === false) continue
-      qs.set(k, v === true ? '1' : String(v))
-    }
-    return fetch(`/api/emails?${qs}`).then(jsonOrThrow<EmailList>)
+    return fetch(`/api/emails?${listQuery(params)}`).then(jsonOrThrow<EmailList>)
   },
 
   setStarred(sha: string, starred: boolean) {
@@ -381,12 +386,7 @@ export const api = {
   },
 
   listAttachments(params: AttachmentListParams = {}) {
-    const qs = new URLSearchParams()
-    for (const [k, v] of Object.entries(params)) {
-      if (v === undefined || v === '') continue
-      qs.set(k, String(v))
-    }
-    return fetch(`/api/attachments?${qs}`).then(jsonOrThrow<AttachmentList>)
+    return fetch(`/api/attachments?${listQuery(params)}`).then(jsonOrThrow<AttachmentList>)
   },
 
   getStats() {
