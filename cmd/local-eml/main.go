@@ -33,6 +33,10 @@ var version = "dev"
 
 const defaultPort = 7878
 
+// portAttempts is how many ports serve tries, from defaultPort up, when the
+// port wasn't chosen explicitly and the default is held by another program.
+const portAttempts = 20
+
 // idleGrace is how long app mode keeps serving with no /healthz pings before
 // exiting. The UI pings every 30s, but browsers throttle background-tab timers
 // to ~1/min, so anything under a couple of minutes would false-positive.
@@ -162,6 +166,10 @@ func runServe(args []string) int {
 	port := fs.Int("port", defaultPort, "TCP port to listen on (loopback only)")
 	ephemeral := fs.Bool("ephemeral", false, "temporary session: data is deleted on exit")
 	_ = fs.Parse(args)
+	// An explicit --port is a promise about the URL, so only the default
+	// moves on to the next free port.
+	explicitPort := false
+	fs.Visit(func(f *flag.Flag) { explicitPort = explicitPort || f.Name == "port" })
 	temporary := *ephemeral || ephemeralFromEnv()
 	// The service has no "close" to clean up after, so a temporary service
 	// would be one that silently deletes its library on every reboot.
@@ -169,7 +177,7 @@ func runServe(args []string) int {
 		fmt.Fprintln(os.Stderr, "ignoring --ephemeral: not available when running as a service")
 		temporary = false
 	}
-	return serve(serveOptions{port: *port, temporary: temporary})
+	return serve(serveOptions{port: *port, portFallback: !explicitPort, temporary: temporary})
 }
 
 // runApp gives the double-click experience: reuse a running server if there is
@@ -182,9 +190,11 @@ func runApp(args []string) int {
 	temporary := *ephemeral || ephemeralFromEnv() || temporaryLaunchesPref()
 	// A temporary session must never attach to a running server: that would
 	// be the service, working on the real library.
-	if !temporary && probeExisting(defaultPort) {
-		openWindow(existingServerURL(defaultPort))
-		return 0
+	if !temporary {
+		if port := findExisting(); port != 0 {
+			openWindow(existingServerURL(port))
+			return 0
+		}
 	}
 	return serve(serveOptions{appMode: true, temporary: temporary})
 }
@@ -239,9 +249,12 @@ func temporaryLaunchesPref() bool {
 }
 
 type serveOptions struct {
-	port      int
-	appMode   bool
-	temporary bool
+	port int
+	// portFallback lets serve try the next ports when port is taken by
+	// something other than local-eml.
+	portFallback bool
+	appMode      bool
+	temporary    bool
 }
 
 // serve runs the server on either the persistent library or, for a temporary
@@ -329,10 +342,18 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
 	go runBackfills(ctx, imp)
 
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", opts.port))
+	attempts := 1
+	if opts.portFallback {
+		attempts = portAttempts
+	}
+	ln, err := listenFrom(opts.port, attempts, probeExisting)
 	if err != nil {
 		slog.Error("listen", "err", err)
 		return 1
+	}
+	if got := ln.Addr().(*net.TCPAddr).Port; opts.port != 0 && got != opts.port {
+		slog.Warn("port in use by another program, using the next free one",
+			"wanted", opts.port, "port", got)
 	}
 	url := "http://" + ln.Addr().String()
 	srv.Port = ln.Addr().(*net.TCPAddr).Port
@@ -386,6 +407,32 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	// deferred closes, and a temporary folder's deletion, come after it.
 	<-shutdownDone
 	return 0
+}
+
+// errAlreadyRunning means local-eml itself holds the port, so starting
+// another copy on the next port would put two servers on one library.
+var errAlreadyRunning = errors.New("local-eml is already running")
+
+// listenFrom listens on the first free loopback port of attempts ports from
+// port up. It stops at a port held by local-eml, because that one is already
+// serving.
+func listenFrom(port, attempts int, isLocalEml func(int) bool) (net.Listener, error) {
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		p := port + i
+		if p > 65535 {
+			break
+		}
+		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", p))
+		if err == nil {
+			return ln, nil
+		}
+		lastErr = err
+		if isLocalEml(p) {
+			return nil, fmt.Errorf("%w at http://127.0.0.1:%d", errAlreadyRunning, p)
+		}
+	}
+	return nil, lastErr
 }
 
 // backfill is a one-time data repair, gated on PRAGMA user_version. countKey

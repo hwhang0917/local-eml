@@ -19,7 +19,9 @@ The window is too narrow. Make it wider or maximise it. If this happens when you
 
 ## Port 7878 is already in use
 
-Another program is using that port. Reinstall with a different one by setting `LOCAL_EML_PORT` before running the install script (see [Install](./install#background-service-linux-macos-windows)). If you start the server yourself, use `local-eml serve --port 9000`.
+Local Eml moves to the next free port on its own (7879, then 7880, and so on), and the log says which one it picked. Double-clicking the program still finds it there. If another copy of Local Eml already holds the port, it doesn't start a second one.
+
+To keep a fixed address instead, reinstall with a different port by setting `LOCAL_EML_PORT` before running the install script (see [Install](./install#background-service-linux-macos-windows)). If you start the server yourself, use `local-eml serve --port 9000`. A port you choose this way is never changed: if it's taken, the server stops with an error.
 
 ## Double-clicking opens the service instead of a new window
 
