@@ -13,6 +13,18 @@ Local Eml은 오래된 메일을 내 컴퓨터에 보관해 두고 인터넷 없
 
 메일 프로그램은 아닙니다. 메일을 쓰거나 보내거나 답장할 수 없고, 메일함의 내용은 전혀 바꾸지 않습니다. IMAP으로는 읽기만 합니다. 데스크톱 전용이며, 내 컴퓨터에서만 접속할 수 있습니다.
 
+![Local Eml 라이브러리 화면](docs/intro/img/ko/library.webp)
+
+## 할 수 있는 일
+
+- **모든 메일을 한 번에 검색.** 보낸 사람, 받는 사람, 제목, 본문, 첨부파일 이름까지 찾고, `from:alice`, `has:attachment`, `after:2019` 같은 필터도 쓸 수 있습니다. 한국어·일본어·중국어도 따로 설정할 필요 없고, 초성검색도 됩니다(`ㅎㄱ` → 한국).
+- **안전하게 읽기.** HTML 메일은 격리된 영역에서 열리고 외부 이미지는 막혀 있습니다. 링크는 실제로 어디로 가는지 먼저 보여 주고, 피싱 같아 보이는 메일에는 경고가 뜹니다.
+- **첨부파일 찾기.** 첨부파일 화면에 모든 메일의 파일이 모여 있어서, 어느 메일에 붙어 왔는지 몰라도 이름, 종류, 보낸 사람, 날짜로 찾을 수 있습니다.
+- **새 메일 받기.** IMAP 프로필에 백그라운드 동기화를 켜 두면, IMAP IDLE을 지원하는 서버에서는 새 메일이 몇 초 안에 들어옵니다. 원하면 데스크톱 알림도 받을 수 있습니다.
+- **정리하기.** 여러 메일을 골라 한꺼번에 읽음·안 읽음으로 바꾸거나 지울 수 있고, 읽던 메일을 바로 지울 수도 있습니다. 메일 전체를 인쇄하거나 PDF로 저장할 수 있습니다.
+- **한눈에 보기.** 통계 화면에서 기간별 메일 수, 메일이 오는 시간대, 많이 보낸 사람, 용량을 차지하는 것을 볼 수 있습니다.
+- **가지고 다니기.** 라이브러리 전체를 `.zip` 하나로 내보내거나 AWS S3, S3 호환 서비스에 올릴 수 있습니다.
+
 ## 다운로드
 
 [최신 릴리스](https://github.com/hwhang0917/local-eml/releases/latest)에서 운영체제에 맞는 파일을 받아 더블클릭하면 됩니다. 전용 창이 열리고, 창을 닫으면 프로그램도 꺼집니다. 따로 설치하거나 가입할 필요가 없습니다. Windows와 macOS에서는 처음 열 때 경고가 뜨는데, 넘어가는 방법은 [설치 안내](https://hwhang0917.github.io/local-eml/docs/ko/install)에 있습니다.
@@ -42,7 +54,7 @@ irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.
 - [Outlook 없이 .pst 열기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/pst-without-outlook)
 - [Gmail 용량 확보하기](https://hwhang0917.github.io/local-eml/docs/ko/how-to/free-up-gmail)
 
-[전체 문서](https://hwhang0917.github.io/local-eml/docs/ko/)에는 [메일 가져오기](https://hwhang0917.github.io/local-eml/docs/ko/import), 초성검색을 포함한 [검색](https://hwhang0917.github.io/local-eml/docs/ko/search), [첨부파일 둘러보기](https://hwhang0917.github.io/local-eml/docs/ko/attachments), [새 메일 받기](https://hwhang0917.github.io/local-eml/docs/ko/sync), [스팸·피싱 경고](https://hwhang0917.github.io/local-eml/docs/ko/spam-phishing), [데이터 보관 위치](https://hwhang0917.github.io/local-eml/docs/ko/privacy), [설정과 명령어](https://hwhang0917.github.io/local-eml/docs/ko/settings-cli), [문제 해결](https://hwhang0917.github.io/local-eml/docs/ko/troubleshooting)이 정리되어 있습니다.
+[전체 문서](https://hwhang0917.github.io/local-eml/docs/ko/)에는 [메일 가져오기](https://hwhang0917.github.io/local-eml/docs/ko/import), 초성검색을 포함한 [검색](https://hwhang0917.github.io/local-eml/docs/ko/search), [첨부파일 둘러보기](https://hwhang0917.github.io/local-eml/docs/ko/attachments), [라이브러리 통계](https://hwhang0917.github.io/local-eml/docs/ko/stats), [새 메일 받기](https://hwhang0917.github.io/local-eml/docs/ko/sync), [스팸·피싱 경고](https://hwhang0917.github.io/local-eml/docs/ko/spam-phishing), [데이터 보관 위치](https://hwhang0917.github.io/local-eml/docs/ko/privacy), [설정과 명령어](https://hwhang0917.github.io/local-eml/docs/ko/settings-cli), [문제 해결](https://hwhang0917.github.io/local-eml/docs/ko/troubleshooting)이 정리되어 있습니다.
 
 ## 기여하기
 
