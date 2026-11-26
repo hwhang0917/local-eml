@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/hwhang0917/local-eml/internal/paths"
 	"github.com/hwhang0917/local-eml/internal/prefs"
+	"github.com/hwhang0917/local-eml/internal/tempsession"
 )
 
 // Session modes, as reported to the Settings page. Service and temporary are
@@ -47,11 +49,23 @@ func (s *Server) handleSession(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"mode":               s.mode(),
 		"temporary_launches": p.TemporaryLaunches,
+		"session_kept":       s.sessionKept(),
 		"key_storage":        keyStorage,
 	})
 }
 
+// sessionKept reports whether this temporary session's mail goes into the
+// library when it closes, rather than being deleted.
+func (s *Server) sessionKept() bool {
+	return s.mode() == ModeTemporary && s.TempSessionDir != "" && tempsession.IsKept(s.TempSessionDir)
+}
+
 // PUT /api/session/temporary-launches  {"enabled": bool}
+//
+// Turned off from inside a temporary session, it also keeps this session:
+// someone switching temporary mode off wants to stop losing mail, starting
+// with the mail in front of them. Turned on, the session is thrown away as
+// usual. PUT /api/session/keep changes that on its own.
 func (s *Server) handlePutTemporaryLaunches(w http.ResponseWriter, r *http.Request) {
 	// The page a double-click opens may be served by the running service; the
 	// switch would then land in the service's folder and govern nothing.
@@ -79,7 +93,42 @@ func (s *Server) handlePutTemporaryLaunches(w http.ResponseWriter, r *http.Reque
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if s.mode() == ModeTemporary && s.TempSessionDir != "" {
+		if err := s.setKeep(!*body.Enabled); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// PUT /api/session/keep  {"keep": bool}
+// Only a temporary session has anything to keep.
+func (s *Server) handlePutKeepSession(w http.ResponseWriter, r *http.Request) {
+	if s.mode() != ModeTemporary || s.TempSessionDir == "" {
+		http.Error(w, "this is not a temporary session", http.StatusConflict)
+		return
+	}
+	var body struct {
+		Keep *bool `json:"keep"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Keep == nil {
+		http.Error(w, `body must be {"keep": true|false}`, http.StatusBadRequest)
+		return
+	}
+	if err := s.setKeep(*body.Keep); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) setKeep(keep bool) error {
+	if err := tempsession.SetKeep(s.TempSessionDir, keep); err != nil {
+		return fmt.Errorf("save keep choice: %w", err)
+	}
+	slog.Info("temporary session", "keep_on_exit", keep)
+	return nil
 }
 
 // POST /api/data/wipe deletes all mail, the search index, import history and

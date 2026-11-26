@@ -33,6 +33,8 @@ Turn on **Settings → Privacy → Double-click sessions are temporary**. From t
 
 The only file kept is `prefs.json`, which remembers that the switch is on. It holds no mail and no passwords.
 
+To keep what you have in a temporary window, turn the switch off from inside it, or tick **Keep the mail from this window** on the same page. When you close the window, its mail, stars, read marks and categories are added to your regular library instead of being deleted. Mail that was already in your library keeps its own marks, and saved profiles come along without their passwords, with background sync off. If the app can't finish this when it closes, it finishes the next time it starts.
+
 You can't use this switch while the background service is running, because the service never closes. On that computer, either stop the service, or start Local Eml with `--ephemeral` (or set `LOCAL_EML_EPHEMERAL=1`). That gives you a temporary session that doesn't touch the service's library.
 
 ## Deleting all data

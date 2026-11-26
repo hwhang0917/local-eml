@@ -13,6 +13,7 @@ import (
 	"github.com/hwhang0917/local-eml/internal/importer"
 	"github.com/hwhang0917/local-eml/internal/prefs"
 	"github.com/hwhang0917/local-eml/internal/store"
+	"github.com/hwhang0917/local-eml/internal/tempsession"
 )
 
 func doJSON(t *testing.T, s *Server, method, path, body string) *httptest.ResponseRecorder {
@@ -114,5 +115,61 @@ func TestWipeData(t *testing.T) {
 	}
 	if _, err := os.Stat(keyFile); err != nil {
 		t.Fatalf("key file must be kept: %v", err)
+	}
+}
+
+// Turning temporary sessions off from inside one must keep that session: the
+// switch alone only governs the next launch, and its window was being deleted
+// on close anyway.
+func TestTurningTemporaryOffKeepsCurrentSession(t *testing.T) {
+	s, p := newDriftServer(t)
+	s.PrefsFile = filepath.Join(p.Base, "prefs.json")
+	s.RunningInteractive = true
+
+	// A normal session has nothing to keep.
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/keep", `{"keep":true}`); rec.Code != http.StatusConflict {
+		t.Fatalf("keep outside a temporary session: %d %s", rec.Code, rec.Body)
+	}
+
+	dir, err := tempsession.Create(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.TemporarySession = true
+	s.TempSessionDir = dir
+	if err := prefs.Save(s.PrefsFile, prefs.Prefs{TemporaryLaunches: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got := sessionMode(t, s)["session_kept"]; got != false {
+		t.Fatalf("fresh temporary session kept = %v", got)
+	}
+
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/temporary-launches", `{"enabled":false}`); rec.Code != http.StatusNoContent {
+		t.Fatalf("toggle off: %d %s", rec.Code, rec.Body)
+	}
+	if !tempsession.IsKept(dir) || sessionMode(t, s)["session_kept"] != true {
+		t.Fatal("turning temporary sessions off did not keep this one")
+	}
+
+	// The user can still let this one go.
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/keep", `{"keep":false}`); rec.Code != http.StatusNoContent {
+		t.Fatalf("unkeep: %d %s", rec.Code, rec.Body)
+	}
+	if tempsession.IsKept(dir) {
+		t.Fatal("keep mark not cleared")
+	}
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/keep", `{"keep":true}`); rec.Code != http.StatusNoContent || !tempsession.IsKept(dir) {
+		t.Fatalf("keep: %d %s", rec.Code, rec.Body)
+	}
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/keep", `{}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("empty body: %d", rec.Code)
+	}
+
+	// Turning it back on means throwaway again.
+	if rec := doJSON(t, s, http.MethodPut, "/api/session/temporary-launches", `{"enabled":true}`); rec.Code != http.StatusNoContent {
+		t.Fatalf("toggle on: %d %s", rec.Code, rec.Body)
+	}
+	if tempsession.IsKept(dir) {
+		t.Fatal("turning temporary sessions on left this one kept")
 	}
 }

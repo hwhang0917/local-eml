@@ -34,6 +34,9 @@ type Server struct {
 	// TemporarySession is true when the data folder is a throwaway one that
 	// is deleted on exit.
 	TemporarySession bool
+	// TempSessionDir is that throwaway folder, where the "keep this session"
+	// mark is written (see tempsession.SetKeep). Empty outside one.
+	TempSessionDir string
 	// PrefsFile is the launch-preferences file in the persistent data folder,
 	// even during a temporary session, so the switch can be turned back off.
 	PrefsFile string
@@ -125,6 +128,7 @@ func (s *Server) Router() http.Handler {
 		api.Put("/read-tracking", s.handlePutReadTracking)
 		api.Get("/session", s.handleSession)
 		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
+		api.Put("/session/keep", s.handlePutKeepSession)
 		api.Post("/data/wipe", s.handleWipeData)
 
 		api.Get("/update/check", s.handleUpdateCheck)
