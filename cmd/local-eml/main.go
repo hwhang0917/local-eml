@@ -59,6 +59,25 @@ func ephemeralFromEnv() bool {
 	return v == "1" || strings.EqualFold(v, "true")
 }
 
+// keyringEnv set to "off" keeps the encryption key in keys/secret.key instead
+// of the OS keychain, moving it back out if an earlier start moved it in.
+const keyringEnv = "LOCAL_EML_KEYRING"
+
+func keyringOff() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(keyringEnv)))
+	return v == "off" || v == "0" || v == "false" || v == "file"
+}
+
+// secretOptions decides where the encryption key lives. A temporary session's
+// folder is deleted on exit, so a keychain entry for it would be litter.
+func secretOptions(p paths.Paths, temporary bool) secret.Options {
+	o := secret.Options{KeyFile: p.KeyFile(), PreferFile: keyringOff()}
+	if !temporary {
+		o.Keyring = secret.OSKeyring{}
+	}
+	return o
+}
+
 // defaultSyncInterval is small enough to feel like "incoming mail," large
 // enough to be polite to remote IMAP servers.
 const defaultSyncInterval = 10 * time.Minute
@@ -154,6 +173,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "                             run the local web server (loopback only)")
 	fmt.Fprintln(os.Stderr, "  --ephemeral                temporary session: data lives in a temp folder deleted on exit")
 	fmt.Fprintf(os.Stderr, "                             (or set %s=1)\n", ephemeralEnv)
+	fmt.Fprintf(os.Stderr, "  %s=off        keep the password encryption key in a file, not the OS keychain\n", keyringEnv)
 	fmt.Fprintln(os.Stderr, "  install [-y|--yes] [--port 7878]")
 	fmt.Fprintln(os.Stderr, "                             register as a background service (systemd/launchd/svc)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
@@ -316,11 +336,12 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	}
 	defer st.Close()
 
-	sec, err := secret.Open(p.KeyFile())
+	sec, err := secret.OpenKeyring(secretOptions(p, opts.temporary))
 	if err != nil {
 		slog.Error("open secret store", "err", err)
 		return 1
 	}
+	slog.Info("encryption key", "storage", sec.Storage())
 	token, err := server.LoadOrCreateToken(p.TokenFile())
 	if err != nil {
 		slog.Error("session token", "err", err)
