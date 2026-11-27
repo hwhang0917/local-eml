@@ -19,6 +19,12 @@ const howto = {
     { text: 'Outlook 없이 .pst 열기', link: '/ko/how-to/pst-without-outlook' },
     { text: 'Gmail 용량 확보하기', link: '/ko/how-to/free-up-gmail' },
   ],
+  ja: [
+    { text: '.emlファイルを開く', link: '/ja/how-to/open-eml-files' },
+    { text: 'Google データエクスポートの.mboxを見る', link: '/ja/how-to/takeout-mbox' },
+    { text: 'Outlookなしで.pstを開く', link: '/ja/how-to/pst-without-outlook' },
+    { text: 'Gmailの容量を空ける', link: '/ja/how-to/free-up-gmail' },
+  ],
 }
 
 const pages = {
@@ -43,6 +49,17 @@ const pages = {
     { text: '개인정보와 데이터', link: '/ko/privacy' },
     { text: '설정과 CLI', link: '/ko/settings-cli' },
     { text: '문제 해결', link: '/ko/troubleshooting' },
+  ],
+  ja: [
+    { text: 'インストール', link: '/ja/install' },
+    { text: 'メールのインポート', link: '/ja/import' },
+    { text: '検索', link: '/ja/search' },
+    { text: '添付ファイルを探す', link: '/ja/attachments' },
+    { text: '新着メールの受信', link: '/ja/sync' },
+    { text: '迷惑メール・フィッシング', link: '/ja/spam-phishing' },
+    { text: 'プライバシーとデータ', link: '/ja/privacy' },
+    { text: '設定とCLI', link: '/ja/settings-cli' },
+    { text: 'トラブルシューティング', link: '/ja/troubleshooting' },
   ],
 }
 
@@ -93,6 +110,27 @@ export default defineConfig({
         langMenuLabel: '언어',
       },
     },
+    ja: {
+      label: '日本語',
+      lang: 'ja',
+      link: '/ja/',
+      description: '自分のPCで.emlファイルを保管して読むための、プライベートなビューア。',
+      themeConfig: {
+        nav: [
+          { text: 'ホーム', link: site },
+          { text: 'ガイド', link: '/ja/install' },
+          { text: 'リリース', link: `${repo}/releases` },
+        ],
+        sidebar: [{ text: '手順ガイド', items: howto.ja }, { text: 'ガイド', items: pages.ja }],
+        editLink: { pattern: `${repo}/edit/main/docs/site/:path`, text: 'GitHubでこのページを編集' },
+        outline: { label: 'このページの内容' },
+        docFooter: { prev: '前へ', next: '次へ' },
+        darkModeSwitchLabel: 'テーマ',
+        sidebarMenuLabel: 'メニュー',
+        returnToTopLabel: 'トップに戻る',
+        langMenuLabel: '言語',
+      },
+    },
   },
 
   themeConfig: {
@@ -110,6 +148,17 @@ export default defineConfig({
                 resetButtonTitle: '지우기',
                 displayDetails: '자세히 보기',
                 footer: { selectText: '선택', navigateText: '이동', closeText: '닫기' },
+              },
+            },
+          },
+          ja: {
+            translations: {
+              button: { buttonText: '検索', buttonAriaLabel: '検索' },
+              modal: {
+                noResultsText: '結果が見つかりません',
+                resetButtonTitle: 'クリア',
+                displayDetails: '詳細を表示',
+                footer: { selectText: '選択', navigateText: '移動', closeText: '閉じる' },
               },
             },
           },

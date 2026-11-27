@@ -129,6 +129,11 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  /* Pretendard has kana but no kanji, so Japanese would render in two
+     typefaces. Skip it and let one system Japanese font draw both. */
+  html[lang="ja"] body {
+    font-family: 'Roboto', "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Noto Sans JP", system-ui, sans-serif;
+  }
   h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
     letter-spacing: -0.022em;
