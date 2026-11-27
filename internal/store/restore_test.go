@@ -86,3 +86,45 @@ func TestRestoreMetadata_MergesStarsProfilesAndScrubsPasswords(t *testing.T) {
 		t.Errorf("imap_profiles=%d after re-restore, want 1", n)
 	}
 }
+
+// A snapshot from someone else must not be able to point this library's
+// automatic backups at a folder of their choosing.
+func TestRestoreMetadata_OnlyRestoresSafeSettings(t *testing.T) {
+	ctx := context.Background()
+	src := openTestStore(t)
+	for k, v := range map[string]string{
+		"backup":         `{"dir":"\\\\evil\\share","every":"daily"}`,
+		"backup_last":    `{"ok":true}`,
+		"saved_searches": `[{"name":"mine","q":"is:starred"}]`,
+		"read_tracking":  "1",
+		"made_up":        "x",
+	} {
+		if err := src.SetSetting(ctx, k, v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	snap := filepath.Join(t.TempDir(), "snap.db")
+	if err := src.SnapshotTo(ctx, snap); err != nil {
+		t.Fatal(err)
+	}
+
+	dst := openTestStore(t)
+	const mine = `{"dir":"/mnt/backup","every":"weekly"}`
+	if err := dst.SetSetting(ctx, "backup", mine); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dst.RestoreMetadata(ctx, snap); err != nil {
+		t.Fatal(err)
+	}
+	for k, want := range map[string]string{
+		"backup":         mine,
+		"backup_last":    "",
+		"made_up":        "",
+		"saved_searches": `[{"name":"mine","q":"is:starred"}]`,
+		"read_tracking":  "1",
+	} {
+		if got, _ := dst.GetSetting(ctx, k); got != want {
+			t.Errorf("setting %q = %q, want %q", k, got, want)
+		}
+	}
+}

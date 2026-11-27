@@ -39,7 +39,7 @@ Running the program with no command is the same as `app`. That's what happens wh
 
 Only your own computer can connect to Local Eml, but that includes every program and every user account on it. So the server also asks for a token: a random password stored in a file called `session-token` in the data folder, which only you can read.
 
-- Double-clicking signs you in automatically. The program hands the token to the browser, which remembers it.
+- Double-clicking signs you in automatically. The program gives the browser a one-time sign-in link made from the token, never the token itself. The browser stays signed in for 30 days after you last used it.
 - If you open the address in a browser yourself, you'll see a sign-in page the first time. It shows how to open Command Prompt or Terminal and has a **Copy** button for the `local-eml token` command. Run it and paste the token it prints.
 - Scripts send it in a header: `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`.
 

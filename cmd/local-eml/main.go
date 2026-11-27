@@ -221,7 +221,8 @@ func runApp(args []string) int {
 
 // existingServerURL signs the browser in to the server already running on
 // port. Its token is readable when it belongs to the same user; otherwise the
-// app asks for it.
+// app asks for it. Only a one-time code derived from the token goes into the
+// URL, so whatever answers on that port never sees the token itself.
 func existingServerURL(port int) string {
 	base := fmt.Sprintf("http://127.0.0.1:%d", port)
 	p, err := paths.Resolve()
@@ -232,7 +233,11 @@ func existingServerURL(port int) string {
 	if err != nil {
 		return base
 	}
-	return server.AuthURL(base, strings.TrimSpace(string(token)))
+	u, err := server.AuthURL(base, strings.TrimSpace(string(token)), port)
+	if err != nil {
+		return base
+	}
+	return u
 }
 
 // runToken prints the library's session token for scripts and for signing a
@@ -466,7 +471,12 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		lastSeen.Store(time.Now().UnixNano())
 		httpSrv.Handler = touchHealth(handler, lastSeen)
 		go watchIdle(ctx, lastSeen, shutdown)
-		go openWindow(server.AuthURL(url, token))
+		signIn, err := server.AuthURL(url, token, srv.Port)
+		if err != nil {
+			slog.Error("sign-in link", "err", err)
+			return 1
+		}
+		go openWindow(signIn)
 	}
 
 	sigCh := make(chan os.Signal, 1)

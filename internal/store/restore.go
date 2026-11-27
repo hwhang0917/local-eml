@@ -3,7 +3,24 @@ package store
 import (
 	"context"
 	"fmt"
+	"strings"
 )
+
+// restorableSettings are the settings a restore may copy from an uploaded
+// snapshot. Anything else stays as it is here. In particular the backup folder
+// and schedule ("backup") are never taken from a file: a snapshot someone else
+// prepared could otherwise point the automatic backups, and so the whole
+// library, at a folder or network share of their choosing. A new setting is
+// not restored until it is added here on purpose.
+var restorableSettings = []string{
+	"saved_searches",
+	"read_tracking",
+	"imap_sync_interval_seconds",
+}
+
+// restorableSettingsSQL is restorableSettings as a quoted SQL list. The names
+// are constants above, never input.
+var restorableSettingsSQL = "'" + strings.Join(restorableSettings, "','") + "'"
 
 // RestoreSummary reports how many rows a metadata restore touched.
 type RestoreSummary struct {
@@ -22,7 +39,8 @@ type RestoreSummary struct {
 //   - category names/positions are taken from the backup
 //   - stars and category assignments are applied to emails that exist locally
 //     (import the .eml files first — emails only in the backup are untouched)
-//   - settings are overwritten with the backup's values
+//   - the settings in restorableSettings are overwritten with the backup's
+//     values; the backup folder and schedule are never restored
 //   - IMAP/S3 profiles are added unless a profile with the same name exists
 //
 // Encrypted IMAP passwords are never restored: they were scrubbed at export
@@ -104,6 +122,10 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 
 	emailFilter := ""
 	settingsVerb := "INSERT OR REPLACE"
+	// An uploaded snapshot may come from anyone, so only the listed settings
+	// are taken from it. A kept session is this user's own folder, and its
+	// settings only fill gaps.
+	settingsFilter := " WHERE key IN (" + restorableSettingsSQL + ")"
 	if session {
 		if _, err := conn.ExecContext(ctx, "CREATE TEMP TABLE merge_only (sha256 TEXT PRIMARY KEY)"); err != nil {
 			return sum, fmt.Errorf("merge list: %w", err)
@@ -116,6 +138,7 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 		}
 		emailFilter = " AND emails.sha256 IN (SELECT sha256 FROM temp.merge_only)"
 		settingsVerb = "INSERT OR IGNORE"
+		settingsFilter = ""
 	}
 
 	type step struct {
@@ -144,7 +167,7 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 			 WHERE emails.sha256 = b.sha256` + emailFilter},
 		{&sum.Settings, "settings",
 			settingsVerb + ` INTO settings (key, value)
-			 SELECT key, value FROM backup.settings`},
+			 SELECT key, value FROM backup.settings` + settingsFilter},
 		{&sum.ImapProfiles, "imap_profiles",
 			`INSERT OR IGNORE INTO imap_profiles
 			   (name, host, port, username, folder, created_at, updated_at)
