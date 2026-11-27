@@ -25,7 +25,7 @@ local-eml <command> [flags]
   serve [--port 7878] [--ephemeral]
                            run the local web server (loopback only)
   install [-y|--yes] [--port 7878]
-                           register as a background service (systemd/launchd/Windows Service)
+                           start in the background at sign-in (systemd/launchd/Windows startup)
   uninstall [-y|--yes]     stop and unregister the background service
   token                    print the session token the API and a browser need
   version | -V | --version

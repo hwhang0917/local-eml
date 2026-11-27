@@ -3,15 +3,16 @@
   Local Eml uninstaller for Windows.
 
 .DESCRIPTION
-  Unregisters the Windows Service via `local-eml uninstall`, removes the
+  Stops the background server and removes it from sign-in startup via
+  `local-eml uninstall`, removes the
   binary (unless -KeepBinary), and optionally deletes the user data
-  directory (-Purge). Service unregister requires administrator privileges.
+  directory (-Purge). No administrator rights are needed.
 
 .PARAMETER InstallDir
   Install directory. Defaults to $env:LOCALAPPDATA\local-eml.
 
 .PARAMETER KeepBinary
-  Unregister the service but leave the binary in place.
+  Stop the background server but leave the binary in place.
 
 .PARAMETER Purge
   Also delete $env:USERPROFILE\.local-eml\ (EMLs, database, logs).

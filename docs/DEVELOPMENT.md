@@ -36,7 +36,7 @@ local-eml <command> [flags]
   serve [--port 7878] [--ephemeral]
                            run the local web server (loopback only)
   install [-y|--yes] [--port 7878]
-                           register as a background service (systemd/launchd/Windows Service)
+                           start in the background at sign-in (systemd/launchd/Windows startup)
   uninstall [-y|--yes]     stop and unregister the background service
   token                    print the session token the API and a browser need
   version | -V | --version
@@ -104,7 +104,7 @@ Set `LOCAL_EML_LOG_LEVEL=debug|info|warn|error` in the service environment to tu
 |---|---|
 | Backend | Go, chi, `modernc.org/sqlite` (pure-Go), enmime, bluemonday, kardianos/service, aws-sdk-go-v2 (S3), go-imap/v2 (IMAP) |
 | Frontend | Vue 3, Vite, TypeScript, Tailwind v4, reka-ui (shadcn-vue primitives), vue-i18n, vue-sonner; attachment previews: rhwp (HWP/HWPX, WASM), docx-preview, SheetJS (vendored in `web/vendor/`, from cdn.sheetjs.com) |
-| Service | systemd user-unit (Linux), LaunchAgent (macOS), Windows Service |
+| Service | systemd user-unit (Linux), LaunchAgent (macOS), per-user Run key at sign-in (Windows) |
 
 ## Third-party license notices
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -183,6 +184,11 @@ const wingetPackageID = "hwhang0917.LocalEml"
 func (s *Server) installBlocker() string {
 	if path, err := updater.CurrentBinary(); err == nil && updater.ManagedByWinget(path) {
 		return "This copy was installed with winget. Update it with `winget upgrade " + wingetPackageID + "`."
+	}
+	// On Windows the background server is started at sign-in, not by a
+	// service manager, so nothing would bring it back up after the swap.
+	if runtime.GOOS == "windows" {
+		return "In-app updates are not available on Windows yet. Run the install script again to update."
 	}
 	if s.RunningInteractive {
 		return "Updates can only be installed when running as a managed service. Run `local-eml install` first."
