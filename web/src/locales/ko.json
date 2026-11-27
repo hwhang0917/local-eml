@@ -29,6 +29,14 @@
     "copied": "복사됨",
     "copy_failed": "복사하지 못했습니다. 명령을 직접 선택해 복사하세요."
   },
+  "not_found": {
+    "title": "페이지를 찾을 수 없습니다",
+    "body": "이 주소에는 아무것도 없습니다. 주소를 잘못 입력했거나 페이지가 옮겨졌을 수 있습니다.",
+    "settings_title": "없는 설정 항목입니다",
+    "settings_body": "이 설정 페이지는 없습니다. 왼쪽 목록에서 항목을 골라 주세요.",
+    "to_library": "라이브러리로 돌아가기",
+    "to_settings": "설정 열기"
+  },
   "nav": {
     "library": "라이브러리",
     "attachments": "첨부파일",
@@ -240,7 +248,12 @@
       "frame_title": "문서 미리보기",
       "empty_sheet": "빈 시트입니다.",
       "sheet_truncated": "전체 {totalRows}행 × {totalCols}열 중 처음 {rows}행, {cols}열만 표시합니다. 전체 내용은 파일을 다운로드해서 확인하세요."
-    }
+    },
+    "not_found_title": "라이브러리에 없는 메일입니다",
+    "not_found_body": "삭제되었거나 링크가 잘렸을 수 있습니다.",
+    "load_error_title": "메일을 열 수 없습니다",
+    "load_error_body": "불러오는 중에 문제가 생겼습니다. 다시 시도하거나 라이브러리로 돌아가세요.",
+    "load_error_retry": "다시 시도"
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip·.mbox·.pst를 여기에 드롭하세요",

@@ -29,6 +29,14 @@
     "copied": "Copied",
     "copy_failed": "Couldn't copy. Select the command and copy it yourself."
   },
+  "not_found": {
+    "title": "Page not found",
+    "body": "There's nothing at this address. The link may be mistyped, or the page may have moved.",
+    "settings_title": "No such settings section",
+    "settings_body": "This settings page doesn't exist. Pick a section from the list on the left.",
+    "to_library": "Back to library",
+    "to_settings": "Open settings"
+  },
   "nav": {
     "library": "Library",
     "attachments": "Attachments",
@@ -240,7 +248,12 @@
       "frame_title": "Document preview",
       "empty_sheet": "This sheet is empty.",
       "sheet_truncated": "Showing the first {rows} rows and {cols} columns of {totalRows} × {totalCols}. Download the file to see everything."
-    }
+    },
+    "not_found_title": "This email isn't in your library",
+    "not_found_body": "It may have been deleted, or the link may be incomplete.",
+    "load_error_title": "Couldn't open this email",
+    "load_error_body": "Something went wrong while loading it. Try again, or go back to the library.",
+    "load_error_retry": "Try again"
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",

@@ -4,8 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { useEventListener, useStorage } from '@vueuse/core'
 import { toast } from 'vue-sonner'
-import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailOpen, Printer, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
-import { api, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
+import { ChevronDown, ChevronLeft, ChevronRight, CircleHelp, FileWarning, Mail, MailQuestionMark, MailWarning, MailOpen, Printer, ShieldAlert, ShieldCheck, Star, Trash2, TriangleAlert } from 'lucide-vue-next'
+import { api, ApiError, quarantined, type Email, type EmailFlag, type PartInfo, type PartsManifest } from '@/lib/api'
 import { NO_CATEGORY, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
 import { useReadTracking } from '@/composables/useReadTracking'
@@ -17,6 +17,7 @@ import { returnToLibrary } from '@/lib/libraryReturn'
 import { dialogClass } from '@/lib/utils'
 import { buildPrintDocument, printDocument } from '@/lib/printEmail'
 import { attachmentName, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
+import ErrorState from '@/components/ErrorState.vue'
 import Button from '@/components/ui/Button.vue'
 import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
@@ -43,6 +44,9 @@ const textBody = ref('')
 const rawBody = ref('')
 const showRemote = ref(false)
 const error = ref('')
+// The address names no message in this library: a deleted email, a mistyped
+// or truncated link (the server answers 404 or 400 for those).
+const notFound = ref(false)
 // Fold state survives navigation — collapsing the metadata once should keep
 // the reading space maximised across the whole session.
 const showMeta = useStorage('viewer-show-meta', true)
@@ -99,6 +103,7 @@ async function setFlag(value: string) {
 
 async function load() {
   error.value = ''
+  notFound.value = false
   textBody.value = ''
   rawBody.value = ''
   previewIdx.value = null
@@ -135,7 +140,9 @@ async function load() {
     else tab.value = 'raw'
     openRequestedAttachment(e, p)
   } catch (err) {
-    error.value = String(err)
+    notFound.value = err instanceof ApiError && (err.status === 404 || err.status === 400)
+    error.value = err instanceof Error ? err.message : String(err)
+    document.title = pageTitle(notFound.value ? t('viewer.not_found_title') : t('viewer.load_error_title'))
   }
 }
 
@@ -386,7 +393,24 @@ async function togglePreview(a: PartInfo) {
 </script>
 
 <template>
-  <div v-if="error" class="text-destructive">{{ error }}</div>
+  <ErrorState
+    v-if="error && notFound"
+    :icon="MailQuestionMark"
+    :title="t('viewer.not_found_title')"
+    :body="t('viewer.not_found_body')"
+  >
+    <Button @click="goBack">{{ t('not_found.to_library') }}</Button>
+  </ErrorState>
+  <ErrorState
+    v-else-if="error"
+    :icon="MailWarning"
+    :title="t('viewer.load_error_title')"
+    :body="t('viewer.load_error_body')"
+    :detail="error"
+  >
+    <Button variant="secondary" @click="load">{{ t('viewer.load_error_retry') }}</Button>
+    <Button @click="goBack">{{ t('not_found.to_library') }}</Button>
+  </ErrorState>
 
   <div v-else-if="email" class="space-y-4">
     <!-- min-h-7 matches the nav buttons, so the row keeps its height when the
