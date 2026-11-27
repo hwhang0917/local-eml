@@ -26,6 +26,8 @@ It is not an email client. You can't write, send or reply to mail, and it never 
 - **Take it with you.** Export everything as one `.zip`, or upload it to AWS S3 or an S3-compatible service. To hand over just some mail, export a search's results or your selection as `.eml` files, one `.mbox` or a PDF.
 - **Back it up.** Automatic backup copies new mail into a folder on an external drive, a NAS or a synced cloud folder, daily or weekly.
 
+The app and the documentation are available in English, Korean and Japanese.
+
 ## Download
 
 Get the file for your system from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own window and quits when you close it. There's no installer and no account. Windows and macOS warn you the first time you open it; the [install guide](https://hwhang0917.github.io/local-eml/docs/install) shows how to get past that.

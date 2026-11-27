@@ -57,6 +57,7 @@ const pages = {
     { text: 'メールのインポート', link: '/ja/import' },
     { text: '検索', link: '/ja/search' },
     { text: '添付ファイルを探す', link: '/ja/attachments' },
+    { text: 'ライブラリの統計', link: '/ja/stats' },
     { text: '新着メールの受信', link: '/ja/sync' },
     { text: '迷惑メール・フィッシング', link: '/ja/spam-phishing' },
     { text: 'プライバシーとデータ', link: '/ja/privacy' },
