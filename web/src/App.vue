@@ -17,6 +17,7 @@ import TokenCommand from '@/components/TokenCommand.vue'
 import Button from '@/components/ui/Button.vue'
 import { fieldClass } from '@/lib/utils'
 import { locked, unlock } from '@/lib/auth'
+import { textSize } from '@/lib/textSize'
 
 const { t, locale } = useI18n()
 const route = useRoute()
@@ -25,6 +26,7 @@ const { online, checking, retry } = useHealth()
 const tour = useTour()
 const { session } = useSession()
 const token = ref('')
+const largeText = computed(() => textSize.value === 'lg' || textSize.value === 'xl')
 
 // Listens for new mail the server announces; notifies only when turned on.
 onMounted(startNewMailWatcher)
@@ -117,10 +119,11 @@ watchEffect(() => {
       </div>
       <header class="bg-black text-white">
         <div class="max-w-[1800px] mx-auto px-4 md:px-6 h-11 flex items-center gap-3 md:gap-6 text-xs whitespace-nowrap">
-          <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
+          <RouterLink to="/" :aria-label="APP_NAME" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
             <img src="/icon-64.png" srcset="/favicon.png 1x, /icon-64.png 2x" alt="" class="h-6 w-6 rounded-sm" />
-            <!-- Below md the name gives its room to the nav; the icon stays. -->
-            <span class="hidden md:inline">{{ APP_NAME }}</span>
+            <!-- Below md the name gives its room to the nav; the icon stays. At
+                 L/XL text the nav needs that room up to lg. -->
+            <span :class="largeText ? 'hidden lg:inline' : 'hidden md:inline'">{{ APP_NAME }}</span>
           </RouterLink>
           <nav class="flex items-center gap-1">
             <RouterLink

@@ -163,9 +163,9 @@ function page(dir: 1 | -1) {
                 <span class="truncate">{{ splitPath(e).head }}</span>
                 <span class="shrink-0 whitespace-pre">{{ splitPath(e).tail }}</span>
               </span>
-              <span v-if="splitPath(e).dir" class="truncate font-mono text-[11px] text-muted-foreground">{{ splitPath(e).dir }}</span>
+              <span v-if="splitPath(e).dir" class="truncate font-mono text-[0.6875rem] text-muted-foreground">{{ splitPath(e).dir }}</span>
               <!-- In a narrow card, size and date move under the name. -->
-              <span class="truncate text-[11px] text-muted-foreground @3xl:hidden">
+              <span class="truncate text-[0.6875rem] text-muted-foreground @3xl:hidden">
                 {{ formatBytes(e.size_bytes) }} · {{ t('duplicates.imported', { date: formatDate(e.imported_at) }) }}
               </span>
             </span>

@@ -17,6 +17,7 @@ const { t } = useI18n()
 const sections = computed(() => [
   { name: 'settings-about', label: t('settings.section.about') },
   { name: 'settings-categories', label: t('settings.section.categories') },
+  { name: 'settings-appearance', label: t('settings.section.appearance') },
   { name: 'settings-locale', label: t('settings.section.locale') },
   { name: 'settings-reading', label: t('settings.section.reading') },
   { name: 'settings-restore', label: t('settings.section.restore') },

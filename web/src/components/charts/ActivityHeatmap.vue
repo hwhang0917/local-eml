@@ -83,7 +83,7 @@ const n = (v: number) => v.toLocaleString(locale.value)
           x="0"
           :y="cy(row) + cell / 2"
           dominant-baseline="middle"
-          class="text-[11px]"
+          class="text-[0.6875rem]"
           fill="var(--muted-foreground)"
         >{{ d.short }}</text>
         <template v-for="(d, row) in days" :key="`r${d.wd}`">
@@ -106,7 +106,7 @@ const n = (v: number) => v.toLocaleString(locale.value)
           :key="`h${h}`"
           :x="cx(h)"
           :y="height - 4"
-          class="text-[11px]"
+          class="text-[0.6875rem]"
           fill="var(--muted-foreground)"
         >{{ hourLabel(h) }}</text>
       </svg>

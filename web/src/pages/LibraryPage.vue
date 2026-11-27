@@ -723,7 +723,9 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
 
     <p class="sr-only" aria-live="polite">{{ liveAnnouncement }}</p>
     <Card class="overflow-hidden" :aria-busy="loading">
-      <table class="w-full text-sm">
+      <!-- A narrow window (or large text in one) halves the cell padding and
+           the icon columns, so the subject keeps some room. -->
+      <table :class="['w-full text-sm', !atLeastMd && '[&_td]:px-1.5 [&_th]:px-1.5 [&_th.w-10]:w-8']">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <!-- With a selection the column headers are hidden, not removed, and the
@@ -927,7 +929,7 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
                 :title="dateFormat === 'relative' || !atLeastMd ? formatDateAbsolute(e.sent_at) : undefined"
               >{{ atLeastMd ? formatDate(e.sent_at) : formatDateCompact(e.sent_at) }}</time>
             </td>
-            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap" :title="e.from">
+            <td v-if="colShown('from')" :class="['px-3 py-2 whitespace-nowrap', !atLeastMd && 'max-w-[8rem] truncate']" :title="e.from">
               <Highlight :text="senderName(e.from)" :query="fromHighlight" />
             </td>
             <td class="px-3 py-2 truncate w-full max-w-0">
@@ -1004,7 +1006,7 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
                 :title="!atLeastMd ? formatDateAbsolute(m.sent_at) : undefined"
               >{{ atLeastMd ? formatDate(m.sent_at) : formatDateCompact(m.sent_at) }}</time>
             </td>
-            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap text-muted-foreground" :title="m.from">
+            <td v-if="colShown('from')" :class="['px-3 py-2 whitespace-nowrap text-muted-foreground', !atLeastMd && 'max-w-[8rem] truncate']" :title="m.from">
               {{ senderName(m.from) }}
             </td>
             <td class="px-3 py-2 truncate w-full max-w-0">

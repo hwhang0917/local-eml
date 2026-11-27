@@ -50,14 +50,14 @@ const maskedKey = computed(() => {
     <template #action>
       <span
         v-if="endpointHost"
-        class="shrink-0 max-w-[12rem] truncate rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground"
+        class="shrink-0 max-w-[12rem] truncate rounded-sm bg-muted px-1.5 py-0.5 text-[0.6875rem] font-mono text-muted-foreground"
         :title="t('import.s3_endpoint') + ': ' + profile.endpoint"
       >
         {{ endpointHost }}
       </span>
       <span
         v-else
-        class="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[11px] font-mono text-muted-foreground"
+        class="shrink-0 rounded-sm bg-muted px-1.5 py-0.5 text-[0.6875rem] font-mono text-muted-foreground"
         :title="t('import.s3_region')"
       >
         {{ profile.region || t('import.s3_card_region_default') }}

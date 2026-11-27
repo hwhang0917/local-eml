@@ -139,7 +139,7 @@ const n = (v: number) => v.toLocaleString(locale.value)
 <template>
   <div ref="root" class="relative select-none" @pointermove="onMove" @pointerleave="hover = null">
     <svg v-if="width > 0" :width="width" :height="HEIGHT" class="block overflow-visible" role="img" :aria-label="t('stats.volume')">
-      <g class="text-[11px]" fill="var(--muted-foreground)">
+      <g class="text-[0.6875rem]" fill="var(--muted-foreground)">
         <template v-for="tk in ticks" :key="tk">
           <line :x1="PAD.left" :x2="width - PAD.right" :y1="y(tk)" :y2="y(tk)" stroke="var(--chart-grid)" stroke-width="1" />
           <text :x="PAD.left - 8" :y="y(tk)" text-anchor="end" dominant-baseline="middle" class="tabular-nums">{{ compact(tk, locale) }}</text>

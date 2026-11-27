@@ -446,6 +446,7 @@
   "settings": {
     "section": {
       "about": "About",
+      "appearance": "Appearance",
       "locale": "Locale",
       "reading": "Reading",
       "attributions": "Attributions",
@@ -803,5 +804,17 @@
     "delete_title": "Delete the saved search “{name}”?",
     "delete_body": "This removes “{query}” from your saved searches. Your mail isn’t affected.",
     "delete_confirm": "Delete"
+  },
+  "appearance": {
+    "text_size": "Text size",
+    "text_size_help": "Makes menus, buttons, lists and plain-text messages larger or smaller. HTML emails keep the sizes their sender chose; use your browser's zoom (Ctrl +) for those. Saved in this browser.",
+    "size": {
+      "xs": "XS",
+      "sm": "S",
+      "md": "M",
+      "lg": "L",
+      "xl": "XL"
+    },
+    "preview": "This is how text in menus and lists will look. M is the default; S is the size earlier versions used."
   }
 }
