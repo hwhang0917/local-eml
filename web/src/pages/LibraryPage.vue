@@ -18,9 +18,10 @@ import {
   TooltipTrigger,
 } from 'reka-ui'
 import { api, type BulkAction, type Email, type EmailListParams, type PartInfo } from '@/lib/api'
-import { attachmentName, dateFormat, formatBytes, formatDate, formatDateAbsolute, riskFor, senderName, shortSHA } from '@/lib/format'
+import { attachmentName, dateFormat, formatBytes, formatDate, formatDateAbsolute, formatDateCompact, riskFor, senderName, shortSHA } from '@/lib/format'
 import { useDebounceFn, useEventListener, useStorage } from '@vueuse/core'
 import { PAGE_SIZES, useListQuery } from '@/composables/useListQuery'
+import { atLeastMd } from '@/composables/useWidth'
 import { useTour } from '@/composables/useTour'
 import { ANY_CATEGORY, NO_CATEGORY, parseCategoryValue, useCategories } from '@/composables/useCategories'
 import { useEmailActions } from '@/composables/useEmailActions'
@@ -70,6 +71,12 @@ const hiddenCols = useStorage<HideableCol[]>('library-hidden-columns', [])
 function colShown(c: HideableCol) {
   return !hiddenCols.value.includes(c)
 }
+// Below md the size column gives its width to the subject, which would
+// otherwise shrink to a word or two in a half-screen window. The columns menu
+// still shows the user's own choice.
+function colRendered(c: HideableCol) {
+  return colShown(c) && (c !== 'size' || atLeastMd.value)
+}
 function toggleCol(c: HideableCol) {
   hiddenCols.value = colShown(c) ? [...hiddenCols.value, c] : hiddenCols.value.filter((x) => x !== c)
 }
@@ -78,7 +85,7 @@ function toggleCol(c: HideableCol) {
 // The read column is not in HIDEABLE_COLS: it exists only while read tracking is on.
 const { enabled: readTracking } = useReadTracking()
 // The leading 2 are the selection checkbox and the subject.
-const colCount = computed(() => 2 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
+const colCount = computed(() => 2 + HIDEABLE_COLS.filter(colRendered).length + (readTracking.value ? 1 : 0))
 
 const q = computed(() => param('q'))
 // The buttons beside the search box are views of the query, not state of
@@ -716,7 +723,9 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
 
     <p class="sr-only" aria-live="polite">{{ liveAnnouncement }}</p>
     <Card class="overflow-hidden" :aria-busy="loading">
-      <table class="w-full text-sm">
+      <!-- A narrow window (or large text in one) halves the cell padding and
+           the icon columns, so the subject keeps some room. -->
+      <table :class="['w-full text-sm', !atLeastMd && '[&_td]:px-1.5 [&_th]:px-1.5 [&_th.w-10]:w-8']">
         <caption class="sr-only">{{ t('library.table_caption') }}</caption>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <!-- With a selection the column headers are hidden, not removed, and the
@@ -799,7 +808,7 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
             <SortHeader v-if="colShown('date')" :label="t('library.col.date')" col="sent_at" :sort="sort" :order="order" @sort="setSort" />
             <SortHeader v-if="colShown('from')" :label="t('library.col.from')" col="from_addr" :sort="sort" :order="order" @sort="setSort" />
             <SortHeader :label="t('library.col.subject')" col="subject" :sort="sort" :order="order" @sort="setSort" />
-            <SortHeader v-if="colShown('size')" :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
+            <SortHeader v-if="colRendered('size')" :label="t('library.col.size')" col="size_bytes" :sort="sort" :order="order" @sort="setSort" align="right" />
           </tr>
         </thead>
         <tbody>
@@ -917,13 +926,13 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
             <td v-if="colShown('date')" class="px-3 py-2 whitespace-nowrap text-muted-foreground">
               <time
                 :datetime="e.sent_at || undefined"
-                :title="dateFormat === 'relative' ? formatDateAbsolute(e.sent_at) : undefined"
-              >{{ formatDate(e.sent_at) }}</time>
+                :title="dateFormat === 'relative' || !atLeastMd ? formatDateAbsolute(e.sent_at) : undefined"
+              >{{ atLeastMd ? formatDate(e.sent_at) : formatDateCompact(e.sent_at) }}</time>
             </td>
-            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap" :title="e.from">
+            <td v-if="colShown('from')" :class="['px-3 py-2 whitespace-nowrap', !atLeastMd && 'max-w-[8rem] truncate']" :title="e.from">
               <Highlight :text="senderName(e.from)" :query="fromHighlight" />
             </td>
-            <td class="px-3 py-2 truncate">
+            <td class="px-3 py-2 truncate w-full max-w-0">
               <button
                 v-if="(e.thread_count ?? 0) > 1"
                 type="button"
@@ -962,7 +971,7 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
                    contrast and failed WCAG AA in Lighthouse. -->
               <span class="ml-2 text-xs text-muted-foreground" :title="e.sha256">({{ shortSHA(e.sha256) }})</span>
             </td>
-            <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
+            <td v-if="colRendered('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(e.size_bytes) }}</td>
           </tr>
           <tr
             v-for="m in expandedThreads.get(e.sha256) ?? []"
@@ -992,12 +1001,15 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
             </td>
             <td v-if="colShown('category')" class="px-3 py-2"></td>
             <td v-if="colShown('date')" class="px-3 py-2 whitespace-nowrap text-muted-foreground">
-              <time :datetime="m.sent_at || undefined">{{ formatDate(m.sent_at) }}</time>
+              <time
+                :datetime="m.sent_at || undefined"
+                :title="!atLeastMd ? formatDateAbsolute(m.sent_at) : undefined"
+              >{{ atLeastMd ? formatDate(m.sent_at) : formatDateCompact(m.sent_at) }}</time>
             </td>
-            <td v-if="colShown('from')" class="px-3 py-2 whitespace-nowrap text-muted-foreground" :title="m.from">
+            <td v-if="colShown('from')" :class="['px-3 py-2 whitespace-nowrap text-muted-foreground', !atLeastMd && 'max-w-[8rem] truncate']" :title="m.from">
               {{ senderName(m.from) }}
             </td>
-            <td class="px-3 py-2 truncate">
+            <td class="px-3 py-2 truncate w-full max-w-0">
               <span class="inline-flex max-w-full items-center gap-1.5 pl-5">
                 <CornerDownRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <RouterLink
@@ -1010,7 +1022,7 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
                 </RouterLink>
               </span>
             </td>
-            <td v-if="colShown('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(m.size_bytes) }}</td>
+            <td v-if="colRendered('size')" class="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">{{ formatBytes(m.size_bytes) }}</td>
           </tr>
           </template>
         </tbody>

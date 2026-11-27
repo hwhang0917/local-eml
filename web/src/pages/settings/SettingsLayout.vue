@@ -29,17 +29,19 @@ const sections = computed(() => [
 </script>
 
 <template>
-  <div class="flex gap-6">
-    <aside class="w-56 shrink-0 self-start">
-      <Sidebar>
+  <!-- Below md the sections sit above the page as a wrapping row, so the page
+       keeps the full width instead of losing a quarter of it to the menu. -->
+  <div class="flex flex-col gap-4 md:flex-row md:gap-6">
+    <aside class="w-full md:w-56 shrink-0 self-start">
+      <Sidebar class="w-full md:w-60">
         <SidebarHeader>
           <SidebarTitle>{{ t('nav.settings') }}</SidebarTitle>
         </SidebarHeader>
         <SidebarContent>
-          <SidebarMenu>
+          <SidebarMenu class="flex-row flex-wrap md:flex-col">
             <SidebarMenuItem v-for="s in sections" :key="s.name">
               <RouterLink v-slot="{ isActive, navigate }" :to="{ name: s.name }" custom>
-                <SidebarMenuButton :active="isActive" @click="navigate">
+                <SidebarMenuButton :active="isActive" class="w-auto md:w-full whitespace-nowrap" @click="navigate">
                   {{ s.label }}
                 </SidebarMenuButton>
               </RouterLink>
