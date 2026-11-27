@@ -12,12 +12,15 @@ Everything is in one folder: `~/.local-eml/` on Linux and macOS, and `%USERPROFI
 | `keys/secret.key` | The key used to encrypt saved IMAP passwords, when your system has no secure storage. Otherwise the key is in Credential Manager, the Keychain or the Linux secret service, under `local-eml`, and `keys/` holds only a note saying so |
 | `session-token` | The password your browser uses to sign in. See [session token](./settings-cli#session-token) |
 | `prefs.json` | Launch preferences (for now, only the temporary sessions switch) |
+| `mcp.json` | Whether AI agents may connect, and their token. See [AI agents](./ai-agents#the-agent-token) |
 
 The folder is created so that other user accounts on the same computer can't open it.
 
 ## Network
 
 Local Eml only accepts connections from your own computer (`127.0.0.1`). Other devices on your network can't reach it, and other websites open in your browser can't talk to it. It only connects to the internet when you ask it to: IMAP and S3 imports and exports, and the update check under **Settings → About**.
+
+If you turn on [AI agents](./ai-agents), Local Eml still makes no new connections itself, but whatever an agent reads is sent on by that agent to its AI provider.
 
 ## Passwords and keys
 

@@ -28,6 +28,7 @@ local-eml <command> [flags]
                            백그라운드 서비스로 등록 (systemd/launchd/Windows 서비스)
   uninstall [-y|--yes]     백그라운드 서비스 중지 및 등록 해제
   token                    API와 브라우저에 필요한 세션 토큰 출력
+  mcp [--port N]           stdio로 AI 에이전트 연결 (AI 에이전트 문서 참고)
   version | -V | --version
 ```
 

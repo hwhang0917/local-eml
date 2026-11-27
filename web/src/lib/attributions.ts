@@ -40,4 +40,7 @@ export const attributions: Attribution[] = [
   { name: 'modernc.org/sqlite', url: 'https://gitlab.com/cznic/sqlite', license: 'BSD-3-Clause' },
   { name: 'go-keyring', url: 'https://github.com/zalando/go-keyring', license: 'MIT' },
   { name: 'bluemonday', url: 'https://github.com/microcosm-cc/bluemonday', license: 'BSD-3-Clause' },
+  { name: 'MCP Go SDK', url: 'https://github.com/modelcontextprotocol/go-sdk', license: 'Apache-2.0 AND MIT' },
+  { name: 'ledongthuc/pdf', url: 'https://github.com/ledongthuc/pdf', license: 'BSD-3-Clause' },
+  { name: 'mscfb', url: 'https://github.com/richardlehane/mscfb', license: 'Apache-2.0' },
 ]

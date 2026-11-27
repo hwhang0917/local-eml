@@ -7,7 +7,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/hwhang0917/local-eml/total)](https://github.com/hwhang0917/local-eml/releases)
 
-Local Eml keeps your old email on your own computer and lets you search and read it offline. You can give it `.eml` files, a folder, a `.zip`, an `.mbox` or an Outlook `.pst`, or pull mail from an IMAP account or an S3 bucket (AWS or an S3-compatible service such as MinIO, Cloudflare R2 or Backblaze B2). Your mail never leaves your machine.
+Local Eml keeps your old email on your own computer and lets you search and read it offline. You can give it `.eml` files, a folder, a `.zip`, an `.mbox` or an Outlook `.pst`, or pull mail from an IMAP account or an S3 bucket (AWS or an S3-compatible service such as MinIO, Cloudflare R2 or Backblaze B2). Your mail never leaves your machine, unless you choose to let an AI agent read it.
 
 It's meant for archiving. If your mailbox is full, you can copy the old messages out, keep them as ordinary `.eml` files, and still find them later.
 
@@ -42,7 +42,7 @@ Step-by-step guides:
 - [Open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook)
 - [Free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
 
-The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [browsing attachments](https://hwhang0917.github.io/local-eml/docs/attachments), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
+The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [browsing attachments](https://hwhang0917.github.io/local-eml/docs/attachments), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [connecting AI agents over MCP](https://hwhang0917.github.io/local-eml/docs/ai-agents), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
 
 ## Contributing
 

@@ -155,6 +155,8 @@ func main() {
 		os.Exit(runUninstall(os.Args[2:]))
 	case "token":
 		os.Exit(runToken())
+	case "mcp":
+		os.Exit(runMCP(os.Args[2:]))
 	case "version", "-V", "--version":
 		fmt.Printf("local-eml v%s\n", version)
 	case "-h", "--help":
@@ -178,6 +180,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "                             register as a background service (systemd/launchd/svc)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
 	fmt.Fprintln(os.Stderr, "  token                      print the session token the API and a browser need")
+	fmt.Fprintln(os.Stderr, "  mcp [--port N]             connect an AI agent over stdio (turn it on in Settings > AI agents)")
 	fmt.Fprintln(os.Stderr, "  version | -V | --version")
 }
 
@@ -410,6 +413,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		TemporarySession:   opts.temporary,
 		TempSessionDir:     opts.tempDir,
 		PrefsFile:          prefsFile,
+		MCPFile:            p.MCPFile(),
 	}
 	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
 	srv.StartBackupScheduler(ctx)

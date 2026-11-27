@@ -56,6 +56,11 @@ type Server struct {
 
 	// Automatic folder backups; see backup.go.
 	backup backupRunner
+
+	// MCPFile holds the AI-agent switch and token (see package mcpconf);
+	// empty disables agent access entirely.
+	MCPFile string
+	mcp     mcpState
 }
 
 func (s *Server) Router() http.Handler {
@@ -69,6 +74,7 @@ func (s *Server) Router() http.Handler {
 
 	r.Get("/healthz", s.handleHealth)
 	r.Get(AuthPath, s.handleAuth)
+	r.Handle(MCPPath, s.mcpHandler())
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(s.requireToken)
@@ -137,6 +143,9 @@ func (s *Server) Router() http.Handler {
 		api.Put("/read-tracking", s.handlePutReadTracking)
 		api.Get("/saved-searches", s.handleGetSavedSearches)
 		api.Put("/saved-searches", s.handlePutSavedSearches)
+		api.Get("/mcp", s.handleGetMCP)
+		api.Put("/mcp", s.handlePutMCP)
+		api.Post("/mcp/token", s.handleRotateMCPToken)
 		api.Get("/session", s.handleSession)
 		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
 		api.Put("/session/keep", s.handlePutKeepSession)

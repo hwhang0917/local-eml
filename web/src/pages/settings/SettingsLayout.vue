@@ -23,6 +23,7 @@ const sections = computed(() => [
   { name: 'settings-duplicates', label: t('settings.section.duplicates') },
   { name: 'settings-flagged', label: t('settings.section.flagged') },
   { name: 'settings-privacy', label: t('settings.section.privacy') },
+  { name: 'settings-agents', label: t('settings.section.agents') },
   { name: 'settings-attributions', label: t('settings.section.attributions') },
 ])
 </script>
