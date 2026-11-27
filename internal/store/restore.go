@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -60,7 +61,8 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 //     library's marks, not the fresh "unread" it had in the session.
 //   - category names are left alone: the session's are the seeded defaults,
 //     and would undo the user's renames here
-//   - settings are added only where this library has none
+//   - the settings in restorableSettings are added, only where this library
+//     has none
 //   - profiles are added unless one with the same name exists, without
 //     passwords (the session's key is deleted with it) and with sync off
 func (s *Store) MergeSessionMetadata(ctx context.Context, sessionDB string, newSHAs []string) (RestoreSummary, error) {
@@ -88,6 +90,18 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 		return sum, fmt.Errorf("attach backup: %w", err)
 	}
 	defer conn.ExecContext(context.WithoutCancel(ctx), "DETACH DATABASE backup")
+
+	// Every table read below must be a plain table. A view under one of these
+	// names would run SQL of the file's choosing inside this merge, and no
+	// Local Eml snapshot has views.
+	var views int
+	if err := conn.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM backup.sqlite_master WHERE type = 'view'`).Scan(&views); err != nil {
+		return sum, fmt.Errorf("inspect backup schema: %w", err)
+	}
+	if views > 0 {
+		return sum, errors.New("this file is not a Local Eml backup")
+	}
 
 	// Snapshots from before a column existed lack it; referencing it would
 	// fail the whole emails step, so later columns are copied only when present.
@@ -122,9 +136,8 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 
 	emailFilter := ""
 	settingsVerb := "INSERT OR REPLACE"
-	// An uploaded snapshot may come from anyone, so only the listed settings
-	// are taken from it. A kept session is this user's own folder, and its
-	// settings only fill gaps.
+	// Only the listed settings are ever copied in, from an uploaded snapshot
+	// or a kept session alike.
 	settingsFilter := " WHERE key IN (" + restorableSettingsSQL + ")"
 	if session {
 		if _, err := conn.ExecContext(ctx, "CREATE TEMP TABLE merge_only (sha256 TEXT PRIMARY KEY)"); err != nil {
@@ -138,7 +151,6 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 		}
 		emailFilter = " AND emails.sha256 IN (SELECT sha256 FROM temp.merge_only)"
 		settingsVerb = "INSERT OR IGNORE"
-		settingsFilter = ""
 	}
 
 	type step struct {

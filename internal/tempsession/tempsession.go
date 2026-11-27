@@ -54,7 +54,7 @@ func Sweep(root string) []string {
 	matches, _ := filepath.Glob(filepath.Join(root, prefix+"*"))
 	var removed []string
 	for _, dir := range matches {
-		if info, err := os.Stat(dir); err != nil || !info.IsDir() || IsKept(dir) || inUse(dir, info) {
+		if info, ok := sessionDir(dir); !ok || IsKept(dir) || inUse(dir, info) {
 			continue
 		}
 		if os.RemoveAll(dir) == nil {
@@ -90,13 +90,24 @@ func Kept(root string) []string {
 	matches, _ := filepath.Glob(filepath.Join(root, prefix+"*"))
 	var kept []string
 	for _, dir := range matches {
-		info, err := os.Stat(dir)
-		if err != nil || !info.IsDir() || !IsKept(dir) || inUse(dir, info) {
+		info, ok := sessionDir(dir)
+		if !ok || !IsKept(dir) || inUse(dir, info) {
 			continue
 		}
 		kept = append(kept, dir)
 	}
 	return kept
+}
+
+// sessionDir reports whether dir is a real session folder of this account's.
+// Lstat, not Stat: a symlink with a session's name must not lead the sweep or
+// the merge somewhere else.
+func sessionDir(dir string) (os.FileInfo, bool) {
+	info, err := os.Lstat(dir)
+	if err != nil || !info.IsDir() || !ownedByMe(info) {
+		return nil, false
+	}
+	return info, true
 }
 
 func inUse(dir string, info os.FileInfo) bool {

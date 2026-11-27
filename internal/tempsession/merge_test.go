@@ -82,7 +82,10 @@ func TestMergeKeepsSessionMailWithoutClobberingLibrary(t *testing.T) {
 	if err := sess.Store.SetSetting(ctx, "read_tracking", "off"); err != nil {
 		t.Fatal(err)
 	}
-	if err := sess.Store.SetSetting(ctx, "only_in_session", "x"); err != nil {
+	if err := sess.Store.SetSetting(ctx, "saved_searches", "x"); err != nil {
+		t.Fatal(err)
+	}
+	if err := sess.Store.SetSetting(ctx, "backup", `{"dir":"/tmp/stolen","every":"daily"}`); err != nil {
 		t.Fatal(err)
 	}
 	prof, err := sess.Store.UpsertIMAPProfile(ctx, store.IMAPProfile{Name: "work", Host: "imap.example.com", Username: "me"})
@@ -123,8 +126,11 @@ func TestMergeKeepsSessionMailWithoutClobberingLibrary(t *testing.T) {
 	if v, _ := lib.Store.GetSetting(ctx, "read_tracking"); v != "on" {
 		t.Errorf("library setting overwritten: %q", v)
 	}
-	if v, _ := lib.Store.GetSetting(ctx, "only_in_session"); v != "x" {
+	if v, _ := lib.Store.GetSetting(ctx, "saved_searches"); v != "x" {
 		t.Errorf("session-only setting not added: %q", v)
+	}
+	if v, _ := lib.Store.GetSetting(ctx, "backup"); v != "" {
+		t.Errorf("a session must not set the backup folder: %q", v)
 	}
 	profs, _ := lib.Store.ListIMAPProfiles(ctx)
 	if len(profs) != 1 || profs[0].Name != "work" || profs[0].HasPassword || profs[0].SyncEnabled {
