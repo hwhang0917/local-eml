@@ -43,6 +43,28 @@ export interface Email {
   category_id?: number
 }
 
+export type BackupEvery = 'off' | 'daily' | 'weekly'
+
+export interface BackupState {
+  dir: string
+  every: BackupEvery
+  last: {
+    /** Unix seconds of the latest attempt; absent before the first. */
+    at?: number
+    ok: boolean
+    error?: string
+    added: number
+    total: number
+    failed: number
+    seconds: number
+    last_ok?: number
+  }
+  running: boolean
+  default_dir: string
+  /** False in a temporary session. */
+  available: boolean
+}
+
 export interface Category {
   id: number
   color: string
@@ -546,6 +568,18 @@ export const api = {
   },
 
   exportZipURL: () => '/api/exports/zip',
+
+  getBackup() {
+    return fetch('/api/backup').then(jsonOrThrow<BackupState>)
+  },
+
+  saveBackup(cfg: { dir: string; every: BackupEvery }) {
+    return fetch('/api/backup', jsonBody('PUT', cfg)).then(jsonOrThrow<BackupState>)
+  },
+
+  runBackup() {
+    return fetch('/api/backup/run', { method: 'POST' }).then(okOrThrow)
+  },
 
   restoreBackup(file: File) {
     const form = new FormData()

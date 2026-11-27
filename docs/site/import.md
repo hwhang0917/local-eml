@@ -32,3 +32,14 @@ Enter the bucket, region, an optional key prefix, the access key ID and the secr
 The **Export** page saves your whole library as one `.zip` file, or uploads it to an S3 bucket. Files that are already in the bucket are skipped, so you can run the same export again safely.
 
 The `.zip` also contains a copy of the database, minus any saved passwords. After you import the `.eml` files from it, for example on a new computer, **Settings → Restore from backup** brings back your stars, categories, settings and profiles.
+
+## Automatic backup
+
+If you've deleted mail from your mailbox after archiving it, Local Eml may hold the only copy. **Automatic backup** at the bottom of the **Export** page copies your library into a folder on a schedule, so one dead disk can't take it with it.
+
+1. Enter the full path of a folder on an external drive, a NAS, or a folder that Dropbox, OneDrive or Google Drive syncs, for example `E:\Mail Backup` or `/Volumes/Backup/Mail`. Local Eml creates the folder if it doesn't exist.
+2. Choose **Daily** or **Weekly** and click **Save**. **Back up now** runs one straight away.
+
+Backups run while Local Eml is running: all the time if you installed it as a background service, or while its window is open otherwise. A backup that was due while it was closed runs a couple of minutes after it next starts. The first backup copies everything. After that, each backup copies only new mail, so it usually takes seconds. Nothing is ever deleted from the backup folder, so mail you delete in Local Eml stays in the backup. If a backup fails, for example because the drive isn't plugged in, the card shows why and when the last good backup was, and Local Eml tries again an hour later.
+
+The folder holds an `emails` folder with one `.eml` file per message, and `local-eml.db` with your stars, categories, settings and profiles (without passwords). To restore on a new computer, drop the `emails` folder onto the **Import** page, then choose `local-eml.db` under **Settings → Restore from backup**.

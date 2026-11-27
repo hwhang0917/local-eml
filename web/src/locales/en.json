@@ -693,5 +693,31 @@
       "exclude": "Leave out mail with this word (works with filters too)"
     },
     "dates": "Dates can be a year (2019), a month (2019-03) or a day (2019-03-05). after:2019 before:2020 means all of 2019."
+  },
+  "backup": {
+    "title": "Automatic backup",
+    "hint": "Copies your mail into a folder on a schedule. Use an external drive, a NAS, or a folder that Dropbox, OneDrive or Google Drive syncs. Each backup copies only new mail, and nothing is ever deleted from the folder, so mail you delete here stays in the backup.",
+    "folder": "Backup folder",
+    "folder_hint": "The full path of a folder on this computer. It is created if it doesn’t exist.",
+    "every": "Back up",
+    "every_off": "Off",
+    "every_daily": "Daily",
+    "every_weekly": "Weekly",
+    "save": "Save",
+    "saved": "Backup settings saved.",
+    "run_now": "Back up now",
+    "running": "Backing up…",
+    "last_ok": "Last backup {when}: {added} new message copied, {total} in total. | Last backup {when}: {added} new messages copied, {total} in total.",
+    "last_failed": "The last backup, {when}, failed.",
+    "last_good": "Last successful backup: {when}.",
+    "never_ok": "No backup has succeeded yet.",
+    "some_failed": "{count} messages couldn’t be copied; see the log for details.",
+    "never": "No backup yet.",
+    "schedule_daily": "Runs about once a day while Local Eml is running. A missed backup runs soon after it next starts.",
+    "schedule_weekly": "Runs about once a week while Local Eml is running. A missed backup runs soon after it next starts.",
+    "temporary": "Backups are off in a temporary session.",
+    "load_error": "Couldn't load backup settings",
+    "save_error": "Couldn't save backup settings",
+    "run_error": "Couldn't start the backup"
   }
 }
