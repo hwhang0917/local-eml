@@ -86,16 +86,18 @@ watchEffect(() => {
   </div>
   <template v-else>
   <!-- Desktop only. The server is loopback-only so no phone ever reaches it;
-       the one narrow case is a tiled desktop window, and below md the nav and
-       the library table break rather than reflow. A plain notice beats that.
+       the narrow case is a tiled desktop window: a vertical 1080p monitor, or
+       a window snapped to half a scaled laptop screen, which can be as narrow
+       as 640px. Below sm the nav and the library table break rather than
+       reflow, and only a phone is that narrow. A plain notice beats that.
        Screen only: a printer lays the page out at paper width, which is under
        md, and the notice was all that came out of the printer (#13). -->
-  <div class="md:hidden print:hidden min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
+  <div class="sm:hidden print:hidden min-h-screen flex flex-col items-center justify-center gap-4 px-6 text-center">
     <Monitor class="h-10 w-10 text-muted-foreground" aria-hidden="true" />
     <h1 class="text-lg font-semibold">{{ t('app.narrow_title') }}</h1>
     <p class="max-w-sm text-sm text-muted-foreground">{{ t('app.narrow_body') }}</p>
   </div>
-  <div class="hidden md:flex print:flex min-h-screen flex-col">
+  <div class="hidden sm:flex print:flex min-h-screen flex-col">
     <div class="sticky top-0 z-50 shadow-sm">
       <div
         v-if="!online"
@@ -114,10 +116,11 @@ watchEffect(() => {
         </button>
       </div>
       <header class="bg-black text-white">
-        <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
+        <div class="max-w-[1800px] mx-auto px-4 md:px-6 h-11 flex items-center gap-3 md:gap-6 text-xs whitespace-nowrap">
           <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
             <img src="/icon-64.png" srcset="/favicon.png 1x, /icon-64.png 2x" alt="" class="h-6 w-6 rounded-sm" />
-            <span>{{ APP_NAME }}</span>
+            <!-- Below md the name gives its room to the nav; the icon stays. -->
+            <span class="hidden md:inline">{{ APP_NAME }}</span>
           </RouterLink>
           <nav class="flex items-center gap-1">
             <RouterLink
@@ -125,7 +128,7 @@ watchEffect(() => {
               :key="r.to"
               :to="r.to"
               :data-tour="r.tour"
-              class="px-3 py-1 rounded-xs text-white/70 hover:text-white"
+              class="px-2 md:px-3 py-1 rounded-xs text-white/70 hover:text-white"
               active-class="text-white"
             >
               {{ r.label }}
@@ -166,7 +169,7 @@ watchEffect(() => {
         <RouterLink :to="{ name: 'settings-privacy' }" class="ml-1 underline">{{ t('nav.settings') }}</RouterLink>
       </div>
     </div>
-    <main class="flex-1 max-w-[1800px] mx-auto w-full px-6 py-10">
+    <main class="flex-1 max-w-[1800px] mx-auto w-full px-4 md:px-6 py-6 md:py-10">
       <RouterView />
     </main>
   </div>
