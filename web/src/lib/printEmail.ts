@@ -34,14 +34,16 @@ function esc(s: string): string {
 }
 
 // The same lockdown the server sends with the HTML body (csp() in
-// handlers_emails.go): no scripts, no frames, images only from here unless the
-// reader chose to load remote ones.
+// handlers_emails.go): no scripts, no frames, and images only from the
+// messages' own inline parts unless the reader chose to load remote ones. Not
+// 'self': a style attribute in the body could then point a background image
+// at any API address.
 function csp(showRemote: boolean): string {
   return [
     "default-src 'none'",
-    `img-src 'self' data:${showRemote ? ' http: https:' : ''}`,
+    `img-src ${location.origin}/api/emails/ data:${showRemote ? ' http: https:' : ''}`,
     "style-src 'unsafe-inline'",
-    "font-src 'self' data:",
+    'font-src data:',
   ].join('; ')
 }
 

@@ -316,13 +316,17 @@ func (s *Server) handleEmailHTML(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Content-Security-Policy", csp(showRemote))
+	w.Header().Set("Content-Security-Policy", csp(r.Host, sha, showRemote))
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	_, _ = io.WriteString(w, out)
 }
 
-func csp(showRemote bool) string {
-	imgSrc := "img-src 'self' data:"
+// csp is the policy for an email body. Images come from this message's own
+// inline parts, not from 'self': style attributes survive sanitizing, and a
+// background image pointed at /api/events or /api/exports/zip would otherwise
+// make the reader's browser call the API with their session.
+func csp(host, sha string, showRemote bool) string {
+	imgSrc := "img-src http://" + host + "/api/emails/" + sha + "/cid/ data:"
 	if showRemote {
 		imgSrc += " http: https:"
 	}
@@ -330,7 +334,7 @@ func csp(showRemote bool) string {
 		"default-src 'none'",
 		imgSrc,
 		"style-src 'unsafe-inline'",
-		"font-src 'self' data:",
+		"font-src data:",
 	}, "; ")
 }
 
