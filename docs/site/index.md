@@ -28,6 +28,10 @@ features:
     details: Turn on background sync for an IMAP profile and new mail shows up within seconds on servers that support it, with an optional desktop notification.
   - title: Every attachment in one place
     details: Browse all attachments across your mail by type, sender or date, and see what takes up space on the stats page.
+  - title: Backups and exports
+    details: Copy new mail into a backup folder every day or week, or export just a search's results as .eml files, an .mbox or a PDF.
+  - title: Opens Korean and Office documents
+    details: Preview Hangul (HWP, HWPX), Word and Excel attachments without leaving the app or installing anything.
   - title: Works with any S3 storage
     details: Import from and export to AWS S3, or S3-compatible storage such as MinIO, Cloudflare R2 and Backblaze B2.
 ---

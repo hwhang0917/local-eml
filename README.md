@@ -17,13 +17,14 @@ It is not an email client. You can't write, send or reply to mail, and it never 
 
 ## What you can do
 
-- **Search all your mail at once.** Sender, recipients, subject, body and attachment names, with filters like `from:alice`, `has:attachment` or `after:2019`. Korean, Japanese and Chinese work out of the box, and so does 초성검색 (typing `ㅎㄱ` finds 한국).
-- **Read safely.** HTML mail opens in a locked-down frame with remote images blocked, links show where they really go, and messages that look like phishing get a warning.
+- **Search all your mail at once.** Sender, recipients, subject, body and attachment names, with filters like `from:alice`, `has:attachment` or `after:2019`. Korean, Japanese and Chinese work out of the box, and so does 초성검색 (typing `ㅎㄱ` finds 한국). Save the searches you use often.
+- **Read safely.** HTML mail opens in a locked-down frame with remote images blocked, links show where they really go, and messages that look like phishing get a warning. Hangul (HWP, HWPX), Word and Excel attachments open right in the app.
 - **Find any attachment.** The Attachments page lists every file in every message, so you can find that PDF by name, type, sender or date without remembering which email it came in.
 - **Keep up with new mail.** Turn on background sync for an IMAP profile and new mail arrives within seconds on servers that support IMAP IDLE, with an optional desktop notification. The password is stored encrypted, and its key sits in your system's keychain (Credential Manager, Keychain or the Linux secret service), or in a private file where there isn't one.
-- **Tidy up.** Select many messages to mark them read or unread or delete them, or delete one while you read it. Print a whole message, or save it as a PDF.
+- **Tidy up.** Select many messages to mark them read or unread or delete them, or delete one while you read it. Print a whole message, or save it as a PDF. Settings → Duplicates finds mail you imported twice and keeps one copy.
 - **See what you have.** The Stats page charts your mail over time, shows when mail arrives, who sends the most, and what takes up space.
-- **Take it with you.** Export everything as one `.zip`, or upload it to AWS S3 or an S3-compatible service.
+- **Take it with you.** Export everything as one `.zip`, or upload it to AWS S3 or an S3-compatible service. To hand over just some mail, export a search's results or your selection as `.eml` files, one `.mbox` or a PDF.
+- **Back it up.** Automatic backup copies new mail into a folder on an external drive, a NAS or a synced cloud folder, daily or weekly.
 
 ## Download
 
