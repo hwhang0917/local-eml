@@ -131,7 +131,7 @@ async function save(name: string) {
         <!-- The × sits beside the item, not inside it: inside, the item's own
              pointer handling turned a click on it into "apply this search"
              and closed the menu, so delete never happened. -->
-        <div v-for="s in list" :key="s.name" class="flex items-center gap-1" data-testid="saved-search-row">
+        <div v-for="s in list" :key="s.name" class="flex items-center gap-2 pr-1.5" data-testid="saved-search-row">
           <DropdownMenuItem
             class="flex min-w-0 flex-1 cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none
               data-[highlighted]:bg-accent"
