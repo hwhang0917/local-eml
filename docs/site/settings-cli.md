@@ -9,6 +9,7 @@
 | **Locale** | Choose the interface language, and whether dates show as "Mar 3, 2024" or "2 years ago". |
 | **Reading** | Turn on read tracking (off by default). Unread subjects then show in bold, opening a message marks it read, and the list gets an **Unread** filter and a read/unread button on each row. When you first turn it on, you choose whether your existing mail starts as read or unread. After a big import, **Mark all as read** clears the backlog. |
 | **Restore from backup** | Bring back stars, categories, settings and profiles from an exported `.zip`. |
+| **Duplicates** | Find emails stored more than once, for example after importing a Takeout `.mbox` and then syncing the same account over IMAP, and keep one copy of each. Stars, read state and categories carry over. See [Duplicates](./import#duplicates). |
 | **Spam & phishing** | See the messages you've marked, and turn phishing warnings on or off. |
 | **Privacy** | Temporary sessions, and Delete all data. |
 | **Attributions** | Licenses of the open-source libraries Local Eml uses. |
