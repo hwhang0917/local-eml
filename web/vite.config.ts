@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import { thirdPartyNotices } from './third-party/notices'
 
 // The HWP renderer is a 28 MB WASM module. Ship it gzipped (~10 MB) so the
 // Go binary that embeds dist/ doesn't grow by the full size; the server
@@ -23,7 +24,7 @@ const gzipWasm = {
 }
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss(), gzipWasm],
+  plugins: [vue(), tailwindcss(), gzipWasm, thirdPartyNotices()],
   css: {
     postcss: {
       plugins: [

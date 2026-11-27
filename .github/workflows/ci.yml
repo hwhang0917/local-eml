@@ -24,6 +24,11 @@ jobs:
           go-version: stable
           cache: true
 
+      # web/third-party/go-notices.txt feeds THIRD_PARTY_NOTICES.txt; it must
+      # list every module in the binary, so a go.mod change has to regenerate it.
+      - name: Go license notices up to date
+        run: go run scripts/gen-go-notices.go -check
+
       - name: go vet
         run: go vet ./...
 

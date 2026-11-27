@@ -38,5 +38,6 @@ export const attributions: Attribution[] = [
   { name: 'AWS SDK for Go v2', url: 'https://github.com/aws/aws-sdk-go-v2', license: 'Apache-2.0' },
   { name: 'kardianos/service', url: 'https://github.com/kardianos/service', license: 'zlib' },
   { name: 'modernc.org/sqlite', url: 'https://gitlab.com/cznic/sqlite', license: 'BSD-3-Clause' },
+  { name: 'go-keyring', url: 'https://github.com/zalando/go-keyring', license: 'MIT' },
   { name: 'bluemonday', url: 'https://github.com/microcosm-cc/bluemonday', license: 'BSD-3-Clause' },
 ]

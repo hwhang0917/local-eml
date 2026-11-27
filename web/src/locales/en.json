@@ -489,6 +489,8 @@
     "week_start_sunday": "Sunday",
     "week_start_monday": "Monday",
     "attributions_intro": "Local Eml is built with these open-source projects.",
+    "attributions_full": "Full license texts and notices",
+    "attributions_full_hint": "Copyright notices and license texts of every library and font included in this version.",
     "license_label": "license",
     "categories_help": "Seven colour labels for organising mail, like Finder tags. Each email can carry one. Rename them here; leave a name blank to use the colour's own name.",
     "category_name": "Category name",
