@@ -153,7 +153,11 @@ func runInstall(args []string) int {
 	fmt.Println("  Binary path: ", exe)
 	fmt.Println("  Service file:", describePath())
 	fmt.Println("  Command:      local-eml", strings.Join(serveArgs(port), " "))
-	fmt.Println("  Auto-start:   yes (RunAtLoad + KeepAlive)")
+	if runtime.GOOS == "windows" {
+		fmt.Println("  Auto-start:   yes, when you sign in")
+	} else {
+		fmt.Println("  Auto-start:   yes (RunAtLoad + KeepAlive)")
+	}
 	fmt.Println()
 
 	if !yes && !confirm("Proceed?") {
@@ -162,12 +166,16 @@ func runInstall(args []string) int {
 	}
 
 	if runtime.GOOS == "windows" {
-		if err := platformInstall(port); err != nil {
+		got, err := platformInstall(port)
+		if err != nil {
 			fmt.Fprintln(os.Stderr, "install failed:", err)
 			return 1
 		}
 		fmt.Println()
-		fmt.Printf("Installed and started. Open http://localhost:%d\n", port)
+		if got != port {
+			fmt.Printf("Port %d is in use by another program, so Local Eml is on %d instead.\n", port, got)
+		}
+		fmt.Printf("Installed and started. Open http://localhost:%d\n", got)
 		return 0
 	}
 

@@ -197,29 +197,34 @@ func backgroundPIDFile(p paths.Paths) string {
 	return filepath.Join(p.Base, "background.pid")
 }
 
-// writeBackgroundPID records this process as the background server and
-// returns the cleanup that forgets it again.
-func writeBackgroundPID(p paths.Paths) func() {
-	_ = os.MkdirAll(p.Base, 0o700)
+// writeBackgroundPID records this process as the background server, and the
+// port it ended up on, as "<pid> <port>". It returns the cleanup that forgets
+// it again.
+func writeBackgroundPID(p paths.Paths, port int) func() {
 	file := backgroundPIDFile(p)
-	if err := os.WriteFile(file, []byte(strconv.Itoa(os.Getpid())), 0o600); err != nil {
+	if err := os.WriteFile(file, []byte(strconv.Itoa(os.Getpid())+" "+strconv.Itoa(port)), 0o600); err != nil {
 		return func() {}
 	}
 	return func() { _ = os.Remove(file) }
 }
 
-// readBackgroundPID returns the recorded background server's pid.
-func readBackgroundPID() (int, bool) {
+// readBackgroundPID returns the recorded background server's pid and port.
+func readBackgroundPID() (pid, port int, ok bool) {
 	p, err := paths.Resolve()
 	if err != nil {
-		return 0, false
+		return 0, 0, false
 	}
 	b, err := os.ReadFile(backgroundPIDFile(p))
 	if err != nil {
-		return 0, false
+		return 0, 0, false
 	}
-	pid, err := strconv.Atoi(strings.TrimSpace(string(b)))
-	return pid, err == nil && pid > 0
+	fields := strings.Fields(string(b))
+	if len(fields) != 2 {
+		return 0, 0, false
+	}
+	pid, err1 := strconv.Atoi(fields[0])
+	port, err2 := strconv.Atoi(fields[1])
+	return pid, port, err1 == nil && err2 == nil && pid > 0
 }
 
 func runServe(args []string) int {
@@ -239,12 +244,7 @@ func runServe(args []string) int {
 		fmt.Fprintln(os.Stderr, "ignoring --ephemeral: not available when running as a service")
 		temporary = false
 	}
-	if *background {
-		if p, err := paths.Resolve(); err == nil {
-			defer writeBackgroundPID(p)()
-		}
-	}
-	return serve(serveOptions{port: *port, portFallback: !explicitPort, temporary: temporary})
+	return serve(serveOptions{port: *port, portFallback: !explicitPort, temporary: temporary, background: *background})
 }
 
 // runApp gives the double-click experience: reuse a running server if there is
@@ -327,6 +327,9 @@ type serveOptions struct {
 	portFallback bool
 	appMode      bool
 	temporary    bool
+	// background is the server Windows starts at sign-in; it records its pid
+	// and port for `local-eml install` and `uninstall`.
+	background bool
 	// tempDir is the temporary session's folder; empty otherwise.
 	tempDir string
 }
@@ -487,6 +490,9 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	}
 	url := "http://" + ln.Addr().String()
 	srv.Port = ln.Addr().(*net.TCPAddr).Port
+	if opts.background {
+		defer writeBackgroundPID(p, srv.Port)()
+	}
 
 	handler := http.Handler(srv.Router())
 	httpSrv := &http.Server{
