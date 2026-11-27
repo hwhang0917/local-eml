@@ -49,6 +49,20 @@ export interface SavedSearch {
   query: string
 }
 
+/** One email stored more than once; keep is the copy a merge keeps by default. */
+export interface DuplicateGroup {
+  key: string
+  items: Email[]
+  keep: string
+}
+
+export interface DuplicateSummary {
+  groups: number
+  /** Copies beyond the first in each group, and their total size. */
+  extra: number
+  extra_bytes: number
+}
+
 export interface Category {
   id: number
   color: string
@@ -442,6 +456,16 @@ export const api = {
       .then(jsonOrThrow<{ affected: number }>)
   },
 
+  listDuplicates(limit: number, offset: number) {
+    const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    return fetch(`/api/duplicates?${qs}`)
+      .then(jsonOrThrow<{ summary: DuplicateSummary; groups: DuplicateGroup[] }>)
+  },
+
+  mergeDuplicates(body: { all: true } | { groups: { group: string; keep?: string }[] }) {
+    return fetch('/api/duplicates/merge', jsonBody('POST', body)).then(jsonOrThrow<{ removed: number }>)
+  },
+
   deleteEmail(sha: string) {
     return fetch(`/api/emails/${sha}`, { method: 'DELETE' }).then(okOrThrow)
   },
@@ -476,6 +500,12 @@ export const api = {
 
   getAttachmentText(sha: string, idx: number) {
     return fetch(api.attachmentURL(sha, idx, true)).then(textOrThrow)
+  },
+
+  async getAttachmentBytes(sha: string, idx: number): Promise<Uint8Array> {
+    const res = await fetch(api.attachmentURL(sha, idx))
+    await okOrThrow(res)
+    return new Uint8Array(await res.arrayBuffer())
   },
 
   upload(files: File[]) {

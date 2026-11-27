@@ -20,6 +20,7 @@ const sections = computed(() => [
   { name: 'settings-locale', label: t('settings.section.locale') },
   { name: 'settings-reading', label: t('settings.section.reading') },
   { name: 'settings-restore', label: t('settings.section.restore') },
+  { name: 'settings-duplicates', label: t('settings.section.duplicates') },
   { name: 'settings-flagged', label: t('settings.section.flagged') },
   { name: 'settings-privacy', label: t('settings.section.privacy') },
   { name: 'settings-attributions', label: t('settings.section.attributions') },

@@ -230,7 +230,17 @@
     "delete_error": "메일을 삭제하지 못했습니다",
     "print": "메일 인쇄",
     "print_error": "메일을 인쇄하지 못했습니다",
-    "toggle_thread": "대화 접기/펼치기"
+    "toggle_thread": "대화 접기/펼치기",
+    "doc_preview": {
+      "loading": "문서를 여는 중…",
+      "failed": "이 문서는 미리 볼 수 없습니다. 암호가 걸려 있거나 손상되었을 수 있습니다. 다운로드해서 해당 앱으로 열어 주세요.",
+      "page": "{total}쪽 중 {page}쪽",
+      "pages_shown": "전체 {total}쪽 중 {shown}쪽 표시 중",
+      "more_pages": "더 보기",
+      "frame_title": "문서 미리보기",
+      "empty_sheet": "빈 시트입니다.",
+      "sheet_truncated": "전체 {totalRows}행 × {totalCols}열 중 처음 {rows}행, {cols}열만 표시합니다. 전체 내용은 파일을 다운로드해서 확인하세요."
+    }
   },
   "import": {
     "drop": ".eml 파일·폴더·.zip·.mbox·.pst를 여기에 드롭하세요",
@@ -429,7 +439,8 @@
       "categories": "분류",
       "restore": "백업 복원",
       "flagged": "스팸·피싱",
-      "privacy": "개인정보"
+      "privacy": "개인정보",
+      "duplicates": "중복 메일"
     },
     "flagged_help": "스팸이나 피싱으로 표시한 메일은 라이브러리에서 숨겨지고, 열어 보더라도 본문 텍스트만 보여줍니다. HTML·이미지·첨부파일은 열리지 않고 링크도 클릭할 수 없습니다. 표시를 해제하면 라이브러리로 돌아옵니다.",
     "flagged_empty": "표시된 메일이 없습니다.",
@@ -727,5 +738,25 @@
     "dialog_placeholder": "예: 영수증",
     "dialog_confirm": "저장",
     "dialog_cancel": "취소"
+  },
+  "duplicates": {
+    "help": "같은 메일을 두 경로로 가져오면 라이브러리에 두 번 들어갈 수 있습니다. 예를 들어 Google Takeout .mbox로 한 번, IMAP으로 또 한 번 가져온 경우입니다. 사본은 Message-ID와 날짜로 찾습니다. 합치면 하나만 남기고 나머지를 지우며, 어느 사본에든 해 둔 별표, 읽음 상태, 분류는 남는 사본으로 옮겨집니다.",
+    "summary": "메일 {groups}건이 여러 번 저장되어 있습니다. 남는 사본 {extra}건이 {size}를 차지합니다.",
+    "merge_all": "남는 사본 {count}건 지우기",
+    "merge_one": "하나만 남기고 {count}건 지우기",
+    "merge_page": "이 페이지의 묶음 모두 합치기",
+    "which_to_keep": "남길 사본",
+    "keep": "남김",
+    "remove": "지움",
+    "imported": "{date} 가져옴",
+    "empty": "중복된 메일이 없습니다. 모든 메일이 한 번씩만 저장되어 있습니다.",
+    "merged": "남는 사본 {count}건을 지웠습니다.",
+    "load_error": "중복 메일을 찾지 못했습니다",
+    "merge_error": "중복 메일을 합치지 못했습니다",
+    "temporary": "임시 세션에서는 메일을 지울 수 없습니다.",
+    "confirm_title": "남는 사본 {count}건을 지울까요?",
+    "confirm_body": "메일마다 가장 먼저 가져온 사본을 남깁니다. 별표, 읽음 상태, 분류는 남는 사본으로 옮겨집니다. 나머지 사본과 .eml 파일은 지워지며 되돌릴 수 없습니다.",
+    "confirm_ok": "사본 지우기",
+    "confirm_cancel": "취소"
   }
 }

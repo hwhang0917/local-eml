@@ -230,7 +230,17 @@
     "delete_error": "Couldn't delete the email",
     "print": "Print email",
     "print_error": "Couldn't print the email",
-    "toggle_thread": "Show or hide the conversation"
+    "toggle_thread": "Show or hide the conversation",
+    "doc_preview": {
+      "loading": "Opening the document…",
+      "failed": "This document couldn't be previewed. It may be password-protected or damaged. Download it to open it in its own app.",
+      "page": "Page {page} of {total}",
+      "pages_shown": "Showing {shown} of {total} pages",
+      "more_pages": "Show more pages",
+      "frame_title": "Document preview",
+      "empty_sheet": "This sheet is empty.",
+      "sheet_truncated": "Showing the first {rows} rows and {cols} columns of {totalRows} × {totalCols}. Download the file to see everything."
+    }
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",
@@ -429,7 +439,8 @@
       "categories": "Categories",
       "restore": "Restore from backup",
       "flagged": "Spam & phishing",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "duplicates": "Duplicates"
     },
     "flagged_help": "Messages flagged as spam or phishing are hidden from the library and, when opened, shown as plain text only: no HTML, no images, no attachments, no clickable links. Unflag a message to restore it.",
     "flagged_empty": "No flagged messages.",
@@ -727,5 +738,25 @@
     "dialog_placeholder": "e.g. Receipts",
     "dialog_confirm": "Save",
     "dialog_cancel": "Cancel"
+  },
+  "duplicates": {
+    "help": "The same email can end up in your library twice when it comes in two ways, for example from a Google Takeout .mbox and again through IMAP. Copies are matched by their Message-ID and date. Merging keeps one copy and deletes the others, and anything you did to any copy carries over: stars, read state and category.",
+    "summary": "{groups} emails are stored more than once: {extra} extra copy using {size}. | {groups} emails are stored more than once: {extra} extra copies using {size}.",
+    "merge_all": "Remove {count} extra copy | Remove {count} extra copies",
+    "merge_one": "Keep one, remove {count} | Keep one, remove {count}",
+    "merge_page": "Merge every group on this page",
+    "which_to_keep": "Which copy to keep",
+    "keep": "Keep",
+    "remove": "Remove",
+    "imported": "Imported {date}",
+    "empty": "No duplicates. Every email in your library is stored once.",
+    "merged": "Removed {count} extra copy. | Removed {count} extra copies.",
+    "load_error": "Couldn't look for duplicates",
+    "merge_error": "Couldn't merge duplicates",
+    "temporary": "Temporary sessions can't delete mail.",
+    "confirm_title": "Remove {count} extra copy? | Remove {count} extra copies?",
+    "confirm_body": "Each email keeps its oldest import. Stars, read state and categories move to the copy that stays. The other copies and their .eml files are deleted, and this can’t be undone.",
+    "confirm_ok": "Remove copies",
+    "confirm_cancel": "Cancel"
   }
 }
