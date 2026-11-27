@@ -86,3 +86,10 @@ func (p Paths) KeyFile() string {
 func (p Paths) BlobFor(sha string) string {
 	return filepath.Join(p.EML, sha+".eml")
 }
+
+// MCPFile holds the AI-agent (MCP) switch and its access token; see package
+// mcpconf. It sits outside the database so a backup never carries the token
+// and restoring one never turns agent access on.
+func (p Paths) MCPFile() string {
+	return filepath.Join(p.Base, "mcp.json")
+}

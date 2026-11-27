@@ -21,7 +21,7 @@ Open an issue and describe the problem you are trying to solve, not only the sol
 - It is an archive, not a mail client: no composing, sending, or replying, and IMAP stays read-only.
 - It only ever listens on `127.0.0.1`.
 - It ships as one pure-Go binary. Anything that needs CGO breaks the cross-compile matrix in `release.yml`.
-- Nothing about your mail leaves your machine.
+- Nothing about your mail leaves your machine unless the user explicitly opts in (AI agent access over MCP is off by default, read-only, and warns that what an agent reads goes to its AI provider).
 
 ## Pull requests
 

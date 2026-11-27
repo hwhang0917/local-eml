@@ -357,6 +357,20 @@ export interface RestoreSummary {
   s3_profiles: number
 }
 
+/** AI agent (MCP) access, as Settings > AI agents shows it. */
+export interface MCPInfo {
+  enabled: boolean
+  /** Empty while access is off. */
+  token: string
+  /** The streamable HTTP endpoint, e.g. http://127.0.0.1:7878/mcp. */
+  url: string
+  /** This binary, for agents that start `local-eml mcp` themselves. */
+  executable: string
+  /** The server runs inside WSL, so Windows agents go through wsl.exe. */
+  wsl: boolean
+  tools: string[]
+}
+
 async function okOrThrow(res: Response): Promise<void> {
   if (res.status === 401) locked.value = true
   if (!res.ok) {
@@ -404,6 +418,18 @@ export const api = {
 
   setKeepSession(keep: boolean) {
     return fetch('/api/session/keep', jsonBody('PUT', { keep })).then(okOrThrow)
+  },
+
+  getMCP() {
+    return fetch('/api/mcp').then(jsonOrThrow<MCPInfo>)
+  },
+
+  setMCP(enabled: boolean) {
+    return fetch('/api/mcp', jsonBody('PUT', { enabled })).then(jsonOrThrow<MCPInfo>)
+  },
+
+  rotateMCPToken() {
+    return fetch('/api/mcp/token', { method: 'POST' }).then(jsonOrThrow<MCPInfo>)
   },
 
   wipeData() {

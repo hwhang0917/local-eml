@@ -28,6 +28,7 @@ local-eml <command> [flags]
                            register as a background service (systemd/launchd/Windows Service)
   uninstall [-y|--yes]     stop and unregister the background service
   token                    print the session token the API and a browser need
+  mcp [--port N]           connect an AI agent over stdio (see AI agents)
   version | -V | --version
 ```
 
