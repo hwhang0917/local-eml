@@ -684,14 +684,48 @@
       "has_attachment": "Has attachments",
       "is_starred": "Starred",
       "is_unread": "Unread",
+      "category": "In a category: its colour (red), its name, or none",
       "after": "Sent on or after",
       "before": "Sent before",
       "on": "Sent on that day, month or year",
+      "until": "Sent on or before (includes that day)",
       "larger": "Bigger than a size (K, M, G)",
       "smaller": "Smaller than a size",
       "phrase": "These words in this order",
       "exclude": "Leave out mail with this word (works with filters too)"
     },
     "dates": "Dates can be a year (2019), a month (2019-03) or a day (2019-03-05). after:2019 before:2020 means all of 2019."
+  },
+  "export_selection": {
+    "results_button": "Export {count} result | Export {count} results",
+    "selected_button": "Export",
+    "format": {
+      "zip": ".eml files in a .zip",
+      "zip_hint": "One file per message, plus index.csv listing them all.",
+      "mbox": "One .mbox file",
+      "mbox_hint": "Opens in Thunderbird, Apple Mail or another Local Eml.",
+      "pdf": "Print or save as PDF",
+      "pdf_hint": "Every message in one printout, with a contents page."
+    },
+    "started": "Your download is starting.",
+    "preparing_print": "Preparing the printout…",
+    "too_many_to_print": "Printing is limited to {max} messages. Narrow the search, or export a .zip instead.",
+    "print_title": "Exported messages",
+    "print_summary": "{count} message · {date} | {count} messages · {date}"
+  },
+  "saved_search": {
+    "button": "Saved",
+    "empty": "No saved searches yet. Search for something, then save it here.",
+    "save": "Save this search…",
+    "save_disabled": "Type a search or pick a filter to save it",
+    "delete": "Delete “{name}”",
+    "saved": "Saved “{name}”",
+    "save_error": "Couldn't save your searches",
+    "dialog_title": "Save search",
+    "dialog_body": "Saves “{query}” so you can open it again with one click.",
+    "dialog_label": "Name",
+    "dialog_placeholder": "e.g. Receipts",
+    "dialog_confirm": "Save",
+    "dialog_cancel": "Cancel"
   }
 }

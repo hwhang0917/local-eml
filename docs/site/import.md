@@ -31,4 +31,6 @@ Enter the bucket, region, an optional key prefix, the access key ID and the secr
 
 The **Export** page saves your whole library as one `.zip` file, or uploads it to an S3 bucket. Files that are already in the bucket are skipped, so you can run the same export again safely.
 
+To export only some messages, such as one search's results, use the export buttons in the library. See [Exporting search results](./search#exporting-search-results).
+
 The `.zip` also contains a copy of the database, minus any saved passwords. After you import the `.eml` files from it, for example on a new computer, **Settings → Restore from backup** brings back your stars, categories, settings and profiles.

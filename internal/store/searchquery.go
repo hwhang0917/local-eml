@@ -19,7 +19,9 @@ import (
 //	from:  to:  cc:  subject:  filename:   text in that field only
 //	has:attachment                          messages with attachments
 //	is:starred  is:unread  is:read          message state
-//	after:  before:  on:                    YYYY, YYYY-MM or YYYY-MM-DD
+//	category:red  category:Work  category:none
+//	                                        a category by colour or name
+//	after:  before:  on:  until:            YYYY, YYYY-MM or YYYY-MM-DD
 //	larger:  smaller:                       size, e.g. 500K, 2M, 1G
 //
 // Anything that doesn't parse as an operator (an unknown key, a bad date, an
@@ -39,7 +41,7 @@ type searchClause struct {
 var searchOperators = map[string]bool{
 	"from": true, "to": true, "cc": true, "subject": true, "filename": true,
 	"has": true, "is": true, "after": true, "before": true, "on": true,
-	"larger": true, "smaller": true,
+	"until": true, "larger": true, "smaller": true, "category": true,
 }
 
 // parseSearch splits a raw query into clauses. Keys are case-insensitive.
@@ -152,13 +154,23 @@ func searchConds(raw string, loc *time.Location) ([]string, []any) {
 			case "read":
 				add(c.negate, `(read = 1)`)
 			}
-		case "after", "before", "on":
+		case "category":
+			// The library's category button writes the colour, which survives a
+			// rename; a name typed by hand works too.
+			if strings.EqualFold(c.value, "none") {
+				add(c.negate, `(category_id IS NULL)`)
+				continue
+			}
+			add(c.negate, `(category_id IN (SELECT id FROM categories WHERE color = lower(?) OR (name <> '' AND lower(name) = lower(?))))`,
+				c.value, c.value)
+		case "after", "before", "on", "until":
 			start, end, ok := parsePeriod(c.value, loc)
 			if !ok {
 				continue
 			}
 			// after: and on: start at the period's first second; before: ends
-			// just before it, so after:2019 before:2020 is exactly 2019.
+			// just before it, so after:2019 before:2020 is exactly 2019. until:
+			// includes the period, which is what the date picker's end day means.
 			var cond string
 			var a []any
 			switch c.field {
@@ -168,6 +180,8 @@ func searchConds(raw string, loc *time.Location) ([]string, []any) {
 				cond, a = `(sent_at > 0 AND sent_at < ?)`, []any{start}
 			case "on":
 				cond, a = `(sent_at >= ? AND sent_at < ?)`, []any{start, end}
+			case "until":
+				cond, a = `(sent_at > 0 AND sent_at < ?)`, []any{end}
 			}
 			add(c.negate, cond, a...)
 		case "larger", "smaller":

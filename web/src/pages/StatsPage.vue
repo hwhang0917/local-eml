@@ -58,15 +58,15 @@ const health = computed(() => {
   return [
     readTracking.value && {
       key: 'unread', icon: Mail, value: s.unread_count, pct: pct(s.unread_count),
-      to: { name: 'library', query: { unread: '1' } },
+      to: { name: 'library', query: { q: 'is:unread' } },
     },
     {
       key: 'starred', icon: Star, value: s.starred_count, pct: pct(s.starred_count),
-      to: { name: 'library', query: { starred: '1' } },
+      to: { name: 'library', query: { q: 'is:starred' } },
     },
     {
       key: 'uncategorized', icon: FolderX, value: s.uncategorized_count, pct: pct(s.uncategorized_count),
-      to: { name: 'library', query: { category: 'none' } },
+      to: { name: 'library', query: { q: 'category:none' } },
     },
     { key: 'spam', icon: Ban, value: s.spam_count, pct: undefined, to: { name: 'settings-flagged' } },
     { key: 'phishing', icon: ShieldAlert, value: s.phishing_count, pct: undefined, to: { name: 'settings-flagged' } },
@@ -369,7 +369,7 @@ const cpuLabel = computed(() => {
             :key="c.category_id"
           >
             <RouterLink
-              :to="{ name: 'library', query: { category: String(c.category_id) } }"
+              :to="{ name: 'library', query: { q: `category:${c.category!.color}` } }"
               class="-mx-2 flex items-center gap-2 rounded-md px-2 py-0.5 text-sm hover:bg-accent"
             >
               <CategoryDot :color="c.category!.color" />

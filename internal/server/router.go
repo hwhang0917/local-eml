@@ -120,12 +120,15 @@ func (s *Server) Router() http.Handler {
 
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
+		api.Post("/exports/selection", s.handleExportSelection)
 		api.Post("/restore", s.handleRestore)
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
 
 		api.Get("/read-tracking", s.handleGetReadTracking)
 		api.Put("/read-tracking", s.handlePutReadTracking)
+		api.Get("/saved-searches", s.handleGetSavedSearches)
+		api.Put("/saved-searches", s.handlePutSavedSearches)
 		api.Get("/session", s.handleSession)
 		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
 		api.Put("/session/keep", s.handlePutKeepSession)

@@ -684,14 +684,48 @@
       "has_attachment": "첨부파일 있음",
       "is_starred": "별표 표시됨",
       "is_unread": "읽지 않음",
+      "category": "분류: 색 이름(red), 분류 이름, 또는 none",
       "after": "이 날짜 이후 (당일 포함)",
       "before": "이 날짜 이전",
       "on": "그날, 그달 또는 그해",
+      "until": "그날까지 보낸 메일 (그날 포함)",
       "larger": "이 크기보다 큼 (K, M, G)",
       "smaller": "이 크기보다 작음",
       "phrase": "이 단어들이 이 순서대로",
       "exclude": "이 단어가 있는 메일 제외 (필터에도 사용 가능)"
     },
     "dates": "날짜는 연도(2019), 월(2019-03), 일(2019-03-05)로 쓸 수 있습니다. after:2019 before:2020은 2019년 전체입니다."
+  },
+  "export_selection": {
+    "results_button": "결과 {count}건 내보내기",
+    "selected_button": "내보내기",
+    "format": {
+      "zip": ".eml 파일을 .zip으로",
+      "zip_hint": "메일마다 파일 하나, 그리고 전체 목록인 index.csv가 들어 있습니다.",
+      "mbox": ".mbox 파일 하나로",
+      "mbox_hint": "Thunderbird, Apple Mail, 다른 Local Eml에서 열 수 있습니다.",
+      "pdf": "인쇄 또는 PDF로 저장",
+      "pdf_hint": "모든 메일을 목차와 함께 한 번에 인쇄합니다."
+    },
+    "started": "다운로드를 시작합니다.",
+    "preparing_print": "인쇄할 내용을 준비하는 중…",
+    "too_many_to_print": "한 번에 {max}건까지만 인쇄할 수 있습니다. 검색 범위를 좁히거나 .zip으로 내보내세요.",
+    "print_title": "내보낸 메일",
+    "print_summary": "메일 {count}건 · {date}"
+  },
+  "saved_search": {
+    "button": "저장한 검색",
+    "empty": "저장한 검색이 없습니다. 검색한 다음 여기서 저장하세요.",
+    "save": "이 검색 저장…",
+    "save_disabled": "검색어를 입력하거나 필터를 골라야 저장할 수 있습니다",
+    "delete": "“{name}” 삭제",
+    "saved": "“{name}”을(를) 저장했습니다",
+    "save_error": "저장한 검색을 저장하지 못했습니다",
+    "dialog_title": "검색 저장",
+    "dialog_body": "“{query}”를 저장해 두고 한 번에 다시 열 수 있습니다.",
+    "dialog_label": "이름",
+    "dialog_placeholder": "예: 영수증",
+    "dialog_confirm": "저장",
+    "dialog_cancel": "취소"
   }
 }

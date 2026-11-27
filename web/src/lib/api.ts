@@ -43,6 +43,12 @@ export interface Email {
   category_id?: number
 }
 
+/** A named search-box query; every library filter can be written as one. */
+export interface SavedSearch {
+  name: string
+  query: string
+}
+
 export interface Category {
   id: number
   color: string
@@ -546,6 +552,17 @@ export const api = {
   },
 
   exportZipURL: () => '/api/exports/zip',
+  /** Form-post target for a selection or search export (see useSelectionExport). */
+  exportSelectionURL: () => '/api/exports/selection',
+
+  listSavedSearches() {
+    return fetch('/api/saved-searches').then(jsonOrThrow<SavedSearch[]>)
+  },
+
+  /** Replaces the whole list; the server returns it as stored. */
+  saveSavedSearches(list: SavedSearch[]) {
+    return fetch('/api/saved-searches', jsonBody('PUT', list)).then(jsonOrThrow<SavedSearch[]>)
+  },
 
   restoreBackup(file: File) {
     const form = new FormData()
