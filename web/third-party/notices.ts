@@ -14,7 +14,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import type { Plugin } from 'vite'
 
-const root = __dirname
+const root = import.meta.dirname
 const webRoot = join(root, '..')
 const nodeModules = join(webRoot, 'node_modules')
 
