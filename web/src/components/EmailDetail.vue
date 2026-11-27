@@ -22,6 +22,8 @@ import CategoryDot from '@/components/ui/CategoryDot.vue'
 import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.vue'
 import Card from '@/components/ui/Card.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import DocumentPreview from '@/components/DocumentPreview.vue'
+import { docPreviewKind, type DocPreviewKind } from '@/lib/docPreview'
 
 // Larger plain-text attachments are a download, not a preview.
 const TEXT_PREVIEW_MAX_BYTES = 512 * 1024
@@ -340,7 +342,7 @@ const currentCategory = computed(() =>
 )
 
 // --- attachment inline preview ---
-type PreviewKind = 'image' | 'pdf' | 'audio' | 'video' | 'text'
+type PreviewKind = 'image' | 'pdf' | 'audio' | 'video' | 'text' | DocPreviewKind
 function previewKind(a: PartInfo): PreviewKind | null {
   const ct = (a.content_type ?? '').toLowerCase().split(';')[0].trim()
   const ext = (a.filename ?? '').toLowerCase().split('.').pop() ?? ''
@@ -349,6 +351,8 @@ function previewKind(a: PartInfo): PreviewKind | null {
   // images render even when the sender said application/octet-stream.
   if (ct === 'application/octet-stream' && ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext)) return 'image'
   if (ct === 'application/pdf') return 'pdf'
+  const doc = docPreviewKind(a.filename, ct, a.size)
+  if (doc) return doc
   if (ct.startsWith('audio/')) return 'audio'
   if (ct.startsWith('video/')) return 'video'
   if (ct === 'text/plain' && a.size <= TEXT_PREVIEW_MAX_BYTES) return 'text'
@@ -697,6 +701,8 @@ async function togglePreview(a: PartInfo) {
               class="max-h-[70vh] w-full rounded-md border bg-black"></video>
             <pre v-else-if="previewKind(a) === 'text'"
               class="max-h-[50vh] overflow-auto whitespace-pre-wrap rounded-md border bg-muted/30 p-3 font-mono text-xs">{{ previewText }}</pre>
+            <DocumentPreview v-else-if="docPreviewKind(a.filename, a.content_type, a.size)" :sha="email.sha256" :index="a.index"
+              :kind="previewKind(a) as DocPreviewKind" />
           </div>
         </li>
       </ul>
