@@ -4,6 +4,7 @@ import { router } from './router'
 import { i18n } from './i18n'
 import { APP_NAME, REPO_URL } from './lib/app'
 import { APP_VERSION } from './version'
+import { applyTextSize } from './lib/textSize'
 import './style.css'
 
 // Easter egg for whoever opens F12.
@@ -14,5 +15,7 @@ console.log(
   'font-size:12px;color:#64748b;line-height:2;',
   'font-size:12px;color:#3b82f6;',
 )
+
+applyTextSize()
 
 createApp(App).use(router).use(i18n).mount('#app')

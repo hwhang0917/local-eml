@@ -16,6 +16,7 @@ const routes = [
       { path: '', redirect: { name: 'settings-about' } },
       { path: 'about', name: 'settings-about', component: () => import('@/pages/settings/AboutPage.vue'), meta: { titleKey: 'settings.section.about' } },
       { path: 'categories', name: 'settings-categories', component: () => import('@/pages/settings/CategoriesPage.vue'), meta: { titleKey: 'settings.section.categories' } },
+      { path: 'appearance', name: 'settings-appearance', component: () => import('@/pages/settings/AppearancePage.vue'), meta: { titleKey: 'settings.section.appearance' } },
       { path: 'locale', name: 'settings-locale', component: () => import('@/pages/settings/LocalePage.vue'), meta: { titleKey: 'settings.section.locale' } },
       { path: 'reading', name: 'settings-reading', component: () => import('@/pages/settings/ReadingPage.vue'), meta: { titleKey: 'settings.section.reading' } },
       { path: 'restore', name: 'settings-restore', component: () => import('@/pages/settings/RestorePage.vue'), meta: { titleKey: 'settings.section.restore' } },

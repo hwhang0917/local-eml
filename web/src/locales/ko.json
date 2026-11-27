@@ -446,6 +446,7 @@
   "settings": {
     "section": {
       "about": "정보",
+      "appearance": "화면",
       "locale": "로케일",
       "reading": "읽음 표시",
       "attributions": "오픈소스 라이선스",
@@ -803,5 +804,17 @@
     "delete_title": "저장한 검색 “{name}”을(를) 삭제할까요?",
     "delete_body": "저장한 검색에서 “{query}”를 지웁니다. 메일은 그대로 남습니다.",
     "delete_confirm": "삭제"
+  },
+  "appearance": {
+    "text_size": "글자 크기",
+    "text_size_help": "메뉴, 버튼, 목록, 텍스트 메일의 글자를 키우거나 줄입니다. HTML 메일은 보낸 사람이 정한 크기를 따르므로 브라우저 확대(Ctrl +)를 사용하세요. 이 브라우저에 저장됩니다.",
+    "size": {
+      "xs": "아주 작게",
+      "sm": "작게",
+      "md": "보통",
+      "lg": "크게",
+      "xl": "아주 크게"
+    },
+    "preview": "메뉴와 목록의 글자가 이렇게 보입니다. 기본값은 보통이며, 작게는 이전 버전의 크기입니다."
   }
 }

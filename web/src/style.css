@@ -123,7 +123,7 @@
     background: var(--canvas-parchment);
     color: var(--foreground);
     font-family: 'Roboto', 'Pretendard Variable', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
-    font-size: 19px;
+    font-size: 1.1875rem;
     line-height: 1.55;
     letter-spacing: -0.022em;
     -webkit-font-smoothing: antialiased;

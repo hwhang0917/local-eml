@@ -115,9 +115,9 @@ watchEffect(() => {
       </div>
       <header class="bg-black text-white">
         <div class="max-w-[1800px] mx-auto px-6 h-11 flex items-center gap-6 text-xs">
-          <RouterLink to="/" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
+          <RouterLink to="/" :aria-label="APP_NAME" class="flex items-center gap-2 font-semibold tracking-tight text-white/90 hover:text-white">
             <img src="/icon-64.png" srcset="/favicon.png 1x, /icon-64.png 2x" alt="" class="h-6 w-6 rounded-sm" />
-            <span>{{ APP_NAME }}</span>
+            <span class="hidden lg:inline whitespace-nowrap">{{ APP_NAME }}</span>
           </RouterLink>
           <nav class="flex items-center gap-1">
             <RouterLink
