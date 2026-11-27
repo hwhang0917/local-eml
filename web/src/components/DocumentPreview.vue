@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { api } from '@/lib/api'
 import type { DocPreviewKind } from '@/lib/docPreview'
 import type { HwpDocument } from '@rhwp/core'
-import type { WorkBook } from 'xlsx'
+import { SheetPreview, type SheetData } from '@/lib/sheetPreview'
 
 // Renders HWP/HWPX, DOCX and spreadsheet attachments entirely in the browser.
 // Nothing leaves the machine: the bytes come from our own API and each
@@ -20,6 +20,7 @@ async function load() {
   const gen = ++generation
   status.value = 'loading'
   freeHwp()
+  freeSheets()
   try {
     const bytes = await api.getAttachmentBytes(props.sha, props.index)
     if (gen !== generation) return
@@ -153,57 +154,50 @@ async function openDocx(bytes: Uint8Array, gen: number) {
 
 // --- Spreadsheets: XLSX, XLSM, XLS, ODS (SheetJS) ---
 
+// SheetJS runs in a worker (lib/sheetWorker.ts): a file built to stall the
+// parser can't freeze the app, and is given up on after a timeout.
 const SHEET_MAX_ROWS = 1000
 const SHEET_MAX_COLS = 100
-const workbook = shallowRef<WorkBook | null>(null)
+const sheetNames = ref<string[]>([])
 const sheetName = ref('')
-let xlsx: typeof import('xlsx') | null = null
+const sheetData = shallowRef<SheetData | null>(null)
+let sheets: SheetPreview | null = null
 
-async function openSheet(bytes: Uint8Array, gen: number) {
-  if (!xlsx) {
-    const [m, cp] = await Promise.all([import('xlsx'), import('xlsx/dist/cpexcel.full.mjs')])
-    // Legacy .xls files in Korean (CP949) and other code pages need the tables.
-    m.set_cptable(cp)
-    xlsx = m
-  }
-  if (gen !== generation) return
-  const wb = xlsx.read(bytes, { type: 'array', dense: true, sheetRows: SHEET_MAX_ROWS + 1, cellHTML: false })
-  workbook.value = wb
-  sheetName.value = wb.SheetNames[0] ?? ''
+function freeSheets() {
+  sheets?.close()
+  sheets = null
+  sheetNames.value = []
+  sheetName.value = ''
+  sheetData.value = null
 }
 
-interface SheetCell { text: string; numeric: boolean }
+async function openSheet(bytes: Uint8Array, gen: number) {
+  const preview = new SheetPreview(SHEET_MAX_ROWS, SHEET_MAX_COLS)
+  sheets = preview
+  const names = await preview.open(bytes)
+  if (gen !== generation) return
+  sheetNames.value = names
+  await showSheet(names[0] ?? '', gen)
+}
+
+async function showSheet(name: string, gen = generation) {
+  const preview = sheets
+  if (!preview) return
+  sheetName.value = name
+  try {
+    const data = await preview.sheet(name)
+    if (gen === generation && sheets === preview && sheetName.value === name) sheetData.value = data
+  } catch (e) {
+    if (gen !== generation || sheets !== preview) return
+    console.warn('document preview failed', e)
+    status.value = 'error'
+  }
+}
 
 const sheet = computed(() => {
-  const wb = workbook.value
-  const ws = wb && xlsx ? wb.Sheets[sheetName.value] : undefined
-  if (!ws || !xlsx) return null
-  const full = xlsx.utils.decode_range(ws['!fullref'] ?? ws['!ref'] ?? 'A1')
-  const used = xlsx.utils.decode_range(ws['!ref'] ?? 'A1')
-  const totalRows = full.e.r + 1
-  const totalCols = full.e.c + 1
-  const rowCount = Math.min(used.e.r + 1, SHEET_MAX_ROWS)
-  const cols = Math.min(totalCols, SHEET_MAX_COLS)
-  // Read with dense: true, so cells are rows of arrays. format_cell applies
-  // the sheet's number format (thousands separators, dates, percentages).
-  const data = (ws['!data'] ?? []) as (import('xlsx').CellObject | undefined)[][]
-  const rows: SheetCell[][] = []
-  for (let r = 0; r < rowCount; r++) {
-    const src = data[r] ?? []
-    const row: SheetCell[] = []
-    for (let c = 0; c < cols; c++) {
-      const cell = src[c]
-      row.push(cell ? { text: xlsx.utils.format_cell(cell), numeric: cell.t === 'n' } : { text: '', numeric: false })
-    }
-    rows.push(row)
-  }
-  return {
-    rows,
-    headers: Array.from({ length: cols }, (_, i) => xlsx!.utils.encode_col(i)),
-    totalRows,
-    totalCols,
-    truncated: totalRows > SHEET_MAX_ROWS || totalCols > SHEET_MAX_COLS,
-  }
+  const d = sheetData.value
+  if (!d) return null
+  return { ...d, truncated: d.totalRows > SHEET_MAX_ROWS || d.totalCols > SHEET_MAX_COLS }
 })
 
 // Last, so the immediate first load sees every binding above initialized.
@@ -211,6 +205,7 @@ watch(() => [props.sha, props.index, props.kind], () => void load(), { immediate
 onBeforeUnmount(() => {
   generation++
   freeHwp()
+  freeSheets()
 })
 </script>
 
@@ -245,17 +240,17 @@ onBeforeUnmount(() => {
       class="block h-[70vh] w-full rounded-md"
     ></iframe>
 
-    <div v-else-if="status === 'ready' && workbook" class="flex flex-col">
-      <div v-if="workbook.SheetNames.length > 1" class="flex gap-1 overflow-x-auto border-b p-1" role="tablist">
+    <div v-else-if="status === 'ready' && sheetData" class="flex flex-col">
+      <div v-if="sheetNames.length > 1" class="flex gap-1 overflow-x-auto border-b p-1" role="tablist">
         <button
-          v-for="name in workbook.SheetNames"
+          v-for="name in sheetNames"
           :key="name"
           type="button"
           role="tab"
           :aria-selected="name === sheetName"
           class="shrink-0 rounded-sm px-3 py-1 text-sm"
           :class="name === sheetName ? 'bg-accent font-medium text-foreground' : 'text-muted-foreground hover:bg-accent/60'"
-          @click="sheetName = name"
+          @click="showSheet(name)"
         >{{ name }}</button>
       </div>
       <div class="max-h-[70vh] overflow-auto">
