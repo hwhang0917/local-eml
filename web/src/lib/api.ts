@@ -43,6 +43,20 @@ export interface Email {
   category_id?: number
 }
 
+/** One email stored more than once; keep is the copy a merge keeps by default. */
+export interface DuplicateGroup {
+  key: string
+  items: Email[]
+  keep: string
+}
+
+export interface DuplicateSummary {
+  groups: number
+  /** Copies beyond the first in each group, and their total size. */
+  extra: number
+  extra_bytes: number
+}
+
 export interface Category {
   id: number
   color: string
@@ -434,6 +448,16 @@ export const api = {
   bulkEmails(action: BulkAction, sha256s: string[], threads = false) {
     return fetch('/api/emails/bulk', jsonBody('POST', { action, sha256s, threads }))
       .then(jsonOrThrow<{ affected: number }>)
+  },
+
+  listDuplicates(limit: number, offset: number) {
+    const qs = new URLSearchParams({ limit: String(limit), offset: String(offset) })
+    return fetch(`/api/duplicates?${qs}`)
+      .then(jsonOrThrow<{ summary: DuplicateSummary; groups: DuplicateGroup[] }>)
+  },
+
+  mergeDuplicates(body: { all: true } | { groups: { group: string; keep?: string }[] }) {
+    return fetch('/api/duplicates/merge', jsonBody('POST', body)).then(jsonOrThrow<{ removed: number }>)
   },
 
   deleteEmail(sha: string) {
