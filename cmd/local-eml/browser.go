@@ -62,11 +62,15 @@ func chromiumBin() string {
 	var candidates []string
 	switch runtime.GOOS {
 	case "windows":
-		candidates = []string{
-			filepath.Join(os.Getenv("ProgramFiles(x86)"), `Microsoft\Edge\Application\msedge.exe`),
-			filepath.Join(os.Getenv("ProgramFiles"), `Microsoft\Edge\Application\msedge.exe`),
-			"msedge", "chrome",
+		// An unset variable would leave a relative path, which Stat resolves
+		// against the current folder: whatever msedge.exe happens to sit
+		// there would be run.
+		for _, env := range []string{"ProgramFiles(x86)", "ProgramFiles"} {
+			if dir := os.Getenv(env); filepath.IsAbs(dir) {
+				candidates = append(candidates, filepath.Join(dir, `Microsoft\Edge\Application\msedge.exe`))
+			}
 		}
+		candidates = append(candidates, "msedge", "chrome")
 	case "darwin":
 		candidates = []string{
 			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
