@@ -12,7 +12,7 @@
 git clone https://github.com/hwhang0917/local-eml.git
 cd local-eml
 
-make install            # npm install (web/) + go mod download
+make install            # npm ci (web/, exact lockfile) + go mod download
 make build              # copies VERSION into web/package.json, builds the SPA, then the Go binary
 ./local-eml serve       # http://localhost:7878
 ```
