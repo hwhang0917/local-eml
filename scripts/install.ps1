@@ -5,8 +5,8 @@
 .DESCRIPTION
   Downloads the matching prebuilt binary from GitHub Releases, verifies its
   SHA-256 against SHA256SUMS, places it on the per-user PATH, and (unless
-  -NoService is passed) runs `local-eml install` to register the Windows
-  Service. Service registration requires elevated privileges.
+  -NoService is passed) runs `local-eml install` so that Local Eml starts in
+  the background when you sign in. No administrator rights are needed.
 
 .PARAMETER Version
   Specific release tag (e.g. v0.0.1). Defaults to "latest".
@@ -15,7 +15,7 @@
   Install directory. Defaults to $env:LOCALAPPDATA\local-eml.
 
 .PARAMETER NoService
-  Skip the service registration step.
+  Skip the start-at-sign-in step.
 
 .EXAMPLE
   irm https://raw.githubusercontent.com/hwhang0917/local-eml/main/scripts/install.ps1 | iex
@@ -81,6 +81,11 @@ try {
     }
 
     $dest = Join-Path $InstallDir 'local-eml.exe'
+    # A copy that is already running in the background holds the file open, so
+    # stop it before replacing it. `install` below starts the new one.
+    if (Test-Path $dest) {
+        try { & $dest uninstall --yes | Out-Null } catch { }
+    }
     Copy-Item (Join-Path $tmp 'local-eml.exe') $dest -Force
     Write-Host "Installed to $dest"
 
@@ -94,7 +99,7 @@ try {
 
     if (-not $NoService) {
         Write-Host ''
-        Write-Host 'Registering Windows Service (this step requires administrator privileges).'
+        Write-Host 'Setting Local Eml to start when you sign in (no administrator rights needed).'
         # Forward an interactive TTY when available, otherwise auto-accept.
         $hasInput = ([Console]::IsInputRedirected -eq $false)
         $installArgs = @('install')

@@ -172,7 +172,7 @@ jobs:
       # Ship the license texts beside the binaries: the project's own GPL-3.0
       # LICENSE, and the notices of every bundled npm package and Go module
       # (the same file the app serves from Settings > Attributions).
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: web-dist
           path: web-dist/

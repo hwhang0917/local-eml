@@ -52,3 +52,24 @@ func TestIsAppLaunch(t *testing.T) {
 		}
 	}
 }
+
+func TestBackgroundServe(t *testing.T) {
+	if got := backgroundArgs(defaultPort); len(got) != 2 || got[0] != "serve" || got[1] != backgroundFlag {
+		t.Fatalf("backgroundArgs = %v", got)
+	}
+	for _, tc := range []struct {
+		args []string
+		want bool
+	}{
+		{backgroundArgs(defaultPort), true},
+		{backgroundArgs(9000), true},
+		{[]string{"serve"}, false},
+		{[]string{"serve", "--port", "9000"}, false},
+		{[]string{"install", backgroundFlag}, false},
+		{nil, false},
+	} {
+		if got := isBackgroundServe(tc.args); got != tc.want {
+			t.Errorf("isBackgroundServe(%v) = %v, want %v", tc.args, got, tc.want)
+		}
+	}
+}

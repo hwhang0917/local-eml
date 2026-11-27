@@ -25,7 +25,7 @@ local-eml <command> [flags]
   serve [--port 7878] [--ephemeral]
                            로컬 웹 서버 실행 (내 컴퓨터에서만 접속 가능)
   install [-y|--yes] [--port 7878]
-                           백그라운드 서비스로 등록 (systemd/launchd/Windows 서비스)
+                           로그인할 때 백그라운드로 시작 (systemd/launchd/Windows 시작 프로그램)
   uninstall [-y|--yes]     백그라운드 서비스 중지 및 등록 해제
   token                    API와 브라우저에 필요한 세션 토큰 출력
   version | -V | --version

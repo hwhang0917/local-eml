@@ -108,6 +108,11 @@ func walk(n *html.Node, fn func(*html.Node)) {
 	}
 }
 
+// rewriteSrc decides what an <img> may load. cid: parts are served by the
+// API, data: images are inline, and http(s) images are the reader's choice.
+// Anything else is blocked: a relative or scheme-less URL would resolve
+// against the app itself, so an email could make the signed-in browser call
+// the API (hold its event streams open, start exports) just by being read.
 func rewriteSrc(src string, opts Options) (newSrc string, blocked bool, original string) {
 	placeholderSrc := blockedPlaceholder(opts.Lang)
 	trimmed := strings.TrimSpace(src)
@@ -116,15 +121,15 @@ func rewriteSrc(src string, opts Options) (newSrc string, blocked bool, original
 		cid := trimmed[len("cid:"):]
 		return opts.CIDBaseURL + url.PathEscape(cid), false, ""
 	}
+	if strings.HasPrefix(lower, "data:image/") {
+		return trimmed, false, ""
+	}
 	u, err := url.Parse(trimmed)
 	if err != nil {
 		return placeholderSrc, true, trimmed
 	}
-	if u.Scheme == "http" || u.Scheme == "https" {
-		if !opts.ShowRemote {
-			return placeholderSrc, true, trimmed
-		}
+	if (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" && opts.ShowRemote {
 		return trimmed, false, ""
 	}
-	return trimmed, false, ""
+	return placeholderSrc, true, trimmed
 }

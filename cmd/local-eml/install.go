@@ -55,6 +55,12 @@ func serveArgs(port int) []string {
 	return []string{"serve", "--port", strconv.Itoa(port)}
 }
 
+// backgroundArgs is what Windows runs at sign-in: serve, with its console
+// window hidden. See install_windows.go.
+func backgroundArgs(port int) []string {
+	return append(serveArgs(port), backgroundFlag)
+}
+
 func newService(port int) (service.Service, error) {
 	cfg := &service.Config{
 		Name:        server.ServiceName,
@@ -78,7 +84,7 @@ func describePlatform() string {
 	case "darwin":
 		return "macOS — launchd LaunchAgent (no root required)"
 	case "windows":
-		return "Windows — Service Control Manager (admin required)"
+		return "Windows — starts when you sign in (no administrator rights required)"
 	default:
 		return runtime.GOOS
 	}
@@ -95,7 +101,7 @@ func describePath() string {
 	case "darwin":
 		return filepath.Join(home, "Library", "LaunchAgents", server.ServiceName+".plist")
 	case "windows":
-		return `Windows Service Control Manager: "` + server.ServiceName + `"`
+		return `HKCU\Software\Microsoft\Windows\CurrentVersion\Run: "Local Eml"`
 	default:
 		return ""
 	}
@@ -155,6 +161,16 @@ func runInstall(args []string) int {
 		return 1
 	}
 
+	if runtime.GOOS == "windows" {
+		if err := platformInstall(port); err != nil {
+			fmt.Fprintln(os.Stderr, "install failed:", err)
+			return 1
+		}
+		fmt.Println()
+		fmt.Printf("Installed and started. Open http://localhost:%d\n", port)
+		return 0
+	}
+
 	if err := s.Install(); err != nil {
 		fmt.Fprintln(os.Stderr, "install failed:", err)
 		fmt.Fprintln(os.Stderr, "(if the service already exists, run `local-eml uninstall` first)")
@@ -188,6 +204,16 @@ func runUninstall(args []string) int {
 	if !yes && !confirm("Proceed?") {
 		fmt.Println("Aborted.")
 		return 1
+	}
+
+	if runtime.GOOS == "windows" {
+		if err := platformUninstall(); err != nil {
+			fmt.Fprintln(os.Stderr, "uninstall failed:", err)
+			return 1
+		}
+		fmt.Println()
+		fmt.Println("Uninstalled.")
+		return 0
 	}
 
 	if err := s.Stop(); err != nil {

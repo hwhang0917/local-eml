@@ -39,3 +39,12 @@ func TestAppCSPHasNoInlineOrRemoteScripts(t *testing.T) {
 		}
 	}
 }
+
+// An email body's images come only from its own inline parts, never from the
+// rest of the API.
+func TestEmailBodyCSPIsScopedToItsOwnParts(t *testing.T) {
+	got := csp("127.0.0.1:7878", "abc", false)
+	if !strings.Contains(got, "img-src http://127.0.0.1:7878/api/emails/abc/cid/ data:;") || strings.Contains(got, "'self'") {
+		t.Fatalf("csp = %q", got)
+	}
+}

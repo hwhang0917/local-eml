@@ -140,3 +140,24 @@ func TestBlockedPlaceholderIsLocalizedAndSelfDescribing(t *testing.T) {
 		}
 	}
 }
+
+// An image address that resolves against the app would let an email call the
+// API as the signed-in reader, so only cid:, data: and (by choice) remote
+// images get through.
+func TestBlocksImagesThatPointAtTheApp(t *testing.T) {
+	for _, src := range []string{"/api/events", "api/exports/zip", "../api/events", "//127.0.0.1:7878/api/events", "javascript:alert(1)", "data:text/html,x"} {
+		for _, remote := range []bool{false, true} {
+			out, err := Sanitize(`<img src="`+src+`">`, Options{ShowRemote: remote})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, `<img src="data:image/svg+xml`) {
+				t.Errorf("src %q (remote=%v) not blocked", src, remote)
+			}
+		}
+	}
+	out, _ := Sanitize(`<img src="data:image/png;base64,AAAA">`, Options{})
+	if !strings.Contains(out, "data:image/png;base64,AAAA") {
+		t.Errorf("inline data image dropped: %s", out)
+	}
+}

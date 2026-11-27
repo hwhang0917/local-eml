@@ -128,3 +128,20 @@ func TestRestoreMetadata_OnlyRestoresSafeSettings(t *testing.T) {
 		}
 	}
 }
+
+// A view named like one of the tables the merge reads would run SQL of the
+// file's choosing.
+func TestRestoreMetadata_RefusesSnapshotWithViews(t *testing.T) {
+	ctx := context.Background()
+	src := openTestStore(t)
+	snap := filepath.Join(t.TempDir(), "snap.db")
+	if _, err := src.DB.ExecContext(ctx, `CREATE VIEW sneaky AS SELECT 1`); err != nil {
+		t.Fatal(err)
+	}
+	if err := src.SnapshotTo(ctx, snap); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := openTestStore(t).RestoreMetadata(ctx, snap); err == nil {
+		t.Fatal("restore accepted a snapshot with a view")
+	}
+}
