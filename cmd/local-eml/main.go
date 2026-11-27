@@ -412,6 +412,7 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		PrefsFile:          prefsFile,
 	}
 	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
+	srv.StartBackupScheduler(ctx)
 	go runBackfills(ctx, imp)
 	if !opts.temporary {
 		// Kept sessions whose merge at exit failed or never ran (a crash, a

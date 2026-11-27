@@ -53,6 +53,9 @@ type Server struct {
 
 	// mail tells open tabs that new mail came in; see mail_events.go.
 	mail mailFeed
+
+	// Automatic folder backups; see backup.go.
+	backup backupRunner
 }
 
 func (s *Server) Router() http.Handler {
@@ -122,6 +125,9 @@ func (s *Server) Router() http.Handler {
 
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
+		api.Get("/backup", s.handleGetBackup)
+		api.Put("/backup", s.handlePutBackup)
+		api.Post("/backup/run", s.handleRunBackup)
 		api.Post("/exports/selection", s.handleExportSelection)
 		api.Post("/restore", s.handleRestore)
 
