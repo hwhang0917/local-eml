@@ -118,6 +118,16 @@ func TestListEmailsSearchOperators(t *testing.T) {
 	if err := s.SetEmailStarred(ctx, "report", true); err != nil {
 		t.Fatal(err)
 	}
+	// report is blue and renamed "Work"; receipt is red and unnamed.
+	if _, err := s.DB.ExecContext(ctx, `UPDATE categories SET name = 'Work' WHERE color = 'blue'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.ExecContext(ctx, `UPDATE emails SET category_id = (SELECT id FROM categories WHERE color = 'blue') WHERE sha256 = 'report'`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.DB.ExecContext(ctx, `UPDATE emails SET category_id = (SELECT id FROM categories WHERE color = 'red') WHERE sha256 = 'receipt'`); err != nil {
+		t.Fatal(err)
+	}
 
 	cases := []struct {
 		q    string
@@ -146,6 +156,14 @@ func TestListEmailsSearchOperators(t *testing.T) {
 		{"after:2021-10-02 before:2021-11", []string{"hello"}},
 		{"on:2019-03", []string{"receipt"}},
 		{"on:2019-03-06", []string{}},
+		{"until:2021-10-01", []string{"receipt", "report"}},
+		{"after:2021-10-01 until:2021-10-20", []string{"hello", "report"}},
+		{"category:blue", []string{"report"}},
+		{"category:work", []string{"report"}},
+		{"category:RED", []string{"receipt"}},
+		{"category:none", []string{"hello"}},
+		{"-category:none", []string{"receipt", "report"}},
+		{"category:orange", []string{}},
 		{"larger:1M", []string{"report"}},
 		{"smaller:10K", []string{"hello"}},
 		{`"order receipt"`, []string{"receipt"}},
