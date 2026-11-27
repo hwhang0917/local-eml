@@ -9,10 +9,13 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/kardianos/service"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
+
+	"github.com/hwhang0917/local-eml/internal/paths"
 )
 
 // On Windows the background server is not a Windows service. A service runs
@@ -34,20 +37,24 @@ func runKeyCommand(exe string, port int) string {
 	return `"` + exe + `" ` + strings.Join(backgroundArgs(port), " ")
 }
 
-func platformInstall(port int) error {
+// startWait is how long install waits for the background server to report
+// the port it is listening on.
+const startWait = 15 * time.Second
+
+func platformInstall(port int) (int, error) {
 	exe, err := os.Executable()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	warnAboutLegacyService()
 
 	key, _, err := registry.CreateKey(registry.CURRENT_USER, runKeyPath, registry.SET_VALUE)
 	if err != nil {
-		return fmt.Errorf("open the sign-in startup list: %w", err)
+		return 0, fmt.Errorf("open the sign-in startup list: %w", err)
 	}
 	defer key.Close()
 	if err := key.SetStringValue(runKeyValue, runKeyCommand(exe, port)); err != nil {
-		return fmt.Errorf("add to the sign-in startup list: %w", err)
+		return 0, fmt.Errorf("add to the sign-in startup list: %w", err)
 	}
 
 	// Start it now too, so installing doesn't need a sign-out.
@@ -56,9 +63,50 @@ func platformInstall(port int) error {
 	cmd.Env = append(os.Environ(), detachedEnv+"=1")
 	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: createNoWindow}
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("registered, but could not start it now: %w", err)
+		return 0, fmt.Errorf("registered, but could not start it now: %w", err)
 	}
-	return cmd.Process.Release()
+	return waitForBackground(cmd)
+}
+
+// waitForBackground waits until the server just started says which port it
+// listens on. The default port moves to the next free one when another
+// program holds it, so the port asked for is not always the port in use.
+func waitForBackground(cmd *exec.Cmd) (int, error) {
+	exited := make(chan struct{})
+	go func() {
+		_ = cmd.Wait()
+		close(exited)
+	}()
+	deadline := time.After(startWait)
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case <-exited:
+			return 0, startFailure("it stopped right after starting")
+		case <-deadline:
+			return 0, startFailure("it did not report a port in time")
+		case <-tick.C:
+			if pid, port, ok := readBackgroundPID(); ok && pid == cmd.Process.Pid {
+				return port, nil
+			}
+		}
+	}
+}
+
+// startFailure explains a background server that did not come up. The usual
+// reason is another Local Eml already answering on the port, such as one
+// running inside WSL, whose ports Windows forwards to itself.
+func startFailure(what string) error {
+	msg := "registered for sign-in, but the server did not start now: " + what + "."
+	if other := findExisting(); other != 0 {
+		msg += fmt.Sprintf("\nAnother Local Eml already answers at http://localhost:%d (for example one running in WSL)."+
+			"\nStop that one, or choose a different port: local-eml install --port 7900", other)
+	}
+	if p, err := paths.Resolve(); err == nil {
+		msg += "\nThe log is at " + p.LogFile()
+	}
+	return errors.New(msg)
 }
 
 func platformUninstall() error {
@@ -76,7 +124,7 @@ func platformUninstall() error {
 
 // stopBackground ends the background server this user started, if one runs.
 func stopBackground() {
-	pid, ok := readBackgroundPID()
+	pid, _, ok := readBackgroundPID()
 	if !ok {
 		return
 	}
