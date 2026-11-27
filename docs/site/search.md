@@ -65,7 +65,7 @@ With **Group by conversation** on, selecting a row selects the whole conversatio
 
 HTML email is shown in a locked-down frame so scripts in the email can't run. Images hosted on the internet are blocked until you click to load them, which stops senders from seeing that you opened the message. Before a link opens, Local Eml shows you where it really goes.
 
-Images, PDFs, audio, video and text attachments can be previewed. Other attachments are downloaded when you click them.
+Images, PDFs, audio, video, text, Hangul (HWP, HWPX), Word (DOCX) and Excel (XLSX, XLS) attachments can be previewed. Other attachments are downloaded when you click them.
 
 ## Speed
 

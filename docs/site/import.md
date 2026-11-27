@@ -15,6 +15,12 @@ Drag any of these onto the page, or click to choose them:
 
 Whatever the format, each message is saved in your library as its own `.eml` file.
 
+## Duplicates
+
+Local Eml skips a message only when the file is exactly the same. The same email can still come in twice by two different routes, because each route stores it a little differently. For example, a Google Takeout `.mbox` adds a label header that IMAP doesn't.
+
+**Settings → Duplicates** finds these copies by their Message-ID and date, shows how much space the extra copies use, and keeps one copy of each. You can pick which copy to keep, or remove every extra copy at once, in which case the oldest import stays. Whatever you did to any copy (a star, read state, a category) moves to the copy that stays.
+
 ## IMAP mailbox
 
 IMAP is the standard way mail apps read a mailbox on a server. Enter the server address (host), port, username, password and folder. Most providers use port 993, which is encrypted (TLS). Port 143 also works and switches to encryption with STARTTLS. The folder is `INBOX` unless you change it.
