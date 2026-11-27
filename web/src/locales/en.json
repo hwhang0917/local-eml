@@ -29,6 +29,14 @@
     "copied": "Copied",
     "copy_failed": "Couldn't copy. Select the command and copy it yourself."
   },
+  "not_found": {
+    "title": "Page not found",
+    "body": "There's nothing at this address. The link may be mistyped, or the page may have moved.",
+    "settings_title": "No such settings section",
+    "settings_body": "This settings page doesn't exist. Pick a section from the list on the left.",
+    "to_library": "Back to library",
+    "to_settings": "Open settings"
+  },
   "nav": {
     "library": "Library",
     "attachments": "Attachments",
@@ -240,7 +248,12 @@
       "frame_title": "Document preview",
       "empty_sheet": "This sheet is empty.",
       "sheet_truncated": "Showing the first {rows} rows and {cols} columns of {totalRows} × {totalCols}. Download the file to see everything."
-    }
+    },
+    "not_found_title": "This email isn't in your library",
+    "not_found_body": "It may have been deleted, or the link may be incomplete.",
+    "load_error_title": "Couldn't open this email",
+    "load_error_body": "Something went wrong while loading it. Try again, or go back to the library.",
+    "load_error_retry": "Try again"
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",
@@ -489,6 +502,8 @@
     "week_start_sunday": "Sunday",
     "week_start_monday": "Monday",
     "attributions_intro": "Local Eml is built with these open-source projects.",
+    "attributions_full": "Full license texts and notices",
+    "attributions_full_hint": "Copyright notices and license texts of every library and font included in this version.",
     "license_label": "license",
     "categories_help": "Seven colour labels for organising mail, like Finder tags. Each email can carry one. Rename them here; leave a name blank to use the colour's own name.",
     "category_name": "Category name",
@@ -783,6 +798,10 @@
     "dialog_label": "Name",
     "dialog_placeholder": "e.g. Receipts",
     "dialog_confirm": "Save",
-    "dialog_cancel": "Cancel"
+    "dialog_cancel": "Cancel",
+    "deleted": "Deleted “{name}”",
+    "delete_title": "Delete the saved search “{name}”?",
+    "delete_body": "This removes “{query}” from your saved searches. Your mail isn’t affected.",
+    "delete_confirm": "Delete"
   }
 }

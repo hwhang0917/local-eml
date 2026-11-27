@@ -34,6 +34,8 @@ body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+/* Pretendard has kana but no kanji; let one system Japanese font draw both. */
+html[lang="ja"] body { font-family: 'Hiragino Sans', 'Yu Gothic UI', Meiryo, 'Noto Sans CJK JP', 'Noto Sans JP', system-ui, sans-serif; }
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 code {
@@ -76,7 +78,7 @@ h1 {
 }
 /* Each line is a block that never wraps internally: breaks happen only where the copy puts them. */
 h1 .line { display: block; white-space: nowrap; }
-html[lang="ko"] h1 { letter-spacing: -0.02em; }
+html[lang="ko"] h1, html[lang="ja"] h1 { letter-spacing: -0.02em; }
 .lead {
   max-width: 60ch; margin: 22px auto 0; color: var(--muted); font-size: clamp(17px, 2vw, 21px);
   text-wrap: pretty;

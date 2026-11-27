@@ -62,7 +62,7 @@ The buttons next to the search box are shortcuts for search filters. Clicking on
 
 If you run the same search often, save it. Type the search, or click the filters you want, then open **Saved** and choose **Save this search**. Give it a name, such as "Receipts" for `receipt filename:pdf -from:newsletter`.
 
-Next time, open **Saved** and click the name. The button shows the name while that search is on. Saving with a name you already used replaces that search, and the × next to a name deletes it. Saved searches are kept with your settings, so they're included in a backup.
+Next time, open **Saved** and click the name. The button shows the name while that search is on. Saving with a name you already used replaces that search. The × next to a name deletes it after you confirm. Saved searches are kept with your settings, so they're included in a backup.
 
 ## Exporting search results
 

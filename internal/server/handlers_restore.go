@@ -15,6 +15,11 @@ import (
 
 const sqliteMagic = "SQLite format 3\x00"
 
+// maxSnapshotBytes caps the database unpacked from an export zip. The upload
+// itself is capped, but a zip entry of a few megabytes can inflate to fill the
+// disk. A real snapshot is mostly the search index and stays far below this.
+const maxSnapshotBytes = 8 << 30
+
 // handleRestore merges metadata (stars, categories, settings, profiles) from
 // an uploaded backup — either a bare local-eml.db snapshot or a full export
 // zip containing one — into the live database. Synchronous: a metadata merge
@@ -62,6 +67,8 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sum)
 }
 
+var errSnapshotTooLarge = fmt.Errorf("the database in this zip is larger than %d GB, which no Local Eml export is", maxSnapshotBytes>>30)
+
 // extractSnapshot returns a path to the SQLite snapshot inside the upload:
 // the upload itself for a bare .db file, or the extracted local-eml.db entry
 // for an export zip.
@@ -91,12 +98,26 @@ func extractSnapshot(upload string) (string, error) {
 		if ze.Name != exporter.DBObjectName {
 			continue
 		}
+		if ze.UncompressedSize64 > maxSnapshotBytes {
+			return "", errSnapshotTooLarge
+		}
 		src, err := ze.Open()
 		if err != nil {
 			return "", err
 		}
 		defer src.Close()
-		return copyToTemp(src, "local-eml-restore-*.db")
+		// The declared size above is the archive's own claim, so the copy is
+		// capped as well.
+		limited := &io.LimitedReader{R: src, N: maxSnapshotBytes + 1}
+		path, err := copyToTemp(limited, "local-eml-restore-*.db")
+		if err != nil {
+			return "", err
+		}
+		if limited.N <= 0 {
+			os.Remove(path)
+			return "", errSnapshotTooLarge
+		}
+		return path, nil
 	}
 	return "", fmt.Errorf("zip has no %s entry — was it exported by an older version?", filepath.Base(exporter.DBObjectName))
 }

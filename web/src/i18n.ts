@@ -1,15 +1,22 @@
 import { createI18n } from 'vue-i18n'
 import en from './locales/en.json'
 import ko from './locales/ko.json'
+import ja from './locales/ja.json'
 
-export type Locale = 'en' | 'ko'
+export const LOCALES = ['en', 'ko', 'ja'] as const
+export type Locale = (typeof LOCALES)[number]
+
+function isLocale(v: string | null | undefined): v is Locale {
+  return (LOCALES as readonly string[]).includes(v ?? '')
+}
 
 const STORAGE_KEY = 'locale'
 
 function detectInitial(): Locale {
   const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'en' || stored === 'ko') return stored
-  return navigator.language?.toLowerCase().startsWith('ko') ? 'ko' : 'en'
+  if (isLocale(stored)) return stored
+  const browser = navigator.language?.toLowerCase().split('-')[0]
+  return isLocale(browser) ? browser : 'en'
 }
 
 const initial = detectInitial()
@@ -18,7 +25,7 @@ export const i18n = createI18n({
   legacy: false,
   locale: initial,
   fallbackLocale: 'en',
-  messages: { en, ko },
+  messages: { en, ko, ja },
 })
 
 document.documentElement.lang = initial

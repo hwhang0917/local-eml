@@ -23,8 +23,11 @@ const routes = [
       { path: 'duplicates', name: 'settings-duplicates', component: () => import('@/pages/settings/DuplicatesPage.vue'), meta: { titleKey: 'settings.section.duplicates' } },
       { path: 'flagged', name: 'settings-flagged', component: () => import('@/pages/settings/FlaggedPage.vue'), meta: { titleKey: 'settings.section.flagged' } },
       { path: 'attributions', name: 'settings-attributions', component: () => import('@/pages/settings/AttributionsPage.vue'), meta: { titleKey: 'settings.section.attributions' } },
+      // An unknown section keeps the settings sidebar, so the right one is a click away.
+      { path: ':pathMatch(.*)*', name: 'settings-not-found', component: () => import('@/pages/NotFoundPage.vue'), props: { kind: 'settings' }, meta: { titleKey: 'not_found.title' } },
     ],
   },
+  { path: '/:pathMatch(.*)*', name: 'not-found', component: () => import('@/pages/NotFoundPage.vue'), meta: { titleKey: 'not_found.title' } },
 ]
 
 export const router = createRouter({

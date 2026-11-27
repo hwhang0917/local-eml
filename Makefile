@@ -20,7 +20,7 @@ PLATFORMS := \
 
 help:
 	@echo "Targets:"
-	@echo "  install        npm install (web/) + go module download/verify"
+	@echo "  install        npm ci (web/, exact lockfile) + go module download/verify"
 	@echo "  build          sync-version + web-build + go-build (single binary)"
 	@echo "  go-build       Go binary only (assumes web/dist/ is up to date)"
 	@echo "  web-build      Build the Vue SPA into web/dist/"
@@ -37,7 +37,7 @@ help:
 	@echo "  clean          Remove built binaries"
 
 install:
-	cd web && npm install
+	cd web && npm ci
 	go mod download
 	go mod verify
 

@@ -2,8 +2,26 @@ package store
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 )
+
+// restorableSettings are the settings a restore may copy from an uploaded
+// snapshot. Anything else stays as it is here. In particular the backup folder
+// and schedule ("backup") are never taken from a file: a snapshot someone else
+// prepared could otherwise point the automatic backups, and so the whole
+// library, at a folder or network share of their choosing. A new setting is
+// not restored until it is added here on purpose.
+var restorableSettings = []string{
+	"saved_searches",
+	"read_tracking",
+	"imap_sync_interval_seconds",
+}
+
+// restorableSettingsSQL is restorableSettings as a quoted SQL list. The names
+// are constants above, never input.
+var restorableSettingsSQL = "'" + strings.Join(restorableSettings, "','") + "'"
 
 // RestoreSummary reports how many rows a metadata restore touched.
 type RestoreSummary struct {
@@ -22,7 +40,8 @@ type RestoreSummary struct {
 //   - category names/positions are taken from the backup
 //   - stars and category assignments are applied to emails that exist locally
 //     (import the .eml files first — emails only in the backup are untouched)
-//   - settings are overwritten with the backup's values
+//   - the settings in restorableSettings are overwritten with the backup's
+//     values; the backup folder and schedule are never restored
 //   - IMAP/S3 profiles are added unless a profile with the same name exists
 //
 // Encrypted IMAP passwords are never restored: they were scrubbed at export
@@ -42,7 +61,8 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 //     library's marks, not the fresh "unread" it had in the session.
 //   - category names are left alone: the session's are the seeded defaults,
 //     and would undo the user's renames here
-//   - settings are added only where this library has none
+//   - the settings in restorableSettings are added, only where this library
+//     has none
 //   - profiles are added unless one with the same name exists, without
 //     passwords (the session's key is deleted with it) and with sync off
 func (s *Store) MergeSessionMetadata(ctx context.Context, sessionDB string, newSHAs []string) (RestoreSummary, error) {
@@ -70,6 +90,18 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 		return sum, fmt.Errorf("attach backup: %w", err)
 	}
 	defer conn.ExecContext(context.WithoutCancel(ctx), "DETACH DATABASE backup")
+
+	// Every table read below must be a plain table. A view under one of these
+	// names would run SQL of the file's choosing inside this merge, and no
+	// Local Eml snapshot has views.
+	var views int
+	if err := conn.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM backup.sqlite_master WHERE type = 'view'`).Scan(&views); err != nil {
+		return sum, fmt.Errorf("inspect backup schema: %w", err)
+	}
+	if views > 0 {
+		return sum, errors.New("this file is not a Local Eml backup")
+	}
 
 	// Snapshots from before a column existed lack it; referencing it would
 	// fail the whole emails step, so later columns are copied only when present.
@@ -104,6 +136,9 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 
 	emailFilter := ""
 	settingsVerb := "INSERT OR REPLACE"
+	// Only the listed settings are ever copied in, from an uploaded snapshot
+	// or a kept session alike.
+	settingsFilter := " WHERE key IN (" + restorableSettingsSQL + ")"
 	if session {
 		if _, err := conn.ExecContext(ctx, "CREATE TEMP TABLE merge_only (sha256 TEXT PRIMARY KEY)"); err != nil {
 			return sum, fmt.Errorf("merge list: %w", err)
@@ -144,7 +179,7 @@ func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySH
 			 WHERE emails.sha256 = b.sha256` + emailFilter},
 		{&sum.Settings, "settings",
 			settingsVerb + ` INTO settings (key, value)
-			 SELECT key, value FROM backup.settings`},
+			 SELECT key, value FROM backup.settings` + settingsFilter},
 		{&sum.ImapProfiles, "imap_profiles",
 			`INSERT OR IGNORE INTO imap_profiles
 			   (name, host, port, username, folder, created_at, updated_at)

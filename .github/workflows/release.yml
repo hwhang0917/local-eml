@@ -5,20 +5,22 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+# Actions are pinned to full commit hashes: a tag can be moved to different
+# code, a hash cannot. Dependabot keeps the pins current (.github/dependabot.yml).
+#
+# Every job starts read-only. Only the publish job, which creates the release
+# and signs the attestations, is given more.
 permissions:
-  contents: write
-  # Build provenance attestations (Sigstore via GitHub OIDC).
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
   build-web:
     name: Build SPA
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -35,7 +37,7 @@ jobs:
         working-directory: web
         run: npm run build
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-dist
           path: web/dist/
@@ -57,17 +59,17 @@ jobs:
           - { os: windows, arch: amd64, ext: '.exe' }
           - { os: windows, arch: arm64, ext: '.exe' }
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Must match ci.yml: shipped binaries statically embed the stdlib, so a
       # pinned 1.25.0 toolchain would bake known-vulnerable crypto/tls and
       # net/http into every release.
-      - uses: actions/setup-go@v7
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: stable
           cache: true
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: web-dist
           path: web/dist/
@@ -90,7 +92,7 @@ jobs:
           ls -lh "$OUT"
           echo "OUT=$OUT" >> "$GITHUB_ENV"
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.OUT }}
           path: ${{ env.OUT }}
@@ -110,9 +112,9 @@ jobs:
       matrix:
         arch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: local-eml-darwin-${{ matrix.arch }}
 
@@ -139,7 +141,7 @@ jobs:
           kill "$PID"
           test "${OK:-}" = 1
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ env.OUT }}
           path: ${{ env.OUT }}
@@ -148,19 +150,37 @@ jobs:
 
   release:
     name: Publish release
+    permissions:
+      contents: write
+      # Build provenance attestations (Sigstore via GitHub OIDC).
+      id-token: write
+      attestations: write
     needs: [build-binary, bundle-macos]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # git-cliff needs the previous tag to bound the notes
 
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: dist/
           pattern: local-eml-*
           merge-multiple: true
+
+      # Ship the license texts beside the binaries: the project's own GPL-3.0
+      # LICENSE, and the notices of every bundled npm package and Go module
+      # (the same file the app serves from Settings > Attributions).
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-dist
+          path: web-dist/
+
+      - name: Add license files
+        run: |
+          cp LICENSE dist/LICENSE.txt
+          cp web-dist/THIRD_PARTY_NOTICES.txt dist/THIRD_PARTY_NOTICES.txt
 
       # A tag with a suffix (v0.18.0-rc.1) is a release candidate: published as
       # a GitHub pre-release, never marked latest, and kept off winget. Stable
@@ -179,7 +199,7 @@ jobs:
       # (cliff.toml). GitHub's own generator only sees pull requests, and this
       # repo commits straight to main.
       - name: Generate release notes
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4
         with:
           version: v2.13.1
           config: cliff.toml
@@ -201,18 +221,20 @@ jobs:
       # SLSA provenance: proves each asset was built by this workflow at this
       # commit. Users check with `gh attestation verify <file> --repo hwhang0917/local-eml`.
       - name: Attest build provenance
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: |
             dist/local-eml-*
             dist/SHA256SUMS
 
       - name: Publish to GitHub Releases
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           files: |
             dist/local-eml-*
             dist/SHA256SUMS
+            dist/LICENSE.txt
+            dist/THIRD_PARTY_NOTICES.txt
           body_path: dist/RELEASE_NOTES.md
           fail_on_unmatched_files: true
           prerelease: ${{ steps.tag.outputs.prerelease }}
@@ -227,7 +249,7 @@ jobs:
       - name: Publish to winget
         if: env.WINGET_TOKEN != '' && steps.tag.outputs.prerelease == 'false'
         continue-on-error: true
-        uses: vedantmgoyal9/winget-releaser@v2
+        uses: vedantmgoyal9/winget-releaser@b7370d4d152efdce803a26cc6ca9eee58cb2ad54 # v2
         env:
           WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         with:

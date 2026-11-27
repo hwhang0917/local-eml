@@ -32,6 +32,16 @@ export function formatDate(iso: string | undefined): string {
   return absoluteShort(d)
 }
 
+/** The date without the time, for a list column in a narrow window. The
+ *  relative form is already short, so it stays as it is. */
+export function formatDateCompact(iso: string | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime()) || d.getFullYear() < 2) return ''
+  if (dateFormat.value === 'relative') return formatRelative(d, i18n.global.locale.value)
+  return d.toLocaleDateString(i18n.global.locale.value, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
 const ABSOLUTE_LONG: Intl.DateTimeFormatOptions = {
   year: 'numeric',
   month: 'long',
@@ -94,6 +104,14 @@ export function attachmentName(a: PartInfo): string {
 }
 
 const SENDER_MAX_CHARS = 10
+
+// The sender's whole display name, unshortened, for places with room for it
+// (or that truncate it with CSS and show the rest on hover).
+export function senderFullName(addr: string | undefined): string {
+  if (!addr) return ''
+  const m = /^\s*"?([^"<]*?)"?\s*<([^>]*)>/.exec(addr)
+  return (m && (m[1].trim() || m[2])) || addr.trim().replace(/^<|>$/g, '')
+}
 
 export function senderName(addr: string | undefined): string {
   if (!addr) return ''

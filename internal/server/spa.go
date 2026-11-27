@@ -45,11 +45,20 @@ func newSPAHandler(sub fs.FS) http.Handler {
 			// upgrade, /.well-known/*.json) is a real 404. Handing it the HTML
 			// shell makes crawlers and module loaders parse HTML as something
 			// else. Only extensionless paths are client-side routes.
+			//
+			// A browser navigating to such a path (a typo, a probe like
+			// /.env) is the exception: it gets the app with a 404 status, and
+			// the app's own not-found page, rather than Go's bare text. The
+			// page never names the path or says whether anything is there.
 			if path.Ext(clean) != "" {
+				if wantsHTML(r) {
+					serveIndex(w, sub, http.StatusNotFound)
+					return
+				}
 				http.NotFound(w, r)
 				return
 			}
-			serveIndex(w, sub)
+			serveIndex(w, sub, http.StatusOK)
 			return
 		}
 		switch {
@@ -171,7 +180,23 @@ func acceptsGzip(r *http.Request) bool {
 	return false
 }
 
-func serveIndex(w http.ResponseWriter, sub fs.FS) {
+// wantsHTML reports whether r is a page load (the address bar, a link)
+// rather than a script, stylesheet, image or fetch. Only page loads list
+// text/html in Accept.
+func wantsHTML(r *http.Request) bool {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	for _, part := range strings.Split(r.Header.Get("Accept"), ",") {
+		mt, _, _ := strings.Cut(strings.TrimSpace(part), ";")
+		if strings.EqualFold(strings.TrimSpace(mt), "text/html") {
+			return true
+		}
+	}
+	return false
+}
+
+func serveIndex(w http.ResponseWriter, sub fs.FS, status int) {
 	f, err := sub.Open("index.html")
 	if err != nil {
 		http.Error(w, "index.html missing", http.StatusInternalServerError)
@@ -180,5 +205,6 @@ func serveIndex(w http.ResponseWriter, sub fs.FS) {
 	defer f.Close()
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache")
+	w.WriteHeader(status)
 	_, _ = io.Copy(w, f)
 }

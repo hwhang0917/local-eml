@@ -1,0 +1,14 @@
+# The workflows pin every action to a commit hash, so that a moved tag cannot
+# change what a release build runs. This keeps those pins from going stale:
+# once a month Dependabot opens a pull request with the newer hashes.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ['*']

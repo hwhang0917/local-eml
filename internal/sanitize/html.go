@@ -35,6 +35,7 @@ const blockedPlaceholderTemplate = `<svg xmlns="http://www.w3.org/2000/svg" widt
 var blockedLabels = map[string][2]string{
 	"ko": {"외부 이미지 차단됨", "안전을 위해 차단했어요"},
 	"en": {"Remote image blocked", "Hidden to protect your privacy"},
+	"ja": {"外部画像をブロックしました", "プライバシー保護のため非表示"},
 }
 
 func blockedPlaceholder(lang string) string {
@@ -108,6 +109,11 @@ func walk(n *html.Node, fn func(*html.Node)) {
 	}
 }
 
+// rewriteSrc decides what an <img> may load. cid: parts are served by the
+// API, data: images are inline, and http(s) images are the reader's choice.
+// Anything else is blocked: a relative or scheme-less URL would resolve
+// against the app itself, so an email could make the signed-in browser call
+// the API (hold its event streams open, start exports) just by being read.
 func rewriteSrc(src string, opts Options) (newSrc string, blocked bool, original string) {
 	placeholderSrc := blockedPlaceholder(opts.Lang)
 	trimmed := strings.TrimSpace(src)
@@ -116,15 +122,15 @@ func rewriteSrc(src string, opts Options) (newSrc string, blocked bool, original
 		cid := trimmed[len("cid:"):]
 		return opts.CIDBaseURL + url.PathEscape(cid), false, ""
 	}
+	if strings.HasPrefix(lower, "data:image/") {
+		return trimmed, false, ""
+	}
 	u, err := url.Parse(trimmed)
 	if err != nil {
 		return placeholderSrc, true, trimmed
 	}
-	if u.Scheme == "http" || u.Scheme == "https" {
-		if !opts.ShowRemote {
-			return placeholderSrc, true, trimmed
-		}
+	if (u.Scheme == "http" || u.Scheme == "https") && u.Host != "" && opts.ShowRemote {
 		return trimmed, false, ""
 	}
-	return trimmed, false, ""
+	return placeholderSrc, true, trimmed
 }

@@ -27,6 +27,7 @@ import {
 import { docPreviewKind } from '@/lib/docPreview'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName } from '@/lib/format'
 import { onMailSignal } from '@/composables/useMailEvents'
+import { atLeastLg, atLeastMd, atLeastXl } from '@/composables/useWidth'
 import { PAGE_SIZES, useListQuery } from '@/composables/useListQuery'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
@@ -173,6 +174,7 @@ function downloadURL(a: AttachmentItem) {
 function emailRoute(a: AttachmentItem) {
   return { name: 'viewer', params: { sha: a.email_sha256 }, query: { tab: 'attachments', att: String(a.index) } }
 }
+const colCount = computed(() => 4 + Number(atLeastMd.value) + Number(atLeastLg.value) + Number(atLeastXl.value))
 </script>
 
 <template>
@@ -266,32 +268,36 @@ function emailRoute(a: AttachmentItem) {
     <Card class="overflow-hidden" :aria-busy="loading">
       <table class="w-full text-sm table-fixed">
         <caption class="sr-only">{{ t('attachments.table_caption') }}</caption>
+        <!-- A narrower window drops columns rather than squeezing the file
+             name to nothing: the email's subject first (the envelope button
+             still jumps to it), then the type (the icon shows it), then the
+             size. The name takes whatever width is left. -->
         <colgroup>
-          <col class="w-[30%]" />
-          <col class="w-36" />
-          <col class="w-24" />
+          <col :class="atLeastXl ? 'w-[30%]' : ''" />
+          <col v-if="atLeastLg" class="w-36" />
+          <col v-if="atLeastMd" class="w-24" />
           <col class="w-52" />
           <col class="w-36" />
-          <col />
+          <col v-if="atLeastXl" />
           <col class="w-28" />
         </colgroup>
         <thead class="bg-muted/40 text-xs uppercase text-muted-foreground">
           <tr class="h-10">
             <SortHeader :label="t('attachments.col.name')" col="name" :sort="sort" :order="order" @sort="setSort" />
-            <SortHeader :label="t('attachments.col.type')" col="type" :sort="sort" :order="order" @sort="setSort" />
-            <SortHeader :label="t('attachments.col.size')" col="size" :sort="sort" :order="order" align="right" @sort="setSort" />
+            <SortHeader v-if="atLeastLg" :label="t('attachments.col.type')" col="type" :sort="sort" :order="order" @sort="setSort" />
+            <SortHeader v-if="atLeastMd" :label="t('attachments.col.size')" col="size" :sort="sort" :order="order" align="right" @sort="setSort" />
             <SortHeader :label="t('attachments.col.date')" col="date" :sort="sort" :order="order" @sort="setSort" />
             <SortHeader :label="t('attachments.col.sender')" col="sender" :sort="sort" :order="order" @sort="setSort" />
-            <th scope="col" class="px-3 py-2 text-left">{{ t('attachments.col.email') }}</th>
+            <th v-if="atLeastXl" scope="col" class="px-3 py-2 text-left">{{ t('attachments.col.email') }}</th>
             <th scope="col" class="px-3 py-2"><span class="sr-only">{{ t('attachments.col.actions') }}</span></th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading && items.length === 0">
-            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
+            <td :colspan="colCount" class="px-3 py-6 text-center text-muted-foreground">{{ t('library.loading') }}</td>
           </tr>
           <tr v-else-if="items.length === 0">
-            <td colspan="7" class="px-3 py-6 text-center text-muted-foreground">
+            <td :colspan="colCount" class="px-3 py-6 text-center text-muted-foreground">
               <template v-if="hasActiveFilters">{{ t('attachments.no_matches') }}</template>
               <template v-else>{{ t('attachments.empty') }}</template>
             </td>
@@ -320,10 +326,10 @@ function emailRoute(a: AttachmentItem) {
                 >{{ displayName(a) }}</a>
               </span>
             </td>
-            <td class="px-3 py-2 truncate text-muted-foreground" :title="a.content_type">
+            <td v-if="atLeastLg" class="px-3 py-2 truncate text-muted-foreground" :title="a.content_type">
               {{ t(`attachments.kind.${a.kind}`) }}
             </td>
-            <td class="px-3 py-2 text-right whitespace-nowrap tabular-nums text-muted-foreground">{{ formatBytes(a.size) }}</td>
+            <td v-if="atLeastMd" class="px-3 py-2 text-right whitespace-nowrap tabular-nums text-muted-foreground">{{ formatBytes(a.size) }}</td>
             <td class="px-3 py-2 whitespace-nowrap text-muted-foreground">
               <time
                 :datetime="isoDate(a.sent_at) || undefined"
@@ -331,7 +337,7 @@ function emailRoute(a: AttachmentItem) {
               >{{ formatDate(isoDate(a.sent_at)) }}</time>
             </td>
             <td class="px-3 py-2 truncate" :title="a.email_from">{{ senderName(a.email_from) }}</td>
-            <td class="px-3 py-2 truncate">
+            <td v-if="atLeastXl" class="px-3 py-2 truncate">
               <RouterLink
                 :to="emailRoute(a)"
                 :title="a.email_subject || t('library.no_subject')"

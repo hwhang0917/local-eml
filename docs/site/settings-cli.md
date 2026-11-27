@@ -27,7 +27,7 @@ local-eml <command> [flags]
   serve [--port 7878] [--ephemeral]
                            run the local web server (loopback only)
   install [-y|--yes] [--port 7878]
-                           register as a background service (systemd/launchd/Windows Service)
+                           start in the background at sign-in (systemd/launchd/Windows startup)
   uninstall [-y|--yes]     stop and unregister the background service
   token                    print the session token the API and a browser need
   version | -V | --version
@@ -43,7 +43,7 @@ If you run `serve` without `--port` and another program is already using 7878, i
 
 Only your own computer can connect to Local Eml, but that includes every program and every user account on it. So the server also asks for a token: a random password stored in a file called `session-token` in the data folder, which only you can read.
 
-- Double-clicking signs you in automatically. The program hands the token to the browser, which remembers it.
+- Double-clicking signs you in automatically. The program gives the browser a one-time sign-in link made from the token, never the token itself. The browser stays signed in for 30 days after you last used it.
 - If you open the address in a browser yourself, you'll see a sign-in page the first time. It shows how to open Command Prompt or Terminal and has a **Copy** button for the `local-eml token` command. Run it and paste the token it prints.
 - Scripts send it in a header: `curl -H "Authorization: Bearer $(local-eml token)" http://127.0.0.1:7878/api/stats`.
 
@@ -63,4 +63,4 @@ For the background service, set these in the service's own configuration: the sy
 
 ## Desktop only
 
-The window needs to be at least about 768 pixels wide. If it's narrower, you'll see a message asking you to widen it. Phones can't connect anyway, since only your own computer can reach Local Eml.
+The window needs to be at least 640 pixels wide, so a vertical monitor or a window snapped to half the screen works fine. In a narrower window some list columns step aside: the library drops the size column and shows dates without the time (hover a date for the full one), and the attachments list drops the email column first, then the type and size columns. If the window is narrower than 640 pixels, you'll see a message asking you to widen it. Phones can't connect anyway, since only your own computer can reach Local Eml.

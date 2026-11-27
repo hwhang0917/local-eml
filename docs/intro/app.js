@@ -150,7 +150,78 @@
       os: { windows: 'Windows용', mac: 'macOS용', linux: 'Linux용' },
       title: 'Local Eml — 무료 오픈소스 EML 뷰어 (Windows·macOS·Linux)',
     },
+    ja: {
+      'nav.screens': '画面',
+      'nav.install': 'ダウンロード',
+      'nav.features': '機能',
+      'nav.docs': 'ドキュメント',
+      'hero.eyebrow': '無料・オープンソースのEMLビューア',
+      'hero.title': '<span class="line">古いメールを開いて、</span><span class="line">自分のPCに保管する。</span>',
+      'hero.lead':
+        'Windows・macOS・Linuxで<code>.eml</code>、<code>.mbox</code>、<code>.pst</code>ファイルを開いて保管できるビューアです。いっぱいになったメールボックスからメールを取り出し、検索して、いつでも読めます。実行ファイルは1つだけ。アカウントは不要で、データがPCの外に出ることはありません。',
+      'hero.download': 'ダウンロード',
+      'hero.github': 'GitHubで見る',
+      'hero.other': 'ほかのプラットフォーム',
+      'hero.badges': 'Windows · macOS · Linux · GPL-3.0',
+      'screens.title': '落ち着いて読める場所',
+      'screens.sub': 'すべて、普段お使いのブラウザの中で127.0.0.1上で動きます。見た目はサーバーではなく、アプリです。',
+      'screens.library': 'ライブラリ',
+      'screens.search': '検索',
+      'screens.viewer': '閲覧',
+      'screens.stats': '統計',
+      'screens.import': 'インポート',
+      'screens.cap.library': 'スレッドごとのまとめ表示、スター、色分けカテゴリ、期間の指定。',
+      'screens.cap.search': '一致した箇所をハイライトする全文検索。ハングルの初声検索（초성검색）もライブラリ全体で使えます。',
+      'screens.cap.viewer': 'HTMLメールはサンドボックス化したフレームに表示し、外部画像はブロック。添付ファイルの一覧も、スレッド全体もワンクリックで開けます。',
+      'screens.cap.stats': 'どれくらいのメールが、誰から、いつ届いたのか。何を残すか決めるときに役立ちます。',
+      'screens.cap.import': 'ファイル、フォルダ、アーカイブをドロップするか、S3やIMAPから取り込みます。進行状況はリアルタイムで表示され、重複はスキップされます。',
+      'install.title': 'ダウンロードしてダブルクリック',
+      'install.sub':
+        'インストーラーもアカウントも不要です。お使いのOS用のファイルをダウンロードして開くと、Local Emlが専用のウィンドウで起動します。使い終わってウィンドウを閉じれば、裏で動き続けるものはありません。',
+      'install.win':
+        `<a href="${ASSET('local-eml-windows-amd64.exe')}"><code>local-eml-windows-amd64.exe</code></a>をダウンロードしてダブルクリックします。初回は、まだ広く知られていないファイルのため「Windows によって PC が保護されました」と表示されることがあります。<strong>詳細情報 → 実行</strong>を選んでください。`,
+      'install.mac':
+        `<a href="${ASSET('local-eml-darwin-arm64.app.zip')}"><code>local-eml-darwin-arm64.app.zip</code></a>（Appleシリコン）または<a href="${ASSET('local-eml-darwin-amd64.app.zip')}"><code>local-eml-darwin-amd64.app.zip</code></a>（Intel）をダウンロードして展開し、<strong>Local Eml</strong>をダブルクリックします。開発元を確認できないと表示されたら、<strong>システム設定 → プライバシーとセキュリティ</strong>で<strong>このまま開く</strong>を選び、もう一度開いてください。`,
+      'install.linux': `<a href="${ASSET('local-eml-linux-amd64')}"><code>local-eml-linux-amd64</code></a>をダウンロードし、実行権限を付けて（<code>chmod +x</code>）実行します。ブラウザで開きます。`,
+      'install.howto':
+        '手順ガイド：<a href="docs/ja/how-to/open-eml-files">.emlファイルを開く</a> · <a href="docs/ja/how-to/takeout-mbox">Google データエクスポートの.mboxを取り込む</a> · <a href="docs/ja/how-to/pst-without-outlook">Outlookなしで.pstを開く</a> · <a href="docs/ja/how-to/free-up-gmail">Gmailの容量を空ける</a>',
+      'install.svc.title': '常に起動しておきたい場合',
+      'install.svc.sub':
+        '1行のコマンドで、起動時に自動で立ち上がり、新着のIMAPメールを受信し続けるバックグラウンドサービスとしてインストールできます。最新リリースをダウンロードし、先に検証を行います。',
+      'install.copy': 'コピー',
+      'install.copied': 'コピーしました',
+      'install.winget.title': 'Windowsでwingetを使う場合：',
+      'install.winget.body': '<code>winget install hwhang0917.LocalEml</code>（登録審査中）',
+      'features.title': 'できること',
+      'f.import.t': '何でもインポート',
+      'f.import.b':
+        '<code>.eml</code>ファイル、フォルダ、<code>.zip</code>、<code>.mbox</code>（Google データエクスポート、Thunderbird）、Outlookの<code>.pst</code>、S3バケット、IMAPメールボックス。重複はハッシュで判定してスキップします。',
+      'f.search.t': '日本語もそのまま検索',
+      'f.search.b':
+        '差出人、件名、本文をまとめて全文検索します。日本語・韓国語・中国語は設定なしで検索でき、ハングルは初声だけの入力（<code>ㅎㄱ</code> → 한국）でも見つかります。',
+      'f.private.t': '設計からプライベート',
+      'f.private.b':
+        '待ち受けるのは<code>127.0.0.1</code>だけ。アカウントも、テレメトリも、クラウドもありません。IMAPパスワードは自分でオンにしない限り保存されず、保存する場合もディスクから出ない鍵で暗号化されます。',
+      'f.safe.t': 'HTMLも安全に表示',
+      'f.safe.b': 'メールはサンドボックス化したフレームで表示され、外部画像は既定でブロックされるため、トラッキングピクセルは機能しません。',
+      'f.sync.t': '新着メールにも対応',
+      'f.sync.b':
+        'IMAPプロファイルでバックグラウンド同期をオンにすると、前回以降に届いたメールだけを取得します。読み取り専用なので、メールボックスが変更されることはありません。',
+      'f.export.t': 'いつでも持ち出せる',
+      'f.export.b': 'ライブラリ全体を1つの<code>.zip</code>としてエクスポートするか、S3に送れます。スター、カテゴリ、設定も一緒です。',
+      'not.t': 'できないこと：',
+      'not.b':
+        'メールクライアントではありません。作成、送信、返信はできません。日々のメールはいつものクライアントで、手元に残しておきたいメールはLocal Emlで。',
+      'foot.contrib': 'コントリビュート',
+      'foot.releases': 'リリース',
+      os: { windows: 'Windows版', mac: 'macOS版', linux: 'Linux版' },
+      title: 'Local Eml — 無料・オープンソースのEMLビューア（Windows・macOS・Linux）',
+    },
   }
+
+  const LANGS = Object.keys(I18N)
+  // Locales without their own screenshots borrow another locale's.
+  const SHOT_LANG = { ja: 'en' }
 
   const $ = (s, r = document) => r.querySelector(s)
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s))
@@ -158,19 +229,20 @@
 
   function detectLang() {
     const q = new URLSearchParams(location.search).get('lang')
-    if (q === 'en' || q === 'ko') return q
+    if (LANGS.includes(q)) return q
     try {
       const s = localStorage.getItem('intro-lang')
-      if (s === 'en' || s === 'ko') return s
+      if (LANGS.includes(s)) return s
     } catch {}
-    return navigator.language?.toLowerCase().startsWith('ko') ? 'ko' : 'en'
+    const browser = navigator.language?.toLowerCase().split('-')[0]
+    return LANGS.includes(browser) ? browser : 'en'
   }
 
   let lang = detectLang()
   let shot = 'viewer' // the hero already shows the library
 
   function shotSrc(name, dark) {
-    return `img/${lang}${dark ? '-dark' : ''}/${name}.webp`
+    return `img/${SHOT_LANG[lang] || lang}${dark ? '-dark' : ''}/${name}.webp`
   }
 
   function render() {
@@ -210,7 +282,7 @@
       try {
         localStorage.setItem('intro-lang', lang)
       } catch {}
-      history.replaceState(null, '', lang === 'ko' ? '?lang=ko' : location.pathname)
+      history.replaceState(null, '', lang === 'en' ? location.pathname : `?lang=${lang}`)
       render()
     }),
   )

@@ -13,6 +13,7 @@ import {
 } from 'reka-ui'
 import { api, type SavedSearch } from '@/lib/api'
 import PromptDialog from '@/components/ui/PromptDialog.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 // Saved searches: a name for a search-box query. Since every filter button
 // writes into the box, the query is the whole view, and applying one is just
@@ -25,6 +26,11 @@ const { t } = useI18n()
 const list = ref<SavedSearch[]>([])
 const saving = ref(false)
 const promptOpen = ref(false)
+const menuOpen = ref(false)
+// The search waiting for the person to confirm its deletion.
+const toDelete = ref<SavedSearch | null>(null)
+const confirmOpen = ref(false)
+let deletePending = false
 // The dialog opens once the menu has finished closing: the menu hands focus
 // back to its button as it closes, which would otherwise pull focus out of
 // the dialog's name field.
@@ -33,10 +39,33 @@ function askName() {
   promptPending = true
 }
 function onMenuCloseFocus(e: Event) {
-  if (!promptPending) return
-  promptPending = false
-  e.preventDefault()
-  promptOpen.value = true
+  if (promptPending) {
+    promptPending = false
+    e.preventDefault()
+    promptOpen.value = true
+  } else if (deletePending) {
+    deletePending = false
+    e.preventDefault()
+    confirmOpen.value = true
+  }
+}
+
+// Deleting asks first. The menu closes before the dialog opens, for the same
+// focus reason as the name prompt above.
+function askDelete(s: SavedSearch) {
+  toDelete.value = s
+  deletePending = true
+  menuOpen.value = false
+}
+
+async function confirmDelete() {
+  const s = toDelete.value
+  confirmOpen.value = false
+  if (!s) return
+  if (await store(list.value.filter((x) => x !== s))) {
+    toast.success(t('saved_search.deleted', { name: s.name }))
+  }
+  toDelete.value = null
 }
 
 const norm = (s: string) => s.trim().replace(/\s+/g, ' ')
@@ -76,13 +105,10 @@ async function save(name: string) {
   }
 }
 
-async function remove(s: SavedSearch) {
-  await store(list.value.filter((x) => x !== s))
-}
 </script>
 
 <template>
-  <DropdownMenuRoot>
+  <DropdownMenuRoot v-model:open="menuOpen">
     <DropdownMenuTrigger
       data-testid="saved-searches"
       :class="['inline-flex h-8 items-center gap-2 rounded-sm border px-3 text-sm',
@@ -102,33 +128,38 @@ async function remove(s: SavedSearch) {
         <p v-if="list.length === 0" class="px-2 py-1.5 text-xs text-muted-foreground">
           {{ t('saved_search.empty') }}
         </p>
-        <DropdownMenuItem
-          v-for="s in list"
-          :key="s.name"
-          class="group flex cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none
-            data-[highlighted]:bg-accent"
-          @select="emit('apply', s.query)"
-        >
-          <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center">
-            <Check v-if="s === active" class="h-4 w-4" />
-          </span>
-          <span class="grid min-w-0 flex-1">
-            <span class="truncate font-medium">{{ s.name }}</span>
-            <code class="truncate font-mono text-xs text-muted-foreground">{{ s.query }}</code>
-          </span>
+        <!-- The × sits beside the item, not inside it: inside, the item's own
+             pointer handling turned a click on it into "apply this search"
+             and closed the menu, so delete never happened. -->
+        <div v-for="s in list" :key="s.name" class="flex items-center gap-2 pr-1.5" data-testid="saved-search-row">
+          <DropdownMenuItem
+            class="flex min-w-0 flex-1 cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none
+              data-[highlighted]:bg-accent"
+            @select="emit('apply', s.query)"
+            @keydown.delete.prevent="askDelete(s)"
+          >
+            <span class="inline-flex h-4 w-4 shrink-0 items-center justify-center">
+              <Check v-if="s === active" class="h-4 w-4" />
+            </span>
+            <span class="grid min-w-0 flex-1">
+              <span class="truncate font-medium">{{ s.name }}</span>
+              <code class="truncate font-mono text-xs text-muted-foreground">{{ s.query }}</code>
+            </span>
+          </DropdownMenuItem>
           <button
             type="button"
             :title="t('saved_search.delete', { name: s.name })"
             :aria-label="t('saved_search.delete', { name: s.name })"
             :disabled="saving"
-            class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground
-              hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            @click.stop.prevent="remove(s)"
-            @pointerdown.stop
+            data-testid="saved-search-delete"
+            class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors
+              hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+              disabled:opacity-50"
+            @click="askDelete(s)"
           >
-            <X class="h-3.5 w-3.5" />
+            <X class="h-4 w-4" />
           </button>
-        </DropdownMenuItem>
+        </div>
         <DropdownMenuSeparator class="my-1 h-px bg-hairline" />
         <DropdownMenuItem
           :disabled="!query.trim()"
@@ -154,5 +185,14 @@ async function remove(s: SavedSearch) {
     :placeholder="t('saved_search.dialog_placeholder')"
     :busy="saving"
     @submit="save"
+  />
+  <ConfirmDialog
+    v-model:open="confirmOpen"
+    :title="t('saved_search.delete_title', { name: toDelete?.name ?? '' })"
+    :description="t('saved_search.delete_body', { query: toDelete?.query ?? '' })"
+    :confirm-label="t('saved_search.delete_confirm')"
+    :cancel-label="t('saved_search.dialog_cancel')"
+    destructive
+    @confirm="confirmDelete"
   />
 </template>

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -134,8 +136,17 @@ func isAppLaunch(args []string) bool {
 	return strings.HasPrefix(args[0], psnPrefix)
 }
 
+// backgroundFlag marks the server Windows starts at sign-in (see
+// install_windows.go): it has no console window, and it records its pid so
+// `local-eml uninstall` can stop it.
+const backgroundFlag = "--background"
+
+func isBackgroundServe(args []string) bool {
+	return len(args) > 1 && args[0] == "serve" && slices.Contains(args[1:], backgroundFlag)
+}
+
 func main() {
-	if isAppLaunch(os.Args[1:]) && relaunchWithoutConsole() {
+	if (isAppLaunch(os.Args[1:]) || isBackgroundServe(os.Args[1:])) && relaunchWithoutConsole() {
 		return
 	}
 	if len(os.Args) < 2 || strings.HasPrefix(os.Args[1], psnPrefix) {
@@ -175,16 +186,52 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "                             (or set %s=1)\n", ephemeralEnv)
 	fmt.Fprintf(os.Stderr, "  %s=off        keep the password encryption key in a file, not the OS keychain\n", keyringEnv)
 	fmt.Fprintln(os.Stderr, "  install [-y|--yes] [--port 7878]")
-	fmt.Fprintln(os.Stderr, "                             register as a background service (systemd/launchd/svc)")
+	fmt.Fprintln(os.Stderr, "                             start in the background at sign-in (systemd/launchd/Windows startup)")
 	fmt.Fprintln(os.Stderr, "  uninstall [-y|--yes]       stop and unregister the background service")
 	fmt.Fprintln(os.Stderr, "  token                      print the session token the API and a browser need")
 	fmt.Fprintln(os.Stderr, "  version | -V | --version")
+}
+
+// backgroundPIDFile names the pid file of the server started at sign-in.
+func backgroundPIDFile(p paths.Paths) string {
+	return filepath.Join(p.Base, "background.pid")
+}
+
+// writeBackgroundPID records this process as the background server, and the
+// port it ended up on, as "<pid> <port>". It returns the cleanup that forgets
+// it again.
+func writeBackgroundPID(p paths.Paths, port int) func() {
+	file := backgroundPIDFile(p)
+	if err := os.WriteFile(file, []byte(strconv.Itoa(os.Getpid())+" "+strconv.Itoa(port)), 0o600); err != nil {
+		return func() {}
+	}
+	return func() { _ = os.Remove(file) }
+}
+
+// readBackgroundPID returns the recorded background server's pid and port.
+func readBackgroundPID() (pid, port int, ok bool) {
+	p, err := paths.Resolve()
+	if err != nil {
+		return 0, 0, false
+	}
+	b, err := os.ReadFile(backgroundPIDFile(p))
+	if err != nil {
+		return 0, 0, false
+	}
+	fields := strings.Fields(string(b))
+	if len(fields) != 2 {
+		return 0, 0, false
+	}
+	pid, err1 := strconv.Atoi(fields[0])
+	port, err2 := strconv.Atoi(fields[1])
+	return pid, port, err1 == nil && err2 == nil && pid > 0
 }
 
 func runServe(args []string) int {
 	fs := flag.NewFlagSet("serve", flag.ExitOnError)
 	port := fs.Int("port", defaultPort, "TCP port to listen on (loopback only)")
 	ephemeral := fs.Bool("ephemeral", false, "temporary session: data is deleted on exit")
+	background := fs.Bool("background", false, "started at sign-in by `local-eml install` (Windows)")
 	_ = fs.Parse(args)
 	// An explicit --port is a promise about the URL, so only the default
 	// moves on to the next free port.
@@ -193,11 +240,11 @@ func runServe(args []string) int {
 	temporary := *ephemeral || ephemeralFromEnv()
 	// The service has no "close" to clean up after, so a temporary service
 	// would be one that silently deletes its library on every reboot.
-	if temporary && !service.Interactive() {
+	if temporary && (*background || !service.Interactive()) {
 		fmt.Fprintln(os.Stderr, "ignoring --ephemeral: not available when running as a service")
 		temporary = false
 	}
-	return serve(serveOptions{port: *port, portFallback: !explicitPort, temporary: temporary})
+	return serve(serveOptions{port: *port, portFallback: !explicitPort, temporary: temporary, background: *background})
 }
 
 // runApp gives the double-click experience: reuse a running server if there is
@@ -221,7 +268,8 @@ func runApp(args []string) int {
 
 // existingServerURL signs the browser in to the server already running on
 // port. Its token is readable when it belongs to the same user; otherwise the
-// app asks for it.
+// app asks for it. Only a one-time code derived from the token goes into the
+// URL, so whatever answers on that port never sees the token itself.
 func existingServerURL(port int) string {
 	base := fmt.Sprintf("http://127.0.0.1:%d", port)
 	p, err := paths.Resolve()
@@ -232,7 +280,11 @@ func existingServerURL(port int) string {
 	if err != nil {
 		return base
 	}
-	return server.AuthURL(base, strings.TrimSpace(string(token)))
+	u, err := server.AuthURL(base, strings.TrimSpace(string(token)), port)
+	if err != nil {
+		return base
+	}
+	return u
 }
 
 // runToken prints the library's session token for scripts and for signing a
@@ -275,6 +327,9 @@ type serveOptions struct {
 	portFallback bool
 	appMode      bool
 	temporary    bool
+	// background is the server Windows starts at sign-in; it records its pid
+	// and port for `local-eml install` and `uninstall`.
+	background bool
 	// tempDir is the temporary session's folder; empty otherwise.
 	tempDir string
 }
@@ -435,6 +490,9 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 	}
 	url := "http://" + ln.Addr().String()
 	srv.Port = ln.Addr().(*net.TCPAddr).Port
+	if opts.background {
+		defer writeBackgroundPID(p, srv.Port)()
+	}
 
 	handler := http.Handler(srv.Router())
 	httpSrv := &http.Server{
@@ -466,7 +524,12 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		lastSeen.Store(time.Now().UnixNano())
 		httpSrv.Handler = touchHealth(handler, lastSeen)
 		go watchIdle(ctx, lastSeen, shutdown)
-		go openWindow(server.AuthURL(url, token))
+		signIn, err := server.AuthURL(url, token, srv.Port)
+		if err != nil {
+			slog.Error("sign-in link", "err", err)
+			return 1
+		}
+		go openWindow(signIn)
 	}
 
 	sigCh := make(chan os.Signal, 1)
