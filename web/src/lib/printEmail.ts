@@ -60,9 +60,17 @@ const STYLE = `
   .print-body img { max-width: 100%; height: auto; }
   .print-body table { max-width: 100%; }
   pre.print-body { white-space: pre-wrap; font: 12px/1.45 ui-monospace, Menlo, Consolas, "D2Coding", monospace; margin: 0; }
+  .print-toc h1 { font-size: 20px; margin: 0 0 4px; }
+  .print-toc .detail, .print-index { color: #555; }
+  .print-toc table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 12px; }
+  .print-toc th, .print-toc td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #ddd; vertical-align: top; overflow-wrap: anywhere; }
+  .print-toc .num { width: 2.5em; color: #555; }
+  .print-msg { break-before: page; }
+  .print-index { font-size: 11px; margin: 0 0 6px; }
 `
 
-export function buildPrintDocument(c: PrintContent, showRemote: boolean): string {
+// One message: its header block, then its body as ordinary flowing content.
+function printSection(c: PrintContent): string {
   const rows = c.fields
     .filter((f) => f.value)
     .map((f) => `<dt>${esc(f.label)}</dt><dd>${esc(f.value)}</dd>`)
@@ -77,22 +85,59 @@ export function buildPrintDocument(c: PrintContent, showRemote: boolean): string
   const body = c.html != null
     ? `<div class="print-body">${c.html}</div>`
     : `<pre class="print-body">${esc(c.text)}</pre>`
-  return `<!doctype html>
-<html lang="${esc(c.lang)}">
-<head>
-<meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="${esc(csp(showRemote))}">
-<title>${esc(c.subject)}</title>
-<style>${STYLE}</style>
-</head>
-<body>
-<header class="print-head">
+  return `<header class="print-head">
 <h1>${esc(c.subject)}</h1>
 <dl>${rows.join('')}</dl>
 </header>
+${body}`
+}
+
+function wrapDocument(lang: string, title: string, body: string, showRemote: boolean): string {
+  return `<!doctype html>
+<html lang="${esc(lang)}">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="${esc(csp(showRemote))}">
+<title>${esc(title)}</title>
+<style>${STYLE}</style>
+</head>
+<body>
 ${body}
 </body>
 </html>`
+}
+
+export function buildPrintDocument(c: PrintContent, showRemote: boolean): string {
+  return wrapDocument(c.lang, c.subject, printSection(c), showRemote)
+}
+
+export interface PrintBundle {
+  lang: string
+  title: string
+  /** Shown above the contents table, e.g. "12 messages · printed 3 May 2025". */
+  summary: string
+  columns: { date: string; from: string; subject: string }
+  messages: (PrintContent & { date: string; from: string })[]
+}
+
+/**
+ * Several messages in one printout: a contents page listing them, then each
+ * message starting on a new page. Saved as PDF, it's one file to hand over.
+ */
+export function buildPrintBundle(b: PrintBundle, showRemote: boolean): string {
+  const rows = b.messages
+    .map((m, i) => `<tr><td class="num">${i + 1}</td><td>${esc(m.date)}</td><td>${esc(m.from)}</td><td>${esc(m.subject)}</td></tr>`)
+    .join('')
+  const toc = `<section class="print-toc">
+<h1>${esc(b.title)}</h1>
+<p class="detail">${esc(b.summary)}</p>
+<table><thead><tr><th class="num">#</th><th>${esc(b.columns.date)}</th><th>${esc(b.columns.from)}</th><th>${esc(b.columns.subject)}</th></tr></thead>
+<tbody>${rows}</tbody></table>
+</section>`
+  const sections = b.messages
+    .map((m, i) => `<article class="print-msg"><p class="print-index">${i + 1} / ${b.messages.length}</p>${printSection(m)}</article>`)
+    .join('\n')
+  return wrapDocument(b.lang, b.title, toc + sections, showRemote)
 }
 
 let current: HTMLIFrameElement | null = null

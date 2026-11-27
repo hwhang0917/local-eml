@@ -65,6 +65,12 @@ export interface BackupState {
   available: boolean
 }
 
+/** A named search-box query; every library filter can be written as one. */
+export interface SavedSearch {
+  name: string
+  query: string
+}
+
 /** One email stored more than once; keep is the copy a merge keeps by default. */
 export interface DuplicateGroup {
   key: string
@@ -598,6 +604,17 @@ export const api = {
   },
 
   exportZipURL: () => '/api/exports/zip',
+  /** Form-post target for a selection or search export (see useSelectionExport). */
+  exportSelectionURL: () => '/api/exports/selection',
+
+  listSavedSearches() {
+    return fetch('/api/saved-searches').then(jsonOrThrow<SavedSearch[]>)
+  },
+
+  /** Replaces the whole list; the server returns it as stored. */
+  saveSavedSearches(list: SavedSearch[]) {
+    return fetch('/api/saved-searches', jsonBody('PUT', list)).then(jsonOrThrow<SavedSearch[]>)
+  },
 
   getBackup() {
     return fetch('/api/backup').then(jsonOrThrow<BackupState>)

@@ -41,6 +41,17 @@ watch(open, async (o) => {
   input.value?.select()
 })
 
+// reka's AlertDialog always moves focus to its Cancel button a tick after it
+// opens, which beat the open watch below and left the name field unfocused.
+// Taking focus back after that tick puts the caret where the person types.
+function focusInput(e: Event) {
+  e.preventDefault()
+  setTimeout(() => {
+    input.value?.focus()
+    input.value?.select()
+  }, 0)
+}
+
 function submit() {
   if (canSubmit.value) emit('submit', value.value.trim())
 }
@@ -64,7 +75,7 @@ function submit() {
           rounded-xl border border-hairline bg-background p-6 shadow-xl outline-none
           data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95
           data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-        @open-auto-focus.prevent
+        @open-auto-focus="focusInput"
       >
         <form @submit.prevent="submit">
           <AlertDialogTitle class="text-base font-semibold">{{ title }}</AlertDialogTitle>
