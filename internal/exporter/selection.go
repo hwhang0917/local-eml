@@ -74,15 +74,30 @@ func (e *Exporter) WriteSelectionZip(ctx context.Context, w io.Writer, emails []
 		_ = cw.Write([]string{
 			r.name,
 			formatIndexDate(r.em.SentAt),
-			r.em.FromAddr,
-			strings.Join(r.em.ToAddrs, ", "),
-			strings.Join(r.em.CcAddrs, ", "),
-			r.em.Subject,
+			csvText(r.em.FromAddr),
+			csvText(strings.Join(r.em.ToAddrs, ", ")),
+			csvText(strings.Join(r.em.CcAddrs, ", ")),
+			csvText(r.em.Subject),
 			fmt.Sprint(r.em.AttachmentCount),
 		})
 	}
 	cw.Flush()
 	return written, skipped, cw.Error()
+}
+
+// csvText makes a value from an email safe to open in a spreadsheet. Excel
+// and others run a cell that starts with =, +, - or @ as a formula, and a
+// sender chooses their own subject and display name. A leading apostrophe
+// makes the cell plain text; the spreadsheet does not show it.
+func csvText(v string) string {
+	if v == "" {
+		return v
+	}
+	switch v[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + v
+	}
+	return v
 }
 
 // WriteMbox streams the given messages as one mbox file, which Thunderbird,
