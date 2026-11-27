@@ -1,9 +1,29 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
+import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { gzipSync } from 'node:zlib'
+
+// The HWP renderer is a 28 MB WASM module. Ship it gzipped (~10 MB) so the
+// Go binary that embeds dist/ doesn't grow by the full size; the server
+// sends it with Content-Encoding: gzip (internal/server/spa.go).
+const gzipWasm = {
+  name: 'gzip-wasm',
+  apply: 'build' as const,
+  closeBundle() {
+    const dir = join(__dirname, 'dist', 'assets')
+    for (const f of readdirSync(dir)) {
+      if (!f.endsWith('.wasm')) continue
+      const p = join(dir, f)
+      writeFileSync(`${p}.gz`, gzipSync(readFileSync(p), { level: 9 }))
+      rmSync(p)
+    }
+  },
+}
 
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [vue(), tailwindcss(), gzipWasm],
   css: {
     postcss: {
       plugins: [

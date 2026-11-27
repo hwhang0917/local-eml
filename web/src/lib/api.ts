@@ -472,6 +472,12 @@ export const api = {
     return fetch(api.attachmentURL(sha, idx, true)).then(textOrThrow)
   },
 
+  async getAttachmentBytes(sha: string, idx: number): Promise<Uint8Array> {
+    const res = await fetch(api.attachmentURL(sha, idx))
+    await okOrThrow(res)
+    return new Uint8Array(await res.arrayBuffer())
+  },
+
   upload(files: File[]) {
     const fd = new FormData()
     for (const f of files) fd.append('file', f, f.name)

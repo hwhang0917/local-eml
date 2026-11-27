@@ -35,6 +35,11 @@ func newSPAHandler(sub fs.FS) http.Handler {
 		if clean == "" {
 			clean = "index.html"
 		}
+		if strings.HasPrefix(clean, "assets/") && path.Ext(clean) == ".wasm" {
+			if servePrecompressed(w, r, sub, clean) {
+				return
+			}
+		}
 		if _, err := fs.Stat(sub, clean); err != nil {
 			// A missing file (robots.txt, a stale hashed asset after an
 			// upgrade, /.well-known/*.json) is a real 404. Handing it the HTML
@@ -110,6 +115,43 @@ func (c *gzipCache) serve(w http.ResponseWriter, r *http.Request, name string) b
 	w.WriteHeader(http.StatusOK)
 	if r.Method != http.MethodHead {
 		_, _ = w.Write(b)
+	}
+	return true
+}
+
+// servePrecompressed serves a WASM module that the build stored only as
+// <name>.gz (the HWP renderer is 28 MB raw, 10 MB gzipped). Browsers always
+// accept gzip; anything that doesn't gets it decompressed on the fly.
+func servePrecompressed(w http.ResponseWriter, r *http.Request, fsys fs.FS, name string) bool {
+	f, err := fsys.Open(name + ".gz")
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	h := w.Header()
+	h.Set("Content-Type", "application/wasm")
+	h.Set("Cache-Control", "public, max-age=31536000, immutable")
+	h.Add("Vary", "Accept-Encoding")
+	if acceptsGzip(r) {
+		h.Set("Content-Encoding", "gzip")
+		if st, err := f.Stat(); err == nil {
+			h.Set("Content-Length", strconv.FormatInt(st.Size(), 10))
+		}
+		w.WriteHeader(http.StatusOK)
+		if r.Method != http.MethodHead {
+			_, _ = io.Copy(w, f)
+		}
+		return true
+	}
+	zr, err := gzip.NewReader(f)
+	if err != nil {
+		http.Error(w, "corrupt asset", http.StatusInternalServerError)
+		return true
+	}
+	defer zr.Close()
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = io.Copy(w, zr)
 	}
 	return true
 }

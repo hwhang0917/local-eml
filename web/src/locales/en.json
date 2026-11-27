@@ -230,7 +230,17 @@
     "delete_error": "Couldn't delete the email",
     "print": "Print email",
     "print_error": "Couldn't print the email",
-    "toggle_thread": "Show or hide the conversation"
+    "toggle_thread": "Show or hide the conversation",
+    "doc_preview": {
+      "loading": "Opening the document…",
+      "failed": "This document couldn't be previewed. It may be password-protected or damaged. Download it to open it in its own app.",
+      "page": "Page {page} of {total}",
+      "pages_shown": "Showing {shown} of {total} pages",
+      "more_pages": "Show more pages",
+      "frame_title": "Document preview",
+      "empty_sheet": "This sheet is empty.",
+      "sheet_truncated": "Showing the first {rows} rows and {cols} columns of {totalRows} × {totalCols}. Download the file to see everything."
+    }
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",
