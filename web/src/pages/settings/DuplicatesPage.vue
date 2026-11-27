@@ -101,7 +101,8 @@ function page(dir: 1 | -1) {
       data-testid="duplicates-summary"
     >
       <Copy class="h-5 w-5 shrink-0 text-muted-foreground" />
-      <p class="min-w-0 flex-1 text-sm">
+      <!-- basis keeps the sentence readable; the button wraps under it first. -->
+      <p class="min-w-0 basis-56 grow text-sm">
         {{ t('duplicates.summary', { groups: summary.groups, extra: summary.extra, size: formatBytes(summary.extra_bytes) }, summary.extra) }}
       </p>
       <Button

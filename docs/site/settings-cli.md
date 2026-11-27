@@ -58,4 +58,4 @@ For the background service, set these in the service's own configuration: the sy
 
 ## Desktop only
 
-The window needs to be at least about 768 pixels wide. If it's narrower, you'll see a message asking you to widen it. Phones can't connect anyway, since only your own computer can reach Local Eml.
+The window needs to be at least 640 pixels wide, so a vertical monitor or a window snapped to half the screen works fine. In a narrower window some list columns step aside: the library drops the size column and shows dates without the time (hover a date for the full one), and the attachments list drops the email column first, then the type and size columns. If the window is narrower than 640 pixels, you'll see a message asking you to widen it. Phones can't connect anyway, since only your own computer can reach Local Eml.
