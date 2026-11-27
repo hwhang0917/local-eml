@@ -106,6 +106,18 @@ Set `LOCAL_EML_LOG_LEVEL=debug|info|warn|error` in the service environment to tu
 | Frontend | Vue 3, Vite, TypeScript, Tailwind v4, reka-ui (shadcn-vue primitives), vue-i18n, vue-sonner; attachment previews: rhwp (HWP/HWPX, WASM), docx-preview, SheetJS (vendored in `web/vendor/`, from cdn.sheetjs.com) |
 | Service | systemd user-unit (Linux), LaunchAgent (macOS), Windows Service |
 
+## Third-party license notices
+
+`npm run build` writes `web/dist/THIRD_PARTY_NOTICES.txt`: the license texts and NOTICE files of every npm package in the bundle (found from the bundle itself, see `web/third-party/notices.ts`) and every Go module compiled into the binary. The app serves it from **Settings → Attributions**, and each GitHub release attaches it next to `LICENSE.txt`.
+
+The Go half comes from `web/third-party/go-notices.txt`, which is committed because the web build has no Go toolchain in CI. After changing `go.mod`, regenerate it:
+
+```sh
+go run scripts/gen-go-notices.go
+```
+
+CI fails when it is stale. An npm package published without a license file fails the web build until its upstream license is added as `web/third-party/licenses/<name>.txt` (scoped names use `__` for `/`).
+
 ## Releasing
 
 `VERSION` at the repo root is the single source of truth. `scripts/release.sh` bumps it, propagates the new version into `web/package.json` and `web/package-lock.json` (via `npm version`), then asks `[y/N]` and creates a single `Release version vX.X.X` commit with a matching annotated tag. It does not push.

@@ -162,6 +162,19 @@ jobs:
           pattern: local-eml-*
           merge-multiple: true
 
+      # Ship the license texts beside the binaries: the project's own GPL-3.0
+      # LICENSE, and the notices of every bundled npm package and Go module
+      # (the same file the app serves from Settings > Attributions).
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-dist
+          path: web-dist/
+
+      - name: Add license files
+        run: |
+          cp LICENSE dist/LICENSE.txt
+          cp web-dist/THIRD_PARTY_NOTICES.txt dist/THIRD_PARTY_NOTICES.txt
+
       # A tag with a suffix (v0.18.0-rc.1) is a release candidate: published as
       # a GitHub pre-release, never marked latest, and kept off winget. Stable
       # users only ever see /releases/latest (install scripts, in-app updater),
@@ -213,6 +226,8 @@ jobs:
           files: |
             dist/local-eml-*
             dist/SHA256SUMS
+            dist/LICENSE.txt
+            dist/THIRD_PARTY_NOTICES.txt
           body_path: dist/RELEASE_NOTES.md
           fail_on_unmatched_files: true
           prerelease: ${{ steps.tag.outputs.prerelease }}
