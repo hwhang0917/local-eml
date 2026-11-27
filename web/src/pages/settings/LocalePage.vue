@@ -11,6 +11,7 @@ const { t, locale } = useI18n()
 const langs: { value: Locale; label: string }[] = [
   { value: 'en', label: 'English' },
   { value: 'ko', label: '한국어' },
+  { value: 'ja', label: '日本語' },
 ]
 const currentLangLabel = computed(
   () => langs.find((l) => l.value === locale.value)?.label ?? locale.value,

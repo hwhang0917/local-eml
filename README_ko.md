@@ -1,6 +1,6 @@
 # Local Eml
 
-[English](README.md) · [한국어](README_ko.md) · **[문서](https://hwhang0917.github.io/local-eml/docs/ko/)**
+[English](README.md) · [한국어](README_ko.md) · [日本語](README_ja.md) · **[문서](https://hwhang0917.github.io/local-eml/docs/ko/)**
 
 [![CI](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/ci.yml)
 [![Release](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml/badge.svg)](https://github.com/hwhang0917/local-eml/actions/workflows/release.yml)

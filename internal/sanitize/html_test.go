@@ -119,6 +119,7 @@ func TestBlockedPlaceholderIsLocalizedAndSelfDescribing(t *testing.T) {
 	}{
 		{"ko", "외부 이미지 차단됨"},
 		{"en", "Remote image blocked"},
+		{"ja", "外部画像をブロックしました"},
 		{"de", "Remote image blocked"}, // unknown locale falls back to English
 	} {
 		out, err := Sanitize(src, Options{Lang: tc.lang})

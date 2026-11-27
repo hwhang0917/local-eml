@@ -35,6 +35,7 @@ const blockedPlaceholderTemplate = `<svg xmlns="http://www.w3.org/2000/svg" widt
 var blockedLabels = map[string][2]string{
 	"ko": {"외부 이미지 차단됨", "안전을 위해 차단했어요"},
 	"en": {"Remote image blocked", "Hidden to protect your privacy"},
+	"ja": {"外部画像をブロックしました", "プライバシー保護のため非表示"},
 }
 
 func blockedPlaceholder(lang string) string {
