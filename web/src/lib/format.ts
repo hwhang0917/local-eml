@@ -95,6 +95,14 @@ export function attachmentName(a: PartInfo): string {
 
 const SENDER_MAX_CHARS = 10
 
+// The sender's whole display name, unshortened, for places with room for it
+// (or that truncate it with CSS and show the rest on hover).
+export function senderFullName(addr: string | undefined): string {
+  if (!addr) return ''
+  const m = /^\s*"?([^"<]*?)"?\s*<([^>]*)>/.exec(addr)
+  return (m && (m[1].trim() || m[2])) || addr.trim().replace(/^<|>$/g, '')
+}
+
 export function senderName(addr: string | undefined): string {
   if (!addr) return ''
   const trimmed = addr.trim()

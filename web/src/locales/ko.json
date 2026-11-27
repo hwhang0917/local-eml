@@ -490,6 +490,8 @@
     "week_start_sunday": "일요일",
     "week_start_monday": "월요일",
     "attributions_intro": "Local Eml은 다음 오픈소스 프로젝트로 만들어졌습니다.",
+    "attributions_full": "전체 라이선스 및 고지문",
+    "attributions_full_hint": "이 버전에 포함된 모든 라이브러리와 글꼴의 저작권 고지와 라이선스 전문입니다.",
     "license_label": "라이선스",
     "categories_help": "Finder 태그처럼 메일을 정리하는 7가지 색상 분류입니다. 메일 하나에 분류 하나를 지정할 수 있어요. 여기서 이름을 바꿀 수 있고, 비워두면 색상 이름을 사용합니다.",
     "category_name": "분류 이름",

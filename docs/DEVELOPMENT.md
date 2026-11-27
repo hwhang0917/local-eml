@@ -12,7 +12,7 @@
 git clone https://github.com/hwhang0917/local-eml.git
 cd local-eml
 
-make install            # npm install (web/) + go mod download
+make install            # npm ci (web/, exact lockfile) + go mod download
 make build              # copies VERSION into web/package.json, builds the SPA, then the Go binary
 ./local-eml serve       # http://localhost:7878
 ```
@@ -105,6 +105,18 @@ Set `LOCAL_EML_LOG_LEVEL=debug|info|warn|error` in the service environment to tu
 | Backend | Go, chi, `modernc.org/sqlite` (pure-Go), enmime, bluemonday, kardianos/service, aws-sdk-go-v2 (S3), go-imap/v2 (IMAP) |
 | Frontend | Vue 3, Vite, TypeScript, Tailwind v4, reka-ui (shadcn-vue primitives), vue-i18n, vue-sonner; attachment previews: rhwp (HWP/HWPX, WASM), docx-preview, SheetJS (vendored in `web/vendor/`, from cdn.sheetjs.com) |
 | Service | systemd user-unit (Linux), LaunchAgent (macOS), Windows Service |
+
+## Third-party license notices
+
+`npm run build` writes `web/dist/THIRD_PARTY_NOTICES.txt`: the license texts and NOTICE files of every npm package in the bundle (found from the bundle itself, see `web/third-party/notices.ts`) and every Go module compiled into the binary. The app serves it from **Settings → Attributions**, and each GitHub release attaches it next to `LICENSE.txt`.
+
+The Go half comes from `web/third-party/go-notices.txt`, which is committed because the web build has no Go toolchain in CI. After changing `go.mod`, regenerate it:
+
+```sh
+go run scripts/gen-go-notices.go
+```
+
+CI fails when it is stale. An npm package published without a license file fails the web build until its upstream license is added as `web/third-party/licenses/<name>.txt` (scoped names use `__` for `/`).
 
 ## Releasing
 
