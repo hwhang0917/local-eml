@@ -2,7 +2,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { api, type Email } from '@/lib/api'
-import { attachmentName, formatBytes, formatDateAbsolute } from '@/lib/format'
+import { attachmentName, formatBytes, formatDateAbsolute, senderFullName } from '@/lib/format'
 import { buildPrintBundle, printDocument } from '@/lib/printEmail'
 
 export type ExportFormat = 'zip' | 'mbox' | 'pdf'
@@ -47,13 +47,6 @@ function postDownload(fields: [string, string][]) {
   document.body.appendChild(form)
   form.submit()
   form.remove()
-}
-
-// The contents table has room for the whole name; the library's senderName
-// shortens it to fit a column.
-function fullSender(addr: string): string {
-  const m = /^\s*"?([^"<]*?)"?\s*<([^>]*)>/.exec(addr)
-  return (m && (m[1].trim() || m[2])) || addr.replace(/^<|>$/g, '')
 }
 
 async function mapLimit<T, R>(items: T[], limit: number, fn: (x: T) => Promise<R>): Promise<R[]> {
@@ -113,7 +106,8 @@ export function useSelectionExport() {
         html,
         text,
         date,
-        from: fullSender(e.from),
+        // The contents table has room for the whole name.
+        from: senderFullName(e.from),
       }
     })
     const doc = buildPrintBundle({
