@@ -29,7 +29,34 @@ type RestoreSummary struct {
 // because the AES key never leaves the exporting machine. Restored profiles
 // come back with sync disabled and need their password re-entered.
 func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (RestoreSummary, error) {
+	return s.restoreMetadata(ctx, snapshotPath, nil)
+}
+
+// MergeSessionMetadata carries a kept temporary session's metadata into this
+// library, after its mail has been imported. It differs from a backup restore
+// in what it may overwrite, because the session ran beside this library
+// rather than being a copy of it:
+//
+//   - stars, read marks, flags and categories are applied only to newSHAs,
+//     the emails the merge just added. A message that was in both keeps this
+//     library's marks, not the fresh "unread" it had in the session.
+//   - category names are left alone: the session's are the seeded defaults,
+//     and would undo the user's renames here
+//   - settings are added only where this library has none
+//   - profiles are added unless one with the same name exists, without
+//     passwords (the session's key is deleted with it) and with sync off
+func (s *Store) MergeSessionMetadata(ctx context.Context, sessionDB string, newSHAs []string) (RestoreSummary, error) {
+	if newSHAs == nil {
+		newSHAs = []string{}
+	}
+	return s.restoreMetadata(ctx, sessionDB, newSHAs)
+}
+
+// restoreMetadata is RestoreMetadata, or with onlySHAs non-nil the session
+// merge described at MergeSessionMetadata.
+func (s *Store) restoreMetadata(ctx context.Context, snapshotPath string, onlySHAs []string) (RestoreSummary, error) {
 	var sum RestoreSummary
+	session := onlySHAs != nil
 
 	// ATTACH is connection-scoped, so pin one pool connection for the whole
 	// merge and detach before releasing it.
@@ -75,16 +102,36 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 		}
 	}
 
-	steps := []struct {
+	emailFilter := ""
+	settingsVerb := "INSERT OR REPLACE"
+	if session {
+		if _, err := conn.ExecContext(ctx, "CREATE TEMP TABLE merge_only (sha256 TEXT PRIMARY KEY)"); err != nil {
+			return sum, fmt.Errorf("merge list: %w", err)
+		}
+		defer conn.ExecContext(context.WithoutCancel(ctx), "DROP TABLE temp.merge_only")
+		for _, sha := range onlySHAs {
+			if _, err := conn.ExecContext(ctx, "INSERT OR IGNORE INTO temp.merge_only (sha256) VALUES (?)", sha); err != nil {
+				return sum, fmt.Errorf("merge list: %w", err)
+			}
+		}
+		emailFilter = " AND emails.sha256 IN (SELECT sha256 FROM temp.merge_only)"
+		settingsVerb = "INSERT OR IGNORE"
+	}
+
+	type step struct {
 		dst  *int64
 		name string
 		sql  string
-	}{
-		{&sum.Categories, "categories",
+	}
+	var steps []step
+	if !session {
+		steps = append(steps, step{&sum.Categories, "categories",
 			`UPDATE categories SET name = b.name, position = b.position
 			 FROM backup.categories b
 			 WHERE categories.color = b.color
-			   AND (categories.name <> b.name OR categories.position <> b.position)`},
+			   AND (categories.name <> b.name OR categories.position <> b.position)`})
+	}
+	steps = append(steps, []step{
 		// category_id is remapped through the color, the stable identity —
 		// row ids are seeded and should match, but colors are the contract.
 		{&sum.Emails, "emails",
@@ -94,9 +141,9 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 			                  JOIN backup.categories bc ON bc.color = c.color
 			                  WHERE bc.id = b.category_id)
 			 FROM backup.emails b
-			 WHERE emails.sha256 = b.sha256`},
+			 WHERE emails.sha256 = b.sha256` + emailFilter},
 		{&sum.Settings, "settings",
-			`INSERT OR REPLACE INTO settings (key, value)
+			settingsVerb + ` INTO settings (key, value)
 			 SELECT key, value FROM backup.settings`},
 		{&sum.ImapProfiles, "imap_profiles",
 			`INSERT OR IGNORE INTO imap_profiles
@@ -108,7 +155,7 @@ func (s *Store) RestoreMetadata(ctx context.Context, snapshotPath string) (Resto
 			   (name, bucket, prefix, region, access_key_id, created_at, updated_at` + s3Cols + `)
 			 SELECT name, bucket, prefix, region, access_key_id, created_at, updated_at` + s3Cols + `
 			 FROM backup.s3_profiles`},
-	}
+	}...)
 	for _, st := range steps {
 		res, err := conn.ExecContext(ctx, st.sql)
 		if err != nil {

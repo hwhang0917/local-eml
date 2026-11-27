@@ -56,15 +56,27 @@ export function useS3Form() {
     applyProfile(p)
   }
 
+  // Saving a new profile asks for its name in a modal first; saving the
+  // loaded one keeps its name and writes straight away.
+  const nameDialogOpen = ref(false)
+  const saving = ref(false)
+  const suggestedName = computed(() => s3.value.bucket.trim())
+
   async function saveProfile() {
     const existing = activeProfile.value
-    let name = existing?.name ?? ''
     if (!existing) {
-      const entered = window.prompt(t('import.s3_profile_save_prompt'), '')
-      if (entered == null) return
-      name = entered.trim()
-      if (!name) return
+      nameDialogOpen.value = true
+      return
     }
+    await persistProfile(existing.name)
+  }
+
+  async function saveProfileAs(name: string) {
+    if (await persistProfile(name)) nameDialogOpen.value = false
+  }
+
+  async function persistProfile(name: string): Promise<boolean> {
+    saving.value = true
     try {
       const saved = await api.saveS3Profile({
         name,
@@ -77,8 +89,12 @@ export function useS3Form() {
       })
       await loadProfiles()
       selectedProfileId.value = saved.id
+      return true
     } catch (e) {
       toast.error(t('import.s3_profile_save_error'), { description: String(e) })
+      return false
+    } finally {
+      saving.value = false
     }
   }
 
@@ -129,7 +145,8 @@ export function useS3Form() {
   return {
     s3, confirming, valid, credsLabel, usesEndpoint,
     profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
-    selectProfile, saveProfile, deleteProfile,
+    selectProfile, saveProfile, saveProfileAs, deleteProfile,
+    nameDialogOpen, saving, suggestedName,
     review, cancel, confirm,
   }
 }

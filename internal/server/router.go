@@ -34,6 +34,9 @@ type Server struct {
 	// TemporarySession is true when the data folder is a throwaway one that
 	// is deleted on exit.
 	TemporarySession bool
+	// TempSessionDir is that throwaway folder, where the "keep this session"
+	// mark is written (see tempsession.SetKeep). Empty outside one.
+	TempSessionDir string
 	// PrefsFile is the launch-preferences file in the persistent data folder,
 	// even during a temporary session, so the switch can be turned back off.
 	PrefsFile string
@@ -50,6 +53,9 @@ type Server struct {
 
 	// mail tells open tabs that new mail came in; see mail_events.go.
 	mail mailFeed
+
+	// Automatic folder backups; see backup.go.
+	backup backupRunner
 }
 
 func (s *Server) Router() http.Handler {
@@ -75,6 +81,8 @@ func (s *Server) Router() http.Handler {
 		api.Get("/imports/{id}/events", s.handleImportEvents)
 		api.Get("/emails", s.handleListEmails)
 		api.Post("/emails/bulk", s.handleBulkEmails)
+		api.Get("/duplicates", s.handleListDuplicates)
+		api.Post("/duplicates/merge", s.handleMergeDuplicates)
 		api.Get("/emails/{sha}", s.handleGetEmail)
 		api.Get("/emails/{sha}/thread", s.handleEmailThread)
 		api.Get("/emails/{sha}/raw", s.handleEmailRaw)
@@ -117,14 +125,21 @@ func (s *Server) Router() http.Handler {
 
 		api.Get("/exports/zip", s.handleExportZip)
 		api.Post("/exports/s3", s.handleExportS3)
+		api.Get("/backup", s.handleGetBackup)
+		api.Put("/backup", s.handlePutBackup)
+		api.Post("/backup/run", s.handleRunBackup)
+		api.Post("/exports/selection", s.handleExportSelection)
 		api.Post("/restore", s.handleRestore)
 
 		api.Delete("/jobs/{id}", s.handleCancelJob)
 
 		api.Get("/read-tracking", s.handleGetReadTracking)
 		api.Put("/read-tracking", s.handlePutReadTracking)
+		api.Get("/saved-searches", s.handleGetSavedSearches)
+		api.Put("/saved-searches", s.handlePutSavedSearches)
 		api.Get("/session", s.handleSession)
 		api.Put("/session/temporary-launches", s.handlePutTemporaryLaunches)
+		api.Put("/session/keep", s.handlePutKeepSession)
 		api.Post("/data/wipe", s.handleWipeData)
 
 		api.Get("/update/check", s.handleUpdateCheck)

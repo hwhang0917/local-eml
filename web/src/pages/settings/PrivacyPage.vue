@@ -41,9 +41,27 @@ async function setTemporary(enabled: boolean, wipe: boolean) {
   try {
     await api.setTemporaryLaunches(enabled)
     await refresh()
-    toast.success(t(enabled ? 'privacy.temp_on' : 'privacy.temp_off'))
+    // Turning it off from inside a temporary session keeps this session too;
+    // say so, since that's the part the user can't see in the switch.
+    const keptNow = !enabled && isTemporary.value && session.value?.session_kept
+    toast.success(t(enabled ? 'privacy.temp_on' : 'privacy.temp_off'), {
+      description: keptNow ? t('privacy.keep_now_on') : undefined,
+    })
     enableDialog.value?.close()
     if (wipe) await wipe_()
+  } catch (e) {
+    toast.error(t('privacy.temp_error'), { description: String(e) })
+  } finally {
+    busy.value = false
+  }
+}
+
+async function onToggleKeep() {
+  if (!session.value || busy.value) return
+  busy.value = true
+  try {
+    await api.setKeepSession(!session.value.session_kept)
+    await refresh()
   } catch (e) {
     toast.error(t('privacy.temp_error'), { description: String(e) })
   } finally {
@@ -76,9 +94,22 @@ async function wipe_() {
       <h2 class="text-lg font-semibold">{{ t('privacy.temp_title') }}</h2>
       <p class="text-sm text-muted-foreground">{{ t('privacy.temp_help') }}</p>
 
-      <p v-if="isTemporary" class="rounded-sm bg-amber-500/15 p-3 text-sm text-amber-900 dark:text-amber-200">
-        {{ t('privacy.temp_now') }}
-      </p>
+      <div v-if="isTemporary" class="space-y-3 rounded-sm bg-amber-500/15 p-3 text-sm text-amber-900 dark:text-amber-200">
+        <p>{{ t(session?.session_kept ? 'privacy.temp_now_kept' : 'privacy.temp_now') }}</p>
+        <label class="flex items-start gap-2">
+          <input
+            type="checkbox"
+            class="mt-1"
+            :checked="session?.session_kept ?? false"
+            :disabled="!session || busy"
+            @click.prevent="onToggleKeep"
+          />
+          <span>
+            {{ t('privacy.keep_toggle') }}
+            <span class="block text-xs opacity-80">{{ t('privacy.keep_toggle_help') }}</span>
+          </span>
+        </label>
+      </div>
 
       <label :class="['flex items-start gap-2 text-sm', isService ? 'opacity-60' : '']">
         <input

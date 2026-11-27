@@ -6,6 +6,7 @@ import { useS3Form } from '@/composables/useS3Form'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+import PromptDialog from '@/components/ui/PromptDialog.vue'
 import S3ProfileCard from '@/components/S3ProfileCard.vue'
 import NewProfileCard from '@/components/NewProfileCard.vue'
 
@@ -26,7 +27,8 @@ const { t } = useI18n()
 const {
   s3, confirming, valid, credsLabel, usesEndpoint,
   profiles, selectedProfileId, activeProfile, deleteConfirmOpen,
-  selectProfile, saveProfile, deleteProfile, review, cancel, confirm: confirmS3,
+  selectProfile, saveProfile, saveProfileAs, deleteProfile, review, cancel, confirm: confirmS3,
+  nameDialogOpen, saving, suggestedName,
 } = useS3Form()
 
 // Suggestions only — the input still accepts any value, so newly launched
@@ -195,6 +197,17 @@ const awsRegions: { code: string; name: string }[] = [
       <Button variant="outline" :disabled="!valid" @click="saveProfile">
         {{ activeProfile ? t('import.s3_profile_save') : t('import.s3_profile_save_new') }}
       </Button>
+      <PromptDialog
+        v-model:open="nameDialogOpen"
+        :title="t('import.profile_name_title')"
+        :description="t('import.profile_name_body')"
+        :label="t('import.profile_name_label')"
+        :initial-value="suggestedName"
+        :confirm-label="t('import.s3_profile_save')"
+        :cancel-label="t('import.cancel')"
+        :busy="saving"
+        @submit="saveProfileAs"
+      />
       <Button v-if="activeProfile" variant="outline" @click="deleteConfirmOpen = true">
         {{ t('import.s3_profile_delete') }}
       </Button>

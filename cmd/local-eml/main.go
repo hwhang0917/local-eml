@@ -275,6 +275,8 @@ type serveOptions struct {
 	portFallback bool
 	appMode      bool
 	temporary    bool
+	// tempDir is the temporary session's folder; empty otherwise.
+	tempDir string
 }
 
 // serve runs the server on either the persistent library or, for a temporary
@@ -302,15 +304,63 @@ func serve(opts serveOptions) int {
 		slog.Error("create temporary session", "err", err)
 		return 1
 	}
+	opts.tempDir = dir
 	code := run(paths.At(dir), persistent.PrefsFile(), opts)
 	// The log file was inside dir and is closed now; report to stderr only.
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	if tempsession.IsKept(dir) {
+		// The user turned temporary sessions off from inside this one, which
+		// means "keep what I have". Merge now rather than at the next launch:
+		// the OS may clean its temp folder before then.
+		if err := mergeKeptSession(persistent, dir); err != nil {
+			slog.Error("keep temporary session; its mail will be added on next launch", "dir", dir, "err", err)
+			return 1
+		}
+		return code
+	}
 	if err := tempsession.Remove(dir); err != nil {
 		slog.Error("delete temporary session; it will be retried on next launch", "dir", dir, "err", err)
 		return 1
 	}
 	slog.Info("temporary session deleted", "dir", dir)
 	return code
+}
+
+// mergeKeptSession adds a kept temporary session's mail to the persistent
+// library and deletes the session folder once nothing is left only there.
+// The library may be open in another process too (the service); SQLite's
+// locking makes that safe.
+func mergeKeptSession(persistent paths.Paths, dir string) error {
+	if err := persistent.EnsureDirs(); err != nil {
+		return err
+	}
+	ctx := context.Background()
+	st, err := store.Open(ctx, persistent.DBFile())
+	if err != nil {
+		return fmt.Errorf("open library: %w", err)
+	}
+	defer st.Close()
+	return mergeAndRemove(ctx, &importer.Importer{Store: st, Paths: persistent}, dir)
+}
+
+// adoptKeptSessions merges the kept sessions a previous launch left behind
+// into the library imp writes to.
+func adoptKeptSessions(ctx context.Context, imp *importer.Importer) {
+	for _, dir := range tempsession.Kept(os.TempDir()) {
+		if err := mergeAndRemove(ctx, imp, dir); err != nil {
+			slog.Error("add kept temporary session to library; will retry on next launch", "dir", dir, "err", err)
+		}
+	}
+}
+
+func mergeAndRemove(ctx context.Context, imp *importer.Importer, dir string) error {
+	sum, err := tempsession.Merge(ctx, imp, dir)
+	slog.Info("kept temporary session added to library", "dir", dir,
+		"added", sum.Added, "already_there", sum.Duplicates, "failed", sum.Failed)
+	if err != nil {
+		return err
+	}
+	return tempsession.Remove(dir)
 }
 
 // run serves on p until shutdown. Its defers close the database and the log,
@@ -358,10 +408,17 @@ func run(p paths.Paths, prefsFile string, opts serveOptions) int {
 		Token:              token,
 		RunningInteractive: service.Interactive(),
 		TemporarySession:   opts.temporary,
+		TempSessionDir:     opts.tempDir,
 		PrefsFile:          prefsFile,
 	}
 	srv.StartIMAPSyncer(ctx, resolveSyncInterval(ctx, st))
+	srv.StartBackupScheduler(ctx)
 	go runBackfills(ctx, imp)
+	if !opts.temporary {
+		// Kept sessions whose merge at exit failed or never ran (a crash, a
+		// power cut) still hold mail that exists nowhere else.
+		go adoptKeptSessions(ctx, imp)
+	}
 
 	attempts := 1
 	if opts.portFallback {

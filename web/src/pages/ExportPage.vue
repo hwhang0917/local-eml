@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import S3FormCard from '@/components/S3FormCard.vue'
 import JobRunCard from '@/components/JobRunCard.vue'
+import BackupCard from '@/components/BackupCard.vue'
 
 const { t } = useI18n()
 const { exportRuns, exportActive, startS3Export } = useImports()
@@ -54,5 +55,7 @@ function downloadZip() {
     />
 
     <JobRunCard v-for="run in exportRuns" :key="run.id" :run="run" label-key="export.export_label" />
+
+    <BackupCard />
   </div>
 </template>

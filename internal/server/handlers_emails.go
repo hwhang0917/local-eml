@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -23,27 +24,12 @@ import (
 
 func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	opts := store.ListOptions{
-		Query:        q.Get("q"),
-		StarredOnly:  q.Get("starred") == "1",
-		UnreadOnly:   q.Get("unread") == "1",
-		FlaggedOnly:  q.Get("flagged") == "1",
-		Sort:         q.Get("sort"),
-		Order:        q.Get("order"),
-		Limit:        store.ClampPageSize(intParam(q.Get("limit"), store.DefaultPageSize)),
-		Offset:       intParam(q.Get("offset"), 0),
-		From:         dayStart(q.Get("from")),
-		To:           dayEnd(q.Get("to")),
-		GroupThreads: q.Get("group") == "thread",
-	}
-	// "none" selects uncategorized mail; a bare id selects that category.
-	// Anything else falls through to "any", matching how dayStart treats junk —
-	// a half-typed filter should not blank the library.
-	if cat := q.Get("category"); cat == "none" {
-		opts.Uncategorized = true
-	} else if id, err := strconv.ParseInt(cat, 10, 64); err == nil && id > 0 {
-		opts.CategoryID = &id
-	}
+	opts := listFilters(q)
+	opts.Sort = q.Get("sort")
+	opts.Order = q.Get("order")
+	opts.Limit = store.ClampPageSize(intParam(q.Get("limit"), store.DefaultPageSize))
+	opts.Offset = intParam(q.Get("offset"), 0)
+	opts.GroupThreads = q.Get("group") == "thread"
 	emails, total, err := s.Store.ListEmails(r.Context(), opts)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -55,6 +41,28 @@ func (s *Server) handleListEmails(w http.ResponseWriter, r *http.Request) {
 		"offset": opts.Offset,
 		"items":  emails,
 	})
+}
+
+// listFilters reads the library's filters (search box, starred, unread,
+// category, date range) the way the list, and an export of it, both take them.
+func listFilters(q url.Values) store.ListOptions {
+	opts := store.ListOptions{
+		Query:       q.Get("q"),
+		StarredOnly: q.Get("starred") == "1",
+		UnreadOnly:  q.Get("unread") == "1",
+		FlaggedOnly: q.Get("flagged") == "1",
+		From:        dayStart(q.Get("from")),
+		To:          dayEnd(q.Get("to")),
+	}
+	// "none" selects uncategorized mail; a bare id selects that category.
+	// Anything else falls through to "any", matching how dayStart treats junk —
+	// a half-typed filter should not blank the library.
+	if cat := q.Get("category"); cat == "none" {
+		opts.Uncategorized = true
+	} else if id, err := strconv.ParseInt(cat, 10, 64); err == nil && id > 0 {
+		opts.CategoryID = &id
+	}
+	return opts
 }
 
 // handleEmailThread lists the conversation the message belongs to, oldest

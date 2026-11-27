@@ -24,6 +24,7 @@ import {
   type AttachmentKind,
   type AttachmentListParams,
 } from '@/lib/api'
+import { docPreviewKind } from '@/lib/docPreview'
 import { dateFormat, formatBytes, formatDate, formatDateAbsolute, senderName } from '@/lib/format'
 import { onMailSignal } from '@/composables/useMailEvents'
 import { PAGE_SIZES, useListQuery } from '@/composables/useListQuery'
@@ -303,7 +304,14 @@ function emailRoute(a: AttachmentItem) {
             <td class="px-3 py-2">
               <span class="flex min-w-0 items-center gap-2">
                 <component :is="KIND_ICONS[a.kind]" class="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <RouterLink
+                  v-if="docPreviewKind(a.filename, a.content_type, a.size)"
+                  :to="emailRoute(a)"
+                  :title="displayName(a)"
+                  class="truncate rounded-xs font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >{{ displayName(a) }}</RouterLink>
                 <a
+                  v-else
                   :href="canOpen(a) ? openURL(a) : downloadURL(a)"
                   :target="canOpen(a) ? '_blank' : undefined"
                   rel="noopener"

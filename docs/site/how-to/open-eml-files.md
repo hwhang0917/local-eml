@@ -10,7 +10,7 @@ If you have a mail app set up, Windows and macOS can open a single `.eml` file i
 2. A browser window opens on the **Import** page. Drag your `.eml` files, or the folder they're in, onto it. A `.zip` of `.eml` files works too.
 3. Go to the **Library** page. Every message is listed by date, with the sender and subject. Click one to read it.
 
-Attachments are listed under the message, and images, PDFs, audio and video can be previewed. Images hosted on the internet aren't loaded unless you click to load them, so the sender can't tell you opened the message.
+Attachments are listed under the message, and images, PDFs, audio, video, Hangul (HWP, HWPX), Word (DOCX) and Excel (XLSX, XLS) files can be previewed. Previews are drawn inside the app, so documents never leave your computer. Images hosted on the internet aren't loaded unless you click to load them, so the sender can't tell you opened the message.
 
 ## Search a folder of .eml files
 

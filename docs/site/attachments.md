@@ -21,7 +21,7 @@ Each row has up to three buttons:
 
 - **Open in a new tab** shows images, PDFs, audio, video and plain text in your browser. Other files can't be opened safely in the browser, so they only have a download button.
 - **Download** saves the file.
-- **Go to the email** opens the message the file came in, on its **Attachments** tab. For a file that can be previewed, the preview is already open.
+- **Go to the email** opens the message the file came in, on its **Attachments** tab. For a file that can be previewed, the preview is already open. Clicking the name of a Hangul, Word or Excel file goes there too, instead of downloading it.
 
 Clicking the file name does the same as **Open in a new tab**, or downloads the file when it can't be opened.
 

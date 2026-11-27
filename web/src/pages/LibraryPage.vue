@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUpdate, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 import { Check, ChevronDown, ChevronRight, Columns3, CornerDownRight, Mail, MailOpen, MessagesSquare, RotateCcw, Star, Trash2, TriangleAlert, X } from 'lucide-vue-next'
@@ -29,7 +29,7 @@ import { useListContext } from '@/composables/useListContext'
 import { onMailSignal } from '@/composables/useMailEvents'
 import { useSession } from '@/composables/useSession'
 import { hasModifier, isTypingTarget } from '@/lib/keys'
-import { highlightTerms } from '@/lib/searchQuery'
+import { clauseValue, hasClause, highlightTerms, replaceClauses, toggleClause, type SearchClause } from '@/lib/searchQuery'
 import { cn } from '@/lib/utils'
 import Input from '@/components/ui/Input.vue'
 import Button from '@/components/ui/Button.vue'
@@ -40,6 +40,9 @@ import CategoryMenu, { type CategoryOption } from '@/components/ui/CategoryMenu.
 import DateRangePicker from '@/components/ui/DateRangePicker.vue'
 import Highlight from '@/components/ui/Highlight.vue'
 import SearchHelp from '@/components/SearchHelp.vue'
+import SavedSearchMenu from '@/components/SavedSearchMenu.vue'
+import ExportMenu from '@/components/ExportMenu.vue'
+import { useSelectionExport, type ExportFormat } from '@/composables/useSelectionExport'
 import PageNav from '@/components/ui/PageNav.vue'
 import SortHeader from '@/components/ui/SortHeader.vue'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
@@ -50,8 +53,9 @@ type SortCol = 'sent_at' | 'from_addr' | 'subject' | 'size_bytes'
 type Order = NonNullable<EmailListParams['order']>
 
 const router = useRouter()
+const route = useRoute()
 const {
-  param, pushQuery, offset, limit, goPrevPage, goNextPage, setPageSize, setDateRange, pageLabel,
+  param, pushQuery, offset, limit, goPrevPage, goNextPage, setPageSize, pageLabel,
 } = useListQuery('library-page-size')
 const { t } = useI18n()
 
@@ -77,11 +81,18 @@ const { enabled: readTracking } = useReadTracking()
 const colCount = computed(() => 2 + HIDEABLE_COLS.filter(colShown).length + (readTracking.value ? 1 : 0))
 
 const q = computed(() => param('q'))
-const starredOnly = computed(() => param('starred') === '1')
-const unreadOnly = computed(() => param('unread') === '1')
-const category = computed(() => param('category'))
-const from = computed(() => param('from'))
-const to = computed(() => param('to'))
+// The buttons beside the search box are views of the query, not state of
+// their own: Starred is "is:starred" in the box, the date range is
+// "after:… until:…", and so on. What the box says is the whole filter.
+const starredOnly = computed(() => hasClause(q.value, 'is', 'starred'))
+const unreadOnly = computed(() => hasClause(q.value, 'is', 'unread'))
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/
+const dayClause = (field: 'after' | 'until') => {
+  const v = clauseValue(q.value, field)
+  return ISO_DAY.test(v) ? v : ''
+}
+const from = computed(() => dayClause('after'))
+const to = computed(() => dayClause('until'))
 const sort = computed<SortCol>(() => param('sort', 'sent_at') as SortCol)
 const order = computed<Order>(() => param('order', 'desc') as Order)
 
@@ -105,11 +116,6 @@ const fromHighlight = computed(() => highlightTerms(q.value, 'from'))
 // the viewer's prev/next can re-run the same query around any index.
 const listParams = computed<EmailListParams>(() => ({
   q: q.value || undefined,
-  starred: starredOnly.value || undefined,
-  unread: unreadOnly.value || undefined,
-  category: category.value || undefined,
-  from: from.value || undefined,
-  to: to.value || undefined,
   sort: sort.value,
   order: order.value,
   group: groupThreads.value ? 'thread' : undefined,
@@ -159,7 +165,7 @@ async function toggleThread(e: Email) {
   }
 }
 
-watch([q, starredOnly, unreadOnly, category, from, to, sort, order, offset, limit], load)
+watch([q, sort, order, offset, limit], load)
 
 // Live refresh. When the server says mail came in (a background sync, or an
 // import in another tab), the page re-runs its query in place: no spinner,
@@ -211,8 +217,15 @@ onUnmounted(() => {
 })
 
 const tour = useTour()
-onMounted(() => {
-  load()
+onMounted(async () => {
+  if (LEGACY_PARAMS.some((k) => param(k) !== '')) {
+    // The category id needs the list to become a colour; the replace that
+    // follows changes q, and the watch on q loads the page.
+    await loadCategories().catch(() => {})
+    migrateLegacyParams()
+  } else {
+    load()
+  }
   tour.startIfFirstVisit()
 })
 useEventListener(window, 'keydown', onKeydown)
@@ -316,22 +329,53 @@ function setSort(col: SortCol) {
 const canPrevPage = computed(() => offset.value > 0)
 const canNextPage = computed(() => offset.value + limit.value < total.value)
 
+// Writes the query at once, skipping the typing debounce: a click is final.
+function setQuery(next: string) {
+  searchInput.value = next
+  lastPushedQ = next
+  pushQuery({ q: next || undefined, offset: undefined })
+}
+
 function toggleStarredFilter() {
-  pushQuery({ starred: starredOnly.value ? undefined : '1', offset: undefined })
+  setQuery(toggleClause(q.value, 'is', 'starred'))
 }
 
 function toggleUnreadFilter() {
-  pushQuery({ unread: unreadOnly.value ? undefined : '1', offset: undefined })
+  setQuery(toggleClause(q.value, 'is', 'unread'))
+}
+
+const DATE_FIELDS = new Set(['after', 'until', 'before', 'on'])
+function setDateRange(range: { from: string; to: string }) {
+  const tokens = [range.from && `after:${range.from}`, range.to && `until:${range.to}`].filter(Boolean) as string[]
+  setQuery(replaceClauses(q.value, (c: SearchClause) => DATE_FIELDS.has(c.field), tokens))
+}
+
+// Links and bookmarks from before the buttons wrote into the query carry
+// starred=1, unread=1, category=<id>, from= and to=. Fold them into q once,
+// so there is a single place a filter can live.
+const LEGACY_PARAMS = ['starred', 'unread', 'category', 'from', 'to'] as const
+function migrateLegacyParams() {
+  if (!LEGACY_PARAMS.some((k) => param(k) !== '')) return
+  let next = q.value
+  if (param('starred') === '1' && !hasClause(next, 'is', 'starred')) next = toggleClause(next, 'is', 'starred')
+  if (param('unread') === '1' && !hasClause(next, 'is', 'unread')) next = toggleClause(next, 'is', 'unread')
+  const cat = param('category')
+  const token = categoryToken(cat)
+  if (token) next = replaceClauses(next, (c) => c.field === 'category', [token])
+  const dates = [param('from') && `after:${param('from')}`, param('to') && `until:${param('to')}`].filter(Boolean) as string[]
+  if (dates.length) next = replaceClauses(next, (c) => DATE_FIELDS.has(c.field), dates)
+  const query: Record<string, string> = {}
+  for (const [k, v] of Object.entries(route.query)) {
+    if (typeof v === 'string' && !(LEGACY_PARAMS as readonly string[]).includes(k)) query[k] = v
+  }
+  if (next) query.q = next
+  else delete query.q
+  void router.replace({ query })
 }
 
 const hasActiveFilters = computed(
   () =>
     q.value !== '' ||
-    starredOnly.value ||
-    unreadOnly.value ||
-    category.value !== '' ||
-    from.value !== '' ||
-    to.value !== '' ||
     sort.value !== 'sent_at' ||
     order.value !== 'desc' ||
     offset.value > 0,
@@ -342,11 +386,6 @@ function resetFilters() {
   lastPushedQ = ''
   pushQuery({
     q: undefined,
-    starred: undefined,
-    unread: undefined,
-    category: undefined,
-    from: undefined,
-    to: undefined,
     sort: undefined,
     order: undefined,
     offset: undefined,
@@ -354,7 +393,8 @@ function resetFilters() {
 }
 
 function setCategoryFilter(v: string) {
-  pushQuery({ category: v === ANY_CATEGORY ? undefined : v, offset: undefined })
+  const token = categoryToken(v)
+  setQuery(replaceClauses(q.value, (c) => c.field === 'category', token ? [token] : []))
 }
 
 function emailHref(sha: string) {
@@ -425,6 +465,18 @@ function toggleSelectPage() {
   else for (const e of items.value) selected.value.add(e.sha256)
 }
 
+const exporter = useSelectionExport()
+function exportSelected(format: ExportFormat) {
+  void exporter.run(format, { kind: 'selection', shas: [...selected.value], threads: groupThreads.value }, items.value)
+}
+function exportResults(format: ExportFormat) {
+  void exporter.run(format, { kind: 'search', q: q.value, total: total.value })
+}
+// The filter bar's export button; it stays compact like the other filters.
+const filterBtn = 'inline-flex h-8 items-center gap-2 rounded-sm border border-hairline bg-pearl px-3 text-sm '
+  + 'text-foreground hover:bg-accent disabled:opacity-50 disabled:pointer-events-none '
+  + 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+
 async function runBulk(action: BulkAction) {
   const shas = [...selected.value]
   if (shas.length === 0 || bulkBusy.value) return
@@ -443,8 +495,26 @@ async function runBulk(action: BulkAction) {
   }
 }
 
-const { byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
+const { categories, byId, labelFor, options: assignOptions, load: loadCategories } = useCategories()
 onMounted(loadCategories)
+
+// The category button's value ("" any, "none", or an id) read from the
+// query's category: clause. The button writes the colour, which survives a
+// rename; a name typed by hand is matched too.
+const category = computed(() => {
+  const v = clauseValue(q.value, 'category').toLowerCase()
+  if (!v) return ''
+  if (v === NO_CATEGORY) return NO_CATEGORY
+  const c = categories.value.find((x) => x.color === v || (x.name && x.name.toLowerCase() === v))
+  return c ? String(c.id) : ''
+})
+
+function categoryToken(v: string): string | null {
+  if (!v || v === ANY_CATEGORY) return null
+  if (v === NO_CATEGORY) return 'category:none'
+  const c = byId.value.get(Number(v))
+  return c ? `category:${c.color}` : null
+}
 
 const filterOptions = computed<CategoryOption[]>(() => [
   { value: ANY_CATEGORY, label: t('library.category_any') },
@@ -562,6 +632,15 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
         <RotateCcw class="h-4 w-4" />
         <span class="ml-1.5">{{ t('library.reset') }}</span>
       </Button>
+      <SavedSearchMenu :query="q" @apply="setQuery" />
+      <ExportMenu
+        v-if="q && total > 0"
+        :label="t('export_selection.results_button', { count: total }, total)"
+        :trigger-class="filterBtn"
+        :disabled="exporter.busy.value"
+        testid="export-results"
+        @pick="exportResults"
+      />
       <div class="ml-auto flex items-center gap-3">
         <button
           type="button"
@@ -675,6 +754,13 @@ const pageInfo = computed(() => pageLabel(items.value.length, total.value))
                     <Mail class="h-3.5 w-3.5" />
                     {{ t('library.bulk_mark_unread') }}
                   </button>
+                  <ExportMenu
+                    :label="t('export_selection.selected_button')"
+                    :trigger-class="bulkBtn"
+                    :disabled="bulkBusy || exporter.busy.value"
+                    testid="export-selected"
+                    @pick="exportSelected"
+                  />
                   <button
                     v-if="canDelete"
                     type="button"

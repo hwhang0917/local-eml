@@ -7,7 +7,8 @@
     "server_offline": "Can't reach the local-eml server. Is it running?",
     "server_retry": "Retry",
     "server_checking": "Checking…",
-    "temporary_banner": "Temporary session: nothing is kept after you close this window."
+    "temporary_banner": "Temporary session: nothing is kept after you close this window.",
+    "temporary_banner_kept": "Temporary session: this window's mail will be added to your library when you close it."
   },
   "auth": {
     "title": "Sign in to Local Eml",
@@ -229,7 +230,17 @@
     "delete_error": "Couldn't delete the email",
     "print": "Print email",
     "print_error": "Couldn't print the email",
-    "toggle_thread": "Show or hide the conversation"
+    "toggle_thread": "Show or hide the conversation",
+    "doc_preview": {
+      "loading": "Opening the document…",
+      "failed": "This document couldn't be previewed. It may be password-protected or damaged. Download it to open it in its own app.",
+      "page": "Page {page} of {total}",
+      "pages_shown": "Showing {shown} of {total} pages",
+      "more_pages": "Show more pages",
+      "frame_title": "Document preview",
+      "empty_sheet": "This sheet is empty.",
+      "sheet_truncated": "Showing the first {rows} rows and {cols} columns of {totalRows} × {totalCols}. Download the file to see everything."
+    }
   },
   "import": {
     "drop": "Drop .eml files, a directory, a .zip, an .mbox, or a .pst here",
@@ -291,9 +302,11 @@
     "s3_creds_form": "from form",
     "s3_creds_system": "from system (~/.aws/credentials)",
     "s3_profile_save": "Save profile",
-    "s3_profile_save_prompt": "Profile name:",
     "s3_profile_delete": "Delete",
     "s3_profile_delete_confirm": "Delete profile \"{name}\"?",
+    "profile_name_title": "Name this profile",
+    "profile_name_body": "Shown on its card under Saved profiles, so you can load these settings again later.",
+    "profile_name_label": "Profile name",
     "profile_delete_body": "Only the saved connection details are removed; nothing in the bucket or mailbox is touched.",
     "s3_profile_save_error": "Couldn't save profile",
     "s3_profile_load_error": "Couldn't load profiles",
@@ -318,7 +331,6 @@
     "imap_folder": "Folder",
     "imap_confirm_hint": "Imports every message in the selected folder.",
     "imap_profile_save": "Save profile",
-    "imap_profile_save_prompt": "Profile name:",
     "imap_profile_delete": "Delete",
     "imap_profile_delete_confirm": "Delete profile \"{name}\"?",
     "imap_profile_save_error": "Couldn't save profile",
@@ -427,7 +439,8 @@
       "categories": "Categories",
       "restore": "Restore from backup",
       "flagged": "Spam & phishing",
-      "privacy": "Privacy"
+      "privacy": "Privacy",
+      "duplicates": "Duplicates"
     },
     "flagged_help": "Messages flagged as spam or phishing are hidden from the library and, when opened, shown as plain text only: no HTML, no images, no attachments, no clickable links. Unflag a message to restore it.",
     "flagged_empty": "No flagged messages.",
@@ -639,6 +652,10 @@
     "temp_toggle": "Double-click sessions are temporary",
     "temp_toggle_help": "Takes effect from the next launch. The only thing kept on disk is a small file that remembers this switch.",
     "temp_now": "You're in a temporary session right now. Nothing from this window is kept after it closes.",
+    "temp_now_kept": "You're in a temporary session right now. Because you chose to keep it, its mail will be added to your library when this window closes.",
+    "keep_toggle": "Keep the mail from this window",
+    "keep_toggle_help": "When this window closes, its mail, stars, read marks and categories are added to your library instead of deleted. Saved profiles come along without their passwords.",
+    "keep_now_on": "The mail in this window will be added to your library when you close it.",
     "temp_service": "Not available while Local Eml runs as a background service, because the service never closes. To use a temporary session on this computer, stop the service or start Local Eml with --ephemeral.",
     "temp_on": "Temporary sessions turned on",
     "temp_off": "Temporary sessions turned off",
@@ -684,8 +701,88 @@
       "larger": "Bigger than a size (K, M, G)",
       "smaller": "Smaller than a size",
       "phrase": "These words in this order",
-      "exclude": "Leave out mail with this word (works with filters too)"
+      "exclude": "Leave out mail with this word (works with filters too)",
+      "category": "In a category: its colour (red), its name, or none",
+      "until": "Sent on or before (includes that day)"
     },
     "dates": "Dates can be a year (2019), a month (2019-03) or a day (2019-03-05). after:2019 before:2020 means all of 2019."
+  },
+  "backup": {
+    "title": "Automatic backup",
+    "hint": "Copies your mail into a folder on a schedule. Use an external drive, a NAS, or a folder that Dropbox, OneDrive or Google Drive syncs. Each backup copies only new mail, and nothing is ever deleted from the folder, so mail you delete here stays in the backup.",
+    "folder": "Backup folder",
+    "folder_hint": "The full path of a folder on this computer. It is created if it doesn’t exist.",
+    "every": "Back up",
+    "every_off": "Off",
+    "every_daily": "Daily",
+    "every_weekly": "Weekly",
+    "save": "Save",
+    "saved": "Backup settings saved.",
+    "run_now": "Back up now",
+    "running": "Backing up…",
+    "last_ok": "Last backup {when}: {added} new message copied, {total} in total. | Last backup {when}: {added} new messages copied, {total} in total.",
+    "last_failed": "The last backup, {when}, failed.",
+    "last_good": "Last successful backup: {when}.",
+    "never_ok": "No backup has succeeded yet.",
+    "some_failed": "{count} messages couldn’t be copied; see the log for details.",
+    "never": "No backup yet.",
+    "schedule_daily": "Runs about once a day while Local Eml is running. A missed backup runs soon after it next starts.",
+    "schedule_weekly": "Runs about once a week while Local Eml is running. A missed backup runs soon after it next starts.",
+    "temporary": "Backups are off in a temporary session.",
+    "load_error": "Couldn't load backup settings",
+    "save_error": "Couldn't save backup settings",
+    "run_error": "Couldn't start the backup"
+  },
+  "duplicates": {
+    "help": "The same email can end up in your library twice when it comes in two ways, for example from a Google Takeout .mbox and again through IMAP. Copies are matched by their Message-ID and date. Merging keeps one copy and deletes the others, and anything you did to any copy carries over: stars, read state and category.",
+    "summary": "{groups} emails are stored more than once: {extra} extra copy using {size}. | {groups} emails are stored more than once: {extra} extra copies using {size}.",
+    "merge_all": "Remove {count} extra copy | Remove {count} extra copies",
+    "merge_one": "Keep one, remove {count} | Keep one, remove {count}",
+    "merge_page": "Merge every group on this page",
+    "which_to_keep": "Which copy to keep",
+    "keep": "Keep",
+    "remove": "Remove",
+    "imported": "Imported {date}",
+    "empty": "No duplicates. Every email in your library is stored once.",
+    "merged": "Removed {count} extra copy. | Removed {count} extra copies.",
+    "load_error": "Couldn't look for duplicates",
+    "merge_error": "Couldn't merge duplicates",
+    "temporary": "Temporary sessions can't delete mail.",
+    "confirm_title": "Remove {count} extra copy? | Remove {count} extra copies?",
+    "confirm_body": "Each email keeps its oldest import. Stars, read state and categories move to the copy that stays. The other copies and their .eml files are deleted, and this can’t be undone.",
+    "confirm_ok": "Remove copies",
+    "confirm_cancel": "Cancel"
+  },
+  "export_selection": {
+    "results_button": "Export {count} result | Export {count} results",
+    "selected_button": "Export",
+    "format": {
+      "zip": ".eml files in a .zip",
+      "zip_hint": "One file per message, plus index.csv listing them all.",
+      "mbox": "One .mbox file",
+      "mbox_hint": "Opens in Thunderbird, Apple Mail or another Local Eml.",
+      "pdf": "Print or save as PDF",
+      "pdf_hint": "Every message in one printout, with a contents page."
+    },
+    "started": "Your download is starting.",
+    "preparing_print": "Preparing the printout…",
+    "too_many_to_print": "Printing is limited to {max} messages. Narrow the search, or export a .zip instead.",
+    "print_title": "Exported messages",
+    "print_summary": "{count} message · {date} | {count} messages · {date}"
+  },
+  "saved_search": {
+    "button": "Saved",
+    "empty": "No saved searches yet. Search for something, then save it here.",
+    "save": "Save this search…",
+    "save_disabled": "Type a search or pick a filter to save it",
+    "delete": "Delete “{name}”",
+    "saved": "Saved “{name}”",
+    "save_error": "Couldn't save your searches",
+    "dialog_title": "Save search",
+    "dialog_body": "Saves “{query}” so you can open it again with one click.",
+    "dialog_label": "Name",
+    "dialog_placeholder": "e.g. Receipts",
+    "dialog_confirm": "Save",
+    "dialog_cancel": "Cancel"
   }
 }
