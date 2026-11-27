@@ -357,11 +357,18 @@ export interface RestoreSummary {
   s3_profiles: number
 }
 
+/** A non-2xx answer from the server. The message keeps the old "status text: body" shape. */
+export class ApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message)
+  }
+}
+
 async function okOrThrow(res: Response): Promise<void> {
   if (res.status === 401) locked.value = true
   if (!res.ok) {
     const text = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${res.statusText}: ${text}`)
+    throw new ApiError(res.status, `${res.status} ${res.statusText}: ${text}`)
   }
 }
 

@@ -43,6 +43,42 @@ func TestSPAFallbackOnlyForRoutes(t *testing.T) {
 	}
 }
 
+// A browser landing on a missing file gets the app (which shows its own
+// not-found page) with a 404 status; scripts, images and fetches still get a
+// bare 404, so nothing parses HTML as something else.
+func TestSPAMissingFileNavigation(t *testing.T) {
+	h := securityHeaders(testSPA())
+	nav := map[string]string{"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
+	for _, p := range []string{"/.env::$DATA?raw", "/robots.txt", "/assets/index-old.js", "/wp-login.php"} {
+		rec := get(h, p, nav)
+		if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "id=app") {
+			t.Errorf("%s: want shell with 404, got %d %q", p, rec.Code, rec.Body.String())
+		}
+		if ct := rec.Header().Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+			t.Errorf("%s: content-type %q", p, ct)
+		}
+		if rec.Header().Get("Content-Security-Policy") != appCSP {
+			t.Errorf("%s: CSP missing on the not-found page", p)
+		}
+		if strings.Contains(rec.Body.String(), ".env") || strings.Contains(rec.Body.String(), "wp-login") {
+			t.Errorf("%s: path echoed in the body", p)
+		}
+	}
+	for _, accept := range []string{"", "*/*", "image/avif,image/webp,*/*", "text/css,*/*;q=0.1", "application/json"} {
+		rec := get(h, "/assets/index-old.js", map[string]string{"Accept": accept})
+		if rec.Code != http.StatusNotFound || strings.Contains(rec.Body.String(), "id=app") {
+			t.Errorf("Accept %q: want bare 404, got %d %q", accept, rec.Code, rec.Body.String())
+		}
+	}
+	req := httptest.NewRequest(http.MethodPost, "/robots.txt", nil)
+	req.Header.Set("Accept", "text/html")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if strings.Contains(rec.Body.String(), "id=app") {
+		t.Errorf("POST: want no shell, got %q", rec.Body.String())
+	}
+}
+
 func TestSPAGzipsAssets(t *testing.T) {
 	h := testSPA()
 	rec := get(h, "/assets/index-ab.js", map[string]string{"Accept-Encoding": "gzip, deflate, br"})
