@@ -783,6 +783,10 @@
     "dialog_label": "Name",
     "dialog_placeholder": "e.g. Receipts",
     "dialog_confirm": "Save",
-    "dialog_cancel": "Cancel"
+    "dialog_cancel": "Cancel",
+    "deleted": "Deleted “{name}”",
+    "delete_title": "Delete the saved search “{name}”?",
+    "delete_body": "This removes “{query}” from your saved searches. Your mail isn’t affected.",
+    "delete_confirm": "Delete"
   }
 }

@@ -783,6 +783,10 @@
     "dialog_label": "이름",
     "dialog_placeholder": "예: 영수증",
     "dialog_confirm": "저장",
-    "dialog_cancel": "취소"
+    "dialog_cancel": "취소",
+    "deleted": "“{name}”을(를) 삭제했습니다",
+    "delete_title": "저장한 검색 “{name}”을(를) 삭제할까요?",
+    "delete_body": "저장한 검색에서 “{query}”를 지웁니다. 메일은 그대로 남습니다.",
+    "delete_confirm": "삭제"
   }
 }
