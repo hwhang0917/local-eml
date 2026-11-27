@@ -54,6 +54,9 @@ type Server struct {
 	// mail tells open tabs that new mail came in; see mail_events.go.
 	mail mailFeed
 
+	// Sign-in codes already spent; see auth.go.
+	codes usedCodes
+
 	// Automatic folder backups; see backup.go.
 	backup backupRunner
 }
@@ -65,10 +68,12 @@ func (s *Server) Router() http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.RequestID)
+	r.Use(securityHeaders)
 	r.Use(loopbackGuard)
 
 	r.Get("/healthz", s.handleHealth)
 	r.Get(AuthPath, s.handleAuth)
+	r.Post(AuthPath, s.handleAuthForm)
 
 	r.Route("/api", func(api chi.Router) {
 		api.Use(s.requireToken)
