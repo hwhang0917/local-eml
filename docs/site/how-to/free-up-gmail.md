@@ -22,7 +22,7 @@ If you'd rather not create an app password, export your mail with Google Takeout
 
 ## Check the copy, then delete from Gmail
 
-1. In Local Eml, open **Stats** to see how many messages you have and what dates they cover.
+1. In Local Eml, open [**Stats**](../stats) to see how many messages you have and what dates they cover.
 2. Open a few old messages, including some with attachments, to make sure they look right.
 3. In Gmail, search for the mail you've copied, for example `older_than:5y` for mail older than five years. Select it all and delete it. Then empty the Trash, because Gmail keeps deleted mail there for 30 days and you won't get the space back until it's gone.
 

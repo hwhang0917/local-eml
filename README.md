@@ -13,6 +13,21 @@ It's meant for archiving. If your mailbox is full, you can copy the old messages
 
 It is not an email client. You can't write, send or reply to mail, and it never changes anything in your mailbox: IMAP access is read-only. It runs on desktop computers only, and only your own computer can connect to it.
 
+![The Local Eml library](docs/intro/img/en/library.webp)
+
+## What you can do
+
+- **Search all your mail at once.** Sender, recipients, subject, body and attachment names, with filters like `from:alice`, `has:attachment` or `after:2019`. Korean, Japanese and Chinese work out of the box, and so does 초성검색 (typing `ㅎㄱ` finds 한국). Save the searches you use often.
+- **Read safely.** HTML mail opens in a locked-down frame with remote images blocked, links show where they really go, and messages that look like phishing get a warning. Hangul (HWP, HWPX), Word and Excel attachments open right in the app.
+- **Find any attachment.** The Attachments page lists every file in every message, so you can find that PDF by name, type, sender or date without remembering which email it came in.
+- **Keep up with new mail.** Turn on background sync for an IMAP profile and new mail arrives within seconds on servers that support IMAP IDLE, with an optional desktop notification. The password is stored encrypted, and its key sits in your system's keychain (Credential Manager, Keychain or the Linux secret service), or in a private file where there isn't one.
+- **Tidy up.** Select many messages to mark them read or unread or delete them, or delete one while you read it. Print a whole message, or save it as a PDF. Settings → Duplicates finds mail you imported twice and keeps one copy.
+- **See what you have.** The Stats page charts your mail over time, shows when mail arrives, who sends the most, and what takes up space.
+- **Take it with you.** Export everything as one `.zip`, or upload it to AWS S3 or an S3-compatible service. To hand over just some mail, export a search's results or your selection as `.eml` files, one `.mbox` or a PDF.
+- **Back it up.** Automatic backup copies new mail into a folder on an external drive, a NAS or a synced cloud folder, daily or weekly.
+
+The app and the documentation are available in English, Korean and Japanese.
+
 ## Download
 
 Get the file for your system from the [latest release](https://github.com/hwhang0917/local-eml/releases/latest) and double-click it. Local Eml opens in its own window and quits when you close it. There's no installer and no account. Windows and macOS warn you the first time you open it; the [install guide](https://hwhang0917.github.io/local-eml/docs/install) shows how to get past that.
@@ -42,7 +57,7 @@ Step-by-step guides:
 - [Open a .pst without Outlook](https://hwhang0917.github.io/local-eml/docs/how-to/pst-without-outlook)
 - [Free up Gmail storage](https://hwhang0917.github.io/local-eml/docs/how-to/free-up-gmail)
 
-The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [browsing attachments](https://hwhang0917.github.io/local-eml/docs/attachments), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
+The [full documentation](https://hwhang0917.github.io/local-eml/docs/) also explains [importing](https://hwhang0917.github.io/local-eml/docs/import), [search](https://hwhang0917.github.io/local-eml/docs/search) (including Korean 초성검색), [browsing attachments](https://hwhang0917.github.io/local-eml/docs/attachments), [library stats](https://hwhang0917.github.io/local-eml/docs/stats), [receiving new mail](https://hwhang0917.github.io/local-eml/docs/sync), [spam and phishing warnings](https://hwhang0917.github.io/local-eml/docs/spam-phishing), [where your data is kept](https://hwhang0917.github.io/local-eml/docs/privacy), [settings and the command line](https://hwhang0917.github.io/local-eml/docs/settings-cli), and [troubleshooting](https://hwhang0917.github.io/local-eml/docs/troubleshooting).
 
 ## Contributing
 

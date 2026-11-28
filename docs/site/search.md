@@ -90,11 +90,22 @@ Tick the box at the start of a row to select a message, or press `x` on the high
 
 With **Group by conversation** on, selecting a row selects the whole conversation, and the action applies to every message in it.
 
+In a [temporary session](./privacy#temporary-sessions) there's no **Delete all**, because the whole library is deleted when you close it anyway.
+
 ## Reading a message
 
 HTML email is shown in a locked-down frame so scripts in the email can't run. Images hosted on the internet are blocked until you click to load them, which stops senders from seeing that you opened the message. Before a link opens, Local Eml shows you where it really goes.
 
 Images, PDFs, audio, video, text, Hangul (HWP, HWPX), Word (DOCX) and Excel (XLSX, XLS) attachments can be previewed. Other attachments are downloaded when you click them.
+
+![Reading a message](https://hwhang0917.github.io/local-eml/img/en/viewer.webp)
+
+The buttons at the top right of a message, from left to right, set its category, mark it as spam or phishing, star it, mark it read or unread (when read tracking is on), print it and delete it.
+
+- **Print** prints the whole message: subject, sender, date, the list of attachments, and the full body, however long it is. `Ctrl+P` (`⌘P` on a Mac) does the same while you're reading. Your browser's print window opens, so you can also choose **Save as PDF** there. If you're on the **Plain text** or **Raw** tab, that's what gets printed.
+- **Delete** removes this one message and its `.eml` file from your computer, after asking you first. Like **Delete all** in the list, this can't be undone. Afterwards you move on to the next message. The button is hidden in a [temporary session](./privacy#temporary-sessions), since everything is deleted when you close it anyway.
+
+Use the arrows to step to the previous or next message in your list, or click another message in the **Conversation** box. However far you wander, **← Back to library** takes you back to the list just as you left it, with the same search, filters and page.
 
 ## Speed
 

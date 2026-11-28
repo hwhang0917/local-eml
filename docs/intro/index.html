@@ -86,6 +86,7 @@
         <button type="button" role="tab" data-shot="library" data-i18n="screens.library">Library</button>
         <button type="button" role="tab" data-shot="search" data-i18n="screens.search">Search</button>
         <button type="button" role="tab" data-shot="viewer" aria-selected="true" data-i18n="screens.viewer">Reading</button>
+        <button type="button" role="tab" data-shot="attachments" data-i18n="screens.attachments">Attachments</button>
         <button type="button" role="tab" data-shot="stats" data-i18n="screens.stats">Stats</button>
         <button type="button" role="tab" data-shot="import" data-i18n="screens.import">Import</button>
       </div>
@@ -94,7 +95,7 @@
         <img id="shot-img" src="img/en/viewer.webp" alt="" width="1440" height="900" />
       </figure>
       <p class="caption" id="shot-caption" data-i18n="screens.cap.viewer">
-        HTML mail in a sandboxed frame, remote images blocked, attachments listed, the whole conversation one click away.
+        HTML mail in a sandboxed frame with remote images blocked, the whole conversation one click away, and buttons to print or delete.
       </p>
     </section>
 
@@ -139,15 +140,15 @@
       <div class="grid">
         <div class="card">
           <h3 data-i18n="f.import.t">Import anything</h3>
-          <p data-i18n="f.import.b"><code>.eml</code> files, folders, <code>.zip</code>, <code>.mbox</code> (Google Takeout, Thunderbird), Outlook <code>.pst</code>, an S3 bucket, or an IMAP mailbox. Duplicates are skipped by hash.</p>
+          <p data-i18n="f.import.b"><code>.eml</code> files, folders, <code>.zip</code>, <code>.mbox</code> (Google Takeout, Thunderbird), Outlook <code>.pst</code>, an IMAP mailbox, or an S3 bucket on AWS, MinIO, R2 or B2. Duplicates are skipped by hash.</p>
         </div>
         <div class="card">
           <h3 data-i18n="f.search.t">Search that speaks CJK</h3>
-          <p data-i18n="f.search.b">Full-text search over sender, subject and body. Korean, Japanese and Chinese work out of the box, and typing just the initial consonants (<code>ㅎㄱ</code> → 한국) finds it too.</p>
+          <p data-i18n="f.search.b">Full-text search over sender, subject, body and attachment names, with filters like <code>from:</code> and <code>has:attachment</code> that you can save. Korean, Japanese and Chinese work out of the box, and typing just the initial consonants (<code>ㅎㄱ</code> → 한국) finds it too.</p>
         </div>
         <div class="card">
           <h3 data-i18n="f.private.t">Private by design</h3>
-          <p data-i18n="f.private.b">Listens only on <code>127.0.0.1</code>. No account, no telemetry, no cloud. IMAP passwords are never stored unless you opt in, and then only encrypted with a key that stays on your disk.</p>
+          <p data-i18n="f.private.b">Listens only on <code>127.0.0.1</code>. No account, no telemetry, no cloud. IMAP passwords are never stored unless you opt in, and then only encrypted, with the key kept in your system's keychain where there is one.</p>
         </div>
         <div class="card">
           <h3 data-i18n="f.safe.t">Reads HTML safely</h3>
@@ -155,11 +156,23 @@
         </div>
         <div class="card">
           <h3 data-i18n="f.sync.t">Keeps up with new mail</h3>
-          <p data-i18n="f.sync.b">Turn on background sync for any IMAP profile and it fetches only what is new since last time. Read-only: your mailbox is never modified.</p>
+          <p data-i18n="f.sync.b">Turn on background sync for an IMAP profile and new mail lands within seconds on servers with IMAP IDLE, with an optional desktop notification. Read-only: your mailbox is never modified.</p>
         </div>
         <div class="card">
           <h3 data-i18n="f.export.t">Yours to take with you</h3>
-          <p data-i18n="f.export.b">Export the whole library as a single <code>.zip</code> or push it to S3. Stars, categories and settings travel with it.</p>
+          <p data-i18n="f.export.b">Export the whole library as a single <code>.zip</code> or push it to S3, or export just a search's results. Automatic backups copy new mail into a folder every day or week.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.attach.t">Every attachment in one place</h3>
+          <p data-i18n="f.attach.b">One table of every file in every message. Filter by name, type, sender or date, sort by size, and preview Hangul (HWP), Word and Excel files right in the app.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.stats.t">See what you have</h3>
+          <p data-i18n="f.stats.b">Charts of your mail over time, a weekday-by-hour grid of when it arrives, top senders and domains, and what takes up space.</p>
+        </div>
+        <div class="card">
+          <h3 data-i18n="f.tidy.t">Tidy up and print</h3>
+          <p data-i18n="f.tidy.b">Select many messages to mark them read or unread or delete them. Print a message or save it as a PDF, and merge mail you imported twice.</p>
         </div>
       </div>
       <p class="not">

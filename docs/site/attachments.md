@@ -4,6 +4,8 @@ The **Attachments** page lists every file attached to every message in one table
 
 Inline images, such as logos in an email's signature, are not attachments and aren't listed. Neither are attachments of messages marked as spam or phishing.
 
+![The attachments page](https://hwhang0917.github.io/local-eml/img/en/attachments.webp)
+
 ## Finding a file
 
 - **Search file names** matches any part of a file name. `invoice` finds `INV-invoice-2291.pdf` and `invoice_march.xlsx`.

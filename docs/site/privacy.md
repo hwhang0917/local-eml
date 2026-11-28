@@ -22,7 +22,7 @@ Local Eml only accepts connections from your own computer (`127.0.0.1`). Other d
 ## Passwords and keys
 
 - The S3 secret key and session token are never saved.
-- IMAP passwords are only saved if you turn on background sync for a profile, and then they're encrypted. See [Receiving new mail](./sync#what-happens-to-your-password).
+- IMAP passwords are only saved if you turn on background sync for a profile, and then they're encrypted with a key kept in your system's secure storage (Credential Manager, the Keychain or the Linux secret service), or in a file where there is none. See [Receiving new mail](./sync#what-happens-to-your-password).
 - Server names, bucket names, usernames and access key IDs are saved as plain text, since they aren't secret.
 
 ## Temporary sessions
