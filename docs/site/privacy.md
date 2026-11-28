@@ -41,6 +41,6 @@ You can't use this switch while the background service is running, because the s
 
 **Settings → Privacy → Delete all data now** deletes every message, the search index, the import history and the logs. It also turns off background sync so the library doesn't fill up again. Your profiles (without passwords), categories, settings and the encryption key are kept. You have to type a confirmation word first.
 
-::: warning No guarantees
-Temporary sessions and Delete all data delete files the normal way, the same as if you deleted them yourself. This is not secure erasure. Deleted files can often be recovered, especially on SSDs, and Local Eml does not promise otherwise. Local Eml also can't bring deleted data back, so keep a backup of anything you need. Like the rest of Local Eml, these features come with no warranty, under the [GPL v3](https://github.com/hwhang0917/local-eml/blob/main/LICENSE).
+::: warning Deleted data can't be restored
+Temporary sessions and Delete all data can't be undone. Local Eml can't bring deleted data back, so keep a backup of anything you need.
 :::

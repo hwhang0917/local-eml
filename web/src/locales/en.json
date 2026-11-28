@@ -695,7 +695,7 @@
     "key_file": "Saved IMAP passwords are encrypted with a key kept in a file only your account can read (keys/secret.key). Local Eml couldn't find secure storage it can use on this system, which is common on WSL, servers and containers.",
     "key_keychain_unavailable": "Saved IMAP passwords are encrypted with a key in your system's secure storage, but it isn't answering right now (it may be locked). Background sync can't sign in until it is unlocked. Local Eml keeps trying.",
     "key_optout": "To keep the key in a file instead, start Local Eml with LOCAL_EML_KEYRING=off. The key is moved back out of secure storage on that start.",
-    "disk_note": "These options delete files the ordinary way. They are not secure erasure: deleted data may still be recoverable, especially on SSDs, and Local Eml can't restore it either. Keep a backup of anything you need. Provided as is, without warranty."
+    "disk_note": "Deleted data can't be recovered in Local Eml. Keep a backup of anything you need."
   },
   "search_help": {
     "open": "Search filters",
